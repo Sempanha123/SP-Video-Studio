@@ -1,4 +1,4 @@
-from app.phase24_runtime import run
+from app.phase25_runtime import run
 
 if __name__ == "__main__":
     raise SystemExit(run())
