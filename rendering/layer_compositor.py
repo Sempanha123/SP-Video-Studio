@@ -15,11 +15,12 @@ def build_layered_scene_command(scene_renderer, original: Callable, spec: dict, 
     """
     layers=[dict(x) for x in list(spec.get("layers",[]) or []) if x.get("visible",True) and x.get("assetPath")]
     manual_audio=[dict(x) for x in list(spec.get("manualAudio",[]) or []) if not x.get("muted",False) and x.get("assetPath")]
-    if not layers and not manual_audio:
+    visual=dict(spec.get("visual",{}) or {}); reframe=dict(visual.get("reframe",{}) or {})
+    if not layers and not manual_audio and not reframe:
         return original(spec,settings,destination,temp_dir=temp_dir)
 
     duration_ms=int(spec.get("durationMs",0) or 0); duration=max(.001,duration_ms/1000.0)
-    visual=dict(spec.get("visual",{}) or {}); audio=dict(spec.get("audio",{}) or {}); overlays=list(spec.get("overlays",[]) or [])
+    audio=dict(spec.get("audio",{}) or {}); overlays=list(spec.get("overlays",[]) or [])
     caps=scene_renderer.runner.discover_capabilities(); available=set(caps.filters)
     inputs:list[str]=[]; media_path=str(visual.get("path","") or ""); media_type=str(visual.get("mediaType","") or ""); bg=str(visual.get("backgroundColor","#000000") or "#000000")
     if media_path:
@@ -52,7 +53,29 @@ def build_layered_scene_command(scene_renderer, original: Callable, spec: dict, 
         inputs += ["-i",str(item["assetPath"])]
         manual_inputs.append((next_input,item)); next_input+=1
 
-    filters=[]; base=fit_filter(settings.width,settings.height,str(visual.get("fitMode","fill")),background=bg)
+    filters=[]
+    if reframe:
+        crop_l=max(0,min(.95,float(reframe.get("cropLeft",0) or 0))); crop_t=max(0,min(.95,float(reframe.get("cropTop",0) or 0)))
+        crop_r=max(0,min(.95,float(reframe.get("cropRight",0) or 0))); crop_b=max(0,min(.95,float(reframe.get("cropBottom",0) or 0)))
+        if crop_l+crop_r>=.98 or crop_t+crop_b>=.98: raise CompositionError("Short reframe crop removes the whole image.")
+        fit=str(reframe.get("fitMode",visual.get("fitMode","fill")) or "fill"); scale=max(.1,min(8.0,float(reframe.get("scale",1) or 1)))
+        ox=max(-1.0,min(1.0,float(reframe.get("offsetX",0) or 0))); oy=max(-1.0,min(1.0,float(reframe.get("offsetY",0) or 0)))
+        primary=[]
+        if crop_l or crop_t or crop_r or crop_b:
+            primary.append(f"crop=iw*{1-crop_l-crop_r:.8f}:ih*{1-crop_t-crop_b:.8f}:iw*{crop_l:.8f}:ih*{crop_t:.8f}")
+        if fit=="fit":
+            primary.append(f"scale={settings.width}:{settings.height}:force_original_aspect_ratio=decrease")
+            if abs(scale-1)>.0001: primary.append(f"scale=iw*{scale:.6f}:ih*{scale:.6f}")
+            primary.append(f"pad={settings.width}:{settings.height}:(ow-iw)/2:(oh-ih)/2:color={bg}")
+        elif fit=="stretch":
+            primary.append(f"scale={settings.width}:{settings.height}")
+        else:
+            primary.append(f"scale={settings.width}:{settings.height}:force_original_aspect_ratio=increase")
+            if abs(scale-1)>.0001: primary.append(f"scale=iw*{scale:.6f}:ih*{scale:.6f}")
+            primary.append(f"crop={settings.width}:{settings.height}:x='max(0,min(iw-ow,(iw-ow)/2+({ox:.6f})*(iw-ow)/2))':y='max(0,min(ih-oh,(ih-oh)/2+({oy:.6f})*(ih-oh)/2))'")
+        base=",".join(primary)
+    else:
+        base=fit_filter(settings.width,settings.height,str(visual.get("fitMode","fill")),background=bg)
     chain=[base,"fps="+str(settings.fps),f"trim=duration={duration:.6f}","setpts=PTS-STARTPTS"]
     chain += fade_filters(duration_ms,dict(spec.get("transitionIn",{}) or {}),dict(spec.get("transitionOut",{}) or {}))
     filters.append(f"[0:v]{','.join(chain)}[vbase]"); current="vbase"

@@ -2,10 +2,12 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import SPVideoStudio.Phase22 1.0
+import SPVideoStudio.Phase23 1.0
 import "../theme"
 import "../components"
 import "../editor"
 import "../video"
+import "../shorts"
 
 FocusScope {
     id: root
@@ -29,7 +31,15 @@ FocusScope {
     Keys.onLeftPressed: function(event) { if(root.controller){ root.controller.seekRelative((event.modifiers&Qt.ShiftModifier)?-5000:-500); event.accepted=true } }
     Keys.onRightPressed: function(event) { if(root.controller){ root.controller.seekRelative((event.modifiers&Qt.ShiftModifier)?5000:500); event.accepted=true } }
 
-    Component.onCompleted: if(root.controller) VideoStudio.setCurrentProject(root.controller.currentProjectId || "")
+    property int studioPanelIndex: Shorts.workflow === "shorts" ? 1 : 0
+
+    Component.onCompleted: {
+        if (!root.controller) return
+        var projectId=root.controller.currentProjectId || ""
+        VideoStudio.setCurrentProject(projectId)
+        Shorts.setCurrentProject(projectId)
+        studioPanelIndex = Shorts.workflow === "shorts" ? 1 : 0
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -45,8 +55,22 @@ FocusScope {
                 PreviewPlayer { anchors.fill:parent; anchors.margins:Theme.spacing.sm; controller:root.playbackController }
             }
             AppCard {
-                SplitView.preferredWidth:420; SplitView.minimumWidth:340
-                UniversalVideoPanel { anchors.fill:parent; anchors.margins:Theme.spacing.md; timelineController:root.controller }
+                SplitView.preferredWidth:440; SplitView.minimumWidth:350
+                ColumnLayout {
+                    anchors.fill:parent; anchors.margins:Theme.spacing.sm; spacing:Theme.spacing.xs
+                    RowLayout {
+                        Layout.fillWidth:true
+                        SecondaryButton { text:"Video"; compact:true; enabled:root.studioPanelIndex!==0; onClicked:root.studioPanelIndex=0 }
+                        SecondaryButton { text:"Shorts"; compact:true; enabled:root.studioPanelIndex!==1; onClicked:root.studioPanelIndex=1 }
+                        Item { Layout.fillWidth:true }
+                        Text { text:Shorts.workflow==="shorts"?"Short project":"Source project"; color:Theme.colors.textMuted; font.family:Theme.type.family; font.pixelSize:Theme.type.caption }
+                    }
+                    StackLayout {
+                        Layout.fillWidth:true; Layout.fillHeight:true; currentIndex:root.studioPanelIndex
+                        UniversalVideoPanel { timelineController:root.controller }
+                        ShortsStudio { timelineController:root.controller; playbackController:root.playbackController }
+                    }
+                }
             }
         }
 
@@ -129,7 +153,12 @@ FocusScope {
 
     Connections {
         target:root.controller; ignoreUnknownSignals:true
-        function onTimelineChanged(){ if(root.controller && VideoStudio.currentProjectId!==root.controller.currentProjectId) VideoStudio.setCurrentProject(root.controller.currentProjectId||""); else VideoStudio.refresh() }
+        function onTimelineChanged(){
+            if (!root.controller) return
+            var pid=root.controller.currentProjectId||""
+            if(VideoStudio.currentProjectId!==pid) VideoStudio.setCurrentProject(pid); else VideoStudio.refresh()
+            if(Shorts.currentProjectId!==pid) Shorts.setCurrentProject(pid); else Shorts.refresh()
+        }
         function onOperationSucceeded(message){root.toastRequested(message,"success")}
         function onOperationFailed(message){root.toastRequested(message,"error")}
     }
@@ -137,5 +166,11 @@ FocusScope {
         target:VideoStudio; ignoreUnknownSignals:true
         function onOperationSucceeded(message){root.toastRequested(message,"success"); if(root.controller)root.controller.refresh()}
         function onOperationFailed(message){root.toastRequested(message,"error")}
+    }
+    Connections {
+        target:Shorts; ignoreUnknownSignals:true
+        function onOperationSucceeded(message){root.toastRequested(message,"success"); if(root.controller)root.controller.refresh()}
+        function onOperationFailed(message){root.toastRequested(message,"error")}
+        function onShortProjectCreated(projectId){root.toastRequested("Short project created. Open it from Projects to continue editing.","success")}
     }
 }

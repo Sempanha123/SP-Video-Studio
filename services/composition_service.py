@@ -15,6 +15,14 @@ class CompositionService:
 
     def enrich_spec(self, project_id: str, spec: dict[str, object]) -> dict[str, object]:
         scene_id=str(spec.get("sceneId","") or "")
+        if scene_id:
+            try:
+                scene=self.scenes.get(project_id,scene_id)[0]
+                reframe=dict(scene.metadata.get("shortReframe") or {})
+                if reframe:
+                    visual=dict(spec.get("visual",{}) or {}); visual["reframe"]=reframe; spec["visual"]=visual
+            except Exception:
+                pass
         enriched=[]
         for raw in list(spec.get("layers",[]) or []):
             item=dict(raw); asset_id=str(item.get("assetId","") or "")
