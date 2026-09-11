@@ -5,6 +5,7 @@ import QtQuick.Dialogs
 import "../theme"
 import "../components"
 import "../editor"
+import "../director"
 
 Item {
     id: root
@@ -48,6 +49,8 @@ Item {
             subtitleController.setCurrentProject(root.current().id || "")
         if (mode === "scenes" && typeof sceneController !== "undefined")
             sceneController.setCurrentProject(root.current().id || "")
+        if (mode === "director" && typeof directorController !== "undefined")
+            directorController.setCurrentProject(root.current().id || "")
         root.workspaceMode = mode
     }
 
@@ -91,6 +94,8 @@ Item {
             subtitleController.setCurrentProject(root.current().id || "")
         if (typeof sceneController !== "undefined")
             sceneController.setCurrentProject(root.current().id || "")
+        if (typeof directorController !== "undefined")
+            directorController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
@@ -120,6 +125,8 @@ Item {
                 subtitleController.setCurrentProject(root.current().id || "")
             if (typeof sceneController !== "undefined")
                 sceneController.setCurrentProject(root.current().id || "")
+            if (typeof directorController !== "undefined")
+                directorController.setCurrentProject(root.current().id || "")
             if (root.workspaceMode === "script" && typeof scriptController !== "undefined")
                 scriptController.load(root.current().id || "")
         }
@@ -164,6 +171,7 @@ Item {
             AppButton { text: "Translation"; compact: true; variant: root.workspaceMode === "translation" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("translation") }
             AppButton { text: "Subtitles"; compact: true; variant: root.workspaceMode === "subtitles" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("subtitles") }
             AppButton { text: "Scenes"; compact: true; variant: root.workspaceMode === "scenes" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("scenes") }
+            AppButton { text: "Director"; compact: true; variant: root.workspaceMode === "director" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("director") }
         }
 
         SplitView {
@@ -518,6 +526,15 @@ Item {
             controller: typeof sceneController !== "undefined" ? sceneController : null
             playbackController: typeof playbackController !== "undefined" ? playbackController : null
             aspectRatio: root.current().aspectRatio || "16:9"
+            onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
+        }
+
+        AIDirectorPage {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.workspaceMode === "director"
+            controller: typeof directorController !== "undefined" ? directorController : null
+            projectLanguage: root.current().language || "en"
             onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
         }
 

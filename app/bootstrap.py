@@ -18,6 +18,7 @@ from engines.stt.manager import STTEngineManager
 from engines.tts.voxcpm2_engine import VoxCPM2Engine
 from engines.voice_registry import VoiceRegistry
 from engines.translation.manager import TranslationEngineManager
+from engines.llm.deterministic_director import DeterministicDirectorProvider
 from services.ai_resource_manager import AIResourceManager
 from services.media_service import MediaService
 from services.model_compatibility_service import ModelCompatibilityService
@@ -45,6 +46,10 @@ from services.scene_generation_service import SceneGenerationService
 from services.scene_preview_service import ScenePreviewService
 from services.scene_service import SceneService
 from services.scene_validation_service import SceneValidationService
+from services.director_rule_engine import DirectorRuleEngine
+from services.director_validation_service import DirectorValidationService
+from services.ai_director_service import AIDirectorService
+from services.director_apply_service import DirectorApplyService
 from services.tts_chunking_service import TTSChunkingService
 from services.tts_service import TTSService
 from services.narration_service import NarrationService
@@ -60,6 +65,7 @@ from storage.repositories.transcript_repository import TranscriptRepository
 from storage.repositories.translation_repository import TranslationRepository
 from storage.repositories.subtitle_repository import SubtitleRepository
 from storage.repositories.scene_repository import SceneRepository
+from storage.repositories.director_plan_repository import DirectorPlanRepository
 from storage.repositories.voice_repository import VoiceRepository
 from workers.worker_pool import WorkerPool
 
@@ -89,6 +95,7 @@ def build_container() -> DependencyContainer:
     translation_repository = TranslationRepository(database)
     subtitle_repository = SubtitleRepository(database)
     scene_repository = SceneRepository(database)
+    director_repository = DirectorPlanRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -220,6 +227,20 @@ def build_container() -> DependencyContainer:
         script_service, transcript_repository, scene_generation_service, scene_validation_service, scene_preview_service, logger,
     )
     project_service.set_scene_service(scene_service)
+    director_rules = DirectorRuleEngine()
+    director_provider = DeterministicDirectorProvider(director_rules)
+    director_validation = DirectorValidationService(
+        lambda: {voice.category for voice in voice_service.list_all()},
+        lambda: {str(preset["id"]) for preset in subtitle_preset_service.list_presets()},
+    )
+    director_service = AIDirectorService(
+        director_repository, repository, script_repository, transcript_repository, translation_repository,
+        scene_repository, media_repository, script_analysis_service, director_provider, director_validation, logger,
+    )
+    director_apply_service = DirectorApplyService(
+        director_service, director_repository, director_validation, project_service, scene_service, voice_service, subtitle_preset_service
+    )
+    project_service.set_director_service(director_service)
     worker_pool = WorkerPool(max_workers=2)
 
     container = DependencyContainer()
@@ -236,6 +257,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(TranslationRepository, translation_repository)
     container.register_instance(SubtitleRepository, subtitle_repository)
     container.register_instance(SceneRepository, scene_repository)
+    container.register_instance(DirectorPlanRepository, director_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -271,6 +293,11 @@ def build_container() -> DependencyContainer:
     container.register_instance(SceneValidationService, scene_validation_service)
     container.register_instance(ScenePreviewService, scene_preview_service)
     container.register_instance(SceneService, scene_service)
+    container.register_instance(DirectorRuleEngine, director_rules)
+    container.register_instance(DeterministicDirectorProvider, director_provider)
+    container.register_instance(DirectorValidationService, director_validation)
+    container.register_instance(AIDirectorService, director_service)
+    container.register_instance(DirectorApplyService, director_apply_service)
     container.register_instance(AIResourceManager, ai_resource_manager)
     container.register_instance(VoiceRegistry, voice_registry)
     container.register_instance(VoiceService, voice_service)
@@ -318,6 +345,7 @@ def run() -> int:
     from ui.controllers.translation_controller import TranslationController
     from ui.controllers.subtitle_controller import SubtitleController
     from ui.controllers.scene_controller import SceneController
+    from ui.controllers.ai_director_controller import AIDirectorController
     from ui.controllers.voice_controller import VoiceController
 
     project_service = container.resolve(ProjectService)
@@ -392,6 +420,12 @@ def run() -> int:
         container.resolve(MediaService),
         container.resolve(NarrationService),
         container.resolve(SubtitleService),
+        logger,
+    )
+    director_controller = AIDirectorController(
+        container.resolve(AIDirectorService),
+        container.resolve(DirectorApplyService),
+        container.resolve(VoiceService),
         logger,
     )
 
@@ -488,6 +522,7 @@ def run() -> int:
     container.register_instance(TranslationController, translation_controller)
     container.register_instance(SubtitleController, subtitle_controller)
     container.register_instance(SceneController, scene_controller)
+    container.register_instance(AIDirectorController, director_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
@@ -503,6 +538,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("translationController", translation_controller)
     engine.rootContext().setContextProperty("subtitleController", subtitle_controller)
     engine.rootContext().setContextProperty("sceneController", scene_controller)
+    engine.rootContext().setContextProperty("directorController", director_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():

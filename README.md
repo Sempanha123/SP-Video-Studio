@@ -4,7 +4,7 @@ SP Video Studio is a native Windows desktop video-creation application built wit
 
 ## Current milestone
 
-Phase 0 foundation through Phase 12 subtitles + **Phase 13 reusable Scene Engine and storyboard editor**.
+Phase 0 foundation through Phase 13 scenes + **Phase 14 structured AI Director planning foundation**.
 
 Implemented now:
 
@@ -38,8 +38,10 @@ Implemented now:
 - Provider-based English↔Khmer translation with local Marian/OPUS and manual-review providers
 - Side-by-side Translation Review with machine-output preservation, human edits, review/lock protection, source synchronization, and UTF-8 export
 - Professional Subtitle Studio with transcript/translation/bilingual/manual tracks, editable millisecond timing, source-safe synchronization, live overlay preview, reusable styles/presets, word highlighting, SRT/VTT/ASS import/export, and short FFmpeg/libass burn-in previews
+- Reusable Scene Engine + storyboard editor with script/transcript creation, project media/narration/subtitle references, normalized overlays, transitions, validation, and renderer-ready sequence specs
+- Offline structured AI Director with deterministic platform/workflow rules, script/scene duration planning, voice/subtitle/visual/audio recommendations, plan locking/versioning, source fingerprints, safe apply modes, and Scene Engine integration
 
-Not implemented yet: speaker diarization, dubbing, scenes, timeline editing, News/Story generation, final production video rendering/export, or batch processing.
+Not implemented yet: cloud LLM Director providers, web/news research, automatic News/Story content generation, speaker diarization, dubbing, advanced timeline editing, AI image/video generation, final production video rendering/export, or batch processing.
 
 ## Requirements
 
@@ -726,4 +728,45 @@ The project sequence contains enabled scenes in stable order with cumulative `st
 
 Project duplication creates new scene/layer/overlay IDs and remaps all project-owned relationships to the duplicate: media IDs, generated-audio IDs, script-section IDs, transcript/translation segment IDs and subtitle-track IDs. Logo/layer media references are remapped as well. No writable scene child row is shared between projects. Scene deletion removes only scene-owned rows; it never deletes project media, generated narration or subtitle tracks. Project deletion removes scene data through the normal project cascade.
 
-Phase 13 intentionally does **not** implement AI scene generation, AI Director, the advanced timeline, final FFmpeg rendering, automated News/Story workflows, keyframe motion graphics or batch rendering. The recommended next phase is **Phase 14 — AI Director Foundation**.
+Phase 13 intentionally did **not** implement AI scene generation, the advanced timeline, final FFmpeg rendering, automated News/Story workflows, keyframe motion graphics or batch rendering. Phase 14 now adds structured production planning above this scene foundation without rendering or generating factual content.
+
+
+## AI Director foundation
+
+Phase 14 adds an offline-first production-planning layer that produces **typed structured data**, not chat prose. SQLite schema version **11** adds `director_plans` and normalized `director_scene_plans`; recommendations remain schema-versioned structured data with a recorded Director rule-engine version so saved plans remain understandable as planning rules evolve.
+
+The current provider is `DeterministicDirectorProvider`. It requires no network, no credentials, and never sends project content outside the application. The Director provider contract is structured-output oriented so a future LLM provider must return data that can be parsed and validated into the same `DirectorPlan` domain before it can be shown or applied. Phase 14 deliberately includes no cloud model, web research, factual News generation, automatic final-script writing, AI image/video generation, rendering, or timeline automation.
+
+### Requests, sources, and deterministic rules
+
+`DirectorRequest` supports the creative workflows `news`, `story`, `translate`, `video`, and `shorts`; platforms `tiktok`, `youtube_shorts`, `instagram_reels`, `youtube`, `facebook`, and `generic`; English/Khmer project language; fixed or custom millisecond duration; audience/style/pace/tone preferences; and source types Idea, Script, Transcript, Translation, or Existing Scenes.
+
+Platform/workflow rules are centralized in typed profiles rather than QML conditionals. They deterministically recommend aspect ratio, effective pace, script-length target, scene count/distribution, structural hook/outro guidance, voice category, subtitle preset, visual style, transition style, and music level. Existing Script analysis reuses the established English WPM and Khmer character-duration heuristics instead of treating Khmer as whitespace-delimited English. The same request under the same rule version produces the same plan; Phase 14 uses no randomness.
+
+Manual News ideas receive structure only. The Director explicitly warns that factual News Studio generation will require sources later and does not invent claims, quotes, sources, or research. Story planning provides structural stages only; Translate planning can recommend target-language/dual subtitles and voice direction without generating dubbing.
+
+### Plans, review, locking, and regeneration
+
+A `DirectorPlan` stores stable IDs, workflow/platform/language/target duration/aspect ratio, status, schema/rule versions, source fingerprint, structured recommendations, and editable `DirectorScenePlan` rows. Projects can keep multiple plans for different platforms/durations, select one active plan, duplicate/delete plans, and reopen all choices after restart.
+
+Recommendation cards show a concise value + reason and remain user-editable. Users can lock important choices and regenerate only unlocked recommendations, or regenerate a selected category such as Scenes, Voice, Subtitles, or Visuals. Manual/locked recommendations are preserved. Editing the planned scene count rebuilds structured scene-plan rows while keeping their combined duration aligned with the target. Plan validation checks supported identifiers, positive duration/counts, scene timing tolerance, and currently available voice/subtitle recommendation targets before approval/apply.
+
+Source fingerprints use SHA-256 over relevant source structure for Script, Transcript, Translation, Existing Scenes, or the stored manual idea. Changed project source data marks a saved plan **Out of Date** rather than deleting it. Refresh/regeneration preserves locked/user-modified choices where possible.
+
+### Applying plans and Scene Engine integration
+
+Approval and Apply are intentionally separate. `DirectorApplyService` presents impact information and supports explicit modes:
+
+- **Settings Only** — the safe default when scenes already exist.
+- **Add Planned Scenes** — creates new placeholders through the existing `SceneService`.
+- **Replace Existing Scenes** — explicit/destructive and never chosen silently.
+
+Application can update project aspect ratio, an explicitly selected existing Voice Studio voice, the project default subtitle preset preference, Director metadata, and planned scenes. It never regenerates narration/audio automatically and never rewrites existing subtitle tracks. Each planned scene is converted through the Phase 13 Scene Engine with duration/transition/source mapping and generic visual notes; renderer logic never parses QML state.
+
+Project duplication creates independent Director plan/recommendation/scene-plan IDs and remaps project-owned Script/Transcript/Translation sources and scene-related references to duplicated entities where available. Deleting a plan never deletes scenes, scripts, media, voices, or subtitles; deleting a project removes project-owned Director data through the normal database lifecycle.
+
+### Privacy and next phase
+
+The Phase 14 Director is entirely local/deterministic and can operate with network access disabled. No project text is uploaded anywhere. The UI labels this as **Local Director / Offline Planning** rather than presenting it as an online generative chatbot.
+
+The recommended next phase is **Phase 15 — FFmpeg Rendering Engine**.

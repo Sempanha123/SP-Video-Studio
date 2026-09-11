@@ -19,3 +19,5 @@ from storage.repositories.translation_repository import TranslationRepository
 from .subtitle_repository import SubtitleRepository
 
 from .scene_repository import SceneRepository
+
+from .director_plan_repository import DirectorPlanRepository

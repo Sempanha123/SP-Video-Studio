@@ -1,0 +1,3 @@
+from domain.director_profile import PLATFORM_PROFILES, WORKFLOW_PROFILES
+
+__all__ = ["PLATFORM_PROFILES", "WORKFLOW_PROFILES"]

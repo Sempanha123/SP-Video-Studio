@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from services.translation_service import TranslationService
     from services.subtitle_service import SubtitleService
     from services.scene_service import SceneService
+    from services.ai_director_service import AIDirectorService
 
 
 PROJECT_DIRS = (
@@ -100,6 +101,7 @@ class ProjectService:
         self._translation_service: TranslationService | None = None
         self._subtitle_service: SubtitleService | None = None
         self._scene_service: SceneService | None = None
+        self._director_service: AIDirectorService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
                 self._known_project_roots.add(Path(existing.project_path).resolve().parent)
@@ -129,6 +131,9 @@ class ProjectService:
 
     def set_scene_service(self, scene_service: "SceneService") -> None:
         self._scene_service = scene_service
+
+    def set_director_service(self, director_service: "AIDirectorService") -> None:
+        self._director_service = director_service
 
     def set_project_root(self, project_root: Path) -> None:
         """Change the location used only for newly created projects."""
@@ -303,12 +308,19 @@ class ProjectService:
                     translation_map=translation_id_map, transcript_segment_map=transcript_segment_map,
                     translation_segment_map=translation_segment_map,
                 )
+            scene_id_map: dict[str, str] = {}
             if self._scene_service is not None:
-                self._scene_service.duplicate_project_scenes(
+                scene_id_map = self._scene_service.duplicate_project_scenes(
                     source.project_id, duplicate.project_id, media_map=media_id_map,
                     audio_map=generated_audio_map, script_section_map=script_section_map,
                     transcript_segment_map=transcript_segment_map, translation_segment_map=translation_segment_map,
                     subtitle_track_map=subtitle_track_map,
+                )
+            if self._director_service is not None:
+                self._director_service.duplicate_project_plans(
+                    source.project_id, duplicate.project_id, script_map=script_id_map,
+                    script_section_map=script_section_map, transcript_map=transcript_id_map,
+                    translation_map=translation_id_map, scene_map=scene_id_map,
                 )
         except Exception as exc:
             try:
@@ -322,6 +334,20 @@ class ProjectService:
 
         self.logger.info("Project duplicated: %s -> %s", source.project_id, duplicate.project_id)
         return duplicate
+
+
+    def update_creative_settings(self, project_id: str, *, aspect_ratio: str | None = None) -> Project:
+        """Persist project-level creative settings used by Director without regenerating assets."""
+        project = self._require_project(project_id)
+        if aspect_ratio is not None:
+            if aspect_ratio not in SUPPORTED_ASPECT_RATIOS:
+                raise ProjectValidationError("Unsupported aspect ratio.")
+            project.aspect_ratio = aspect_ratio
+        project.updated_at = utc_now_iso()
+        project.validate()
+        self.repository.update(project)
+        self._write_metadata(project)
+        return project
 
     def delete_project(self, project_id: str) -> None:
         project = self._require_project(project_id)
