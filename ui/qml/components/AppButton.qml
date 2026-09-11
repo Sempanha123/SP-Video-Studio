@@ -31,7 +31,7 @@ Button {
         Text {
             text: control.text
             font: control.font
-            color: control.variant === "primary" ? "#FFFFFF" : Theme.colors.textPrimary
+            color: (control.variant === "primary" || control.variant === "danger") ? "#FFFFFF" : Theme.colors.textPrimary
             opacity: control.enabled ? 1 : 0.45
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter

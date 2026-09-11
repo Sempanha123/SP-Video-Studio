@@ -34,6 +34,18 @@ class AppPaths:
             downloads=root / "downloads",
         )
 
+    @property
+    def data(self) -> Path:
+        return self.root / "data"
+
+    @property
+    def database(self) -> Path:
+        return self.data / "app.db"
+
+    @property
+    def default_projects_root(self) -> Path:
+        return Path.home() / "Documents" / "SP Video Studio" / "Projects"
+
     def ensure(self) -> None:
         for directory in (
             self.root,
@@ -43,5 +55,6 @@ class AppPaths:
             self.logs,
             self.settings,
             self.downloads,
+            self.data,
         ):
             directory.mkdir(parents=True, exist_ok=True)

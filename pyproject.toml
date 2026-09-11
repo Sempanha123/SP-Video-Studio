@@ -42,4 +42,4 @@ py-modules = ["main"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app*", "domain*", "engines*", "workers*", "services*", "storage*", "media*", "rendering*", "workflows*"]
+include = ["app*", "domain*", "engines*", "workers*", "services*", "storage*", "media*", "rendering*", "workflows*", "ui*"]

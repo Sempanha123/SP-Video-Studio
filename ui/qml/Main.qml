@@ -16,13 +16,24 @@ ApplicationWindow {
 
     property string currentPage: "home"
     property string selectedWorkflow: "news"
+    property string missingProjectId: ""
 
     function pageTitle(key) {
-        var names = { home: "Home", create: "Create", projects: "Projects", batch: "Batch", voices: "Voices", templates: "Templates", assets: "Assets", models: "Models", settings: "Settings" }
+        var names = {
+            home: "Home", create: "Create", projects: "Projects", workspace: "Project Workspace",
+            batch: "Batch", voices: "Voices", templates: "Templates", assets: "Assets",
+            models: "Models", settings: "Settings"
+        }
         return names[key] || "SP Video Studio"
     }
     function pageSource(key) {
-        var sources = { home: "pages/HomePage.qml", create: "pages/CreatePage.qml", projects: "pages/ProjectsPage.qml", batch: "pages/BatchPage.qml", voices: "pages/VoicesPage.qml", templates: "pages/TemplatesPage.qml", assets: "pages/AssetsPage.qml", models: "pages/ModelsPage.qml", settings: "pages/SettingsPage.qml" }
+        var sources = {
+            home: "pages/HomePage.qml", create: "pages/CreatePage.qml",
+            projects: "pages/ProjectsPage.qml", workspace: "pages/ProjectWorkspacePage.qml",
+            batch: "pages/BatchPage.qml", voices: "pages/VoicesPage.qml",
+            templates: "pages/TemplatesPage.qml", assets: "pages/AssetsPage.qml",
+            models: "pages/ModelsPage.qml", settings: "pages/SettingsPage.qml"
+        }
         return Qt.resolvedUrl(sources[key] || sources.home)
     }
     function navigate(page, workflow) {
@@ -60,7 +71,8 @@ ApplicationWindow {
                             color: Theme.colors.accentSoft
                             Icon { anchors.centerIn: parent; width: 19; height: 19; name: "spark" }
                         }
-                        ColumnLayout { Layout.fillWidth: true; spacing: 0
+                        ColumnLayout {
+                            Layout.fillWidth: true; spacing: 0
                             Text { text: "SP Video Studio"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.body; font.weight: Theme.type.semibold; elide: Text.ElideRight; Layout.fillWidth: true }
                             Text { text: "Creative desktop"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: 11; elide: Text.ElideRight; Layout.fillWidth: true }
                         }
@@ -70,7 +82,7 @@ ApplicationWindow {
 
                     SidebarItem { Layout.fillWidth: true; text: "Home"; iconName: "home"; selected: window.currentPage === "home"; onClicked: window.navigate("home", "") }
                     SidebarItem { Layout.fillWidth: true; text: "Create"; iconName: "plus-square"; selected: window.currentPage === "create"; onClicked: window.navigate("create", window.selectedWorkflow) }
-                    SidebarItem { Layout.fillWidth: true; text: "Projects"; iconName: "projects"; selected: window.currentPage === "projects"; onClicked: window.navigate("projects", "") }
+                    SidebarItem { Layout.fillWidth: true; text: "Projects"; iconName: "projects"; selected: window.currentPage === "projects" || window.currentPage === "workspace"; onClicked: window.navigate("projects", "") }
                     SidebarItem { Layout.fillWidth: true; text: "Batch"; iconName: "batch"; selected: window.currentPage === "batch"; onClicked: window.navigate("batch", "") }
                     SidebarItem { Layout.fillWidth: true; text: "Voices"; iconName: "mic"; selected: window.currentPage === "voices"; onClicked: window.navigate("voices", "") }
                     SidebarItem { Layout.fillWidth: true; text: "Templates"; iconName: "template"; selected: window.currentPage === "templates"; onClicked: window.navigate("templates", "") }
@@ -98,7 +110,8 @@ ApplicationWindow {
                         anchors.rightMargin: Theme.spacing.xl
                         spacing: Theme.spacing.md
                         Text { text: window.pageTitle(window.currentPage); color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.title; font.weight: Theme.type.semibold; Layout.fillWidth: true }
-                        RowLayout { spacing: Theme.spacing.sm
+                        RowLayout {
+                            spacing: Theme.spacing.sm
                             Rectangle { width: 8; height: 8; radius: 4; color: Theme.colors.success }
                             Text { text: "System ready"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
                         }
@@ -127,6 +140,46 @@ ApplicationWindow {
                         ignoreUnknownSignals: true
                         function onNavigateRequested(page, workflow) { window.navigate(page, workflow) }
                         function onToastRequested(message, variant) { toast.show(message, variant, 3000) }
+                    }
+                }
+            }
+        }
+    }
+
+    Connections {
+        target: typeof projectController !== "undefined" ? projectController : null
+        ignoreUnknownSignals: true
+        function onOperationSucceeded(message) { toast.show(message, "success", 2600) }
+        function onOperationFailed(message) { toast.show(message, "error", 4200) }
+        function onMissingProjectDetected(projectId) {
+            window.missingProjectId = projectId
+            missingProjectDialog.open()
+        }
+    }
+
+    AppDialog {
+        id: missingProjectDialog
+        width: 470
+        parent: Overlay.overlay
+        x: (parent.width - width) / 2
+        y: (parent.height - height) / 2
+        header: null
+        footer: null
+        closePolicy: Popup.CloseOnEscape
+        contentItem: ColumnLayout {
+            spacing: Theme.spacing.lg
+            Text { text: "Project files could not be found"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.heading; font.weight: Theme.type.semibold }
+            Text { Layout.fillWidth: true; text: "The project is still listed in your library, but its folder is missing. You can keep the entry or remove only the library record."; wrapMode: Text.WordWrap; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall }
+            RowLayout {
+                Layout.fillWidth: true
+                Item { Layout.fillWidth: true }
+                SecondaryButton { text: "Keep Entry"; onClicked: missingProjectDialog.close() }
+                AppButton {
+                    text: "Remove from Library"
+                    variant: "danger"
+                    onClicked: {
+                        if (typeof projectController !== "undefined" && projectController.removeFromLibrary(window.missingProjectId))
+                            missingProjectDialog.close()
                     }
                 }
             }
