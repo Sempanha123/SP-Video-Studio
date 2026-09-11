@@ -7,7 +7,7 @@ Item {
     id:root;required property var controller;signal navigateRequested(string mode);property string tab:"overview"
     Connections{target:controller;function onNavigationRequested(mode){root.navigateRequested(mode)}}
     ColumnLayout{anchors.fill:parent;spacing:Theme.spacing.md
-        PageHeader{Layout.fillWidth:true;title:"Translate & Dub";description:"Keep source, translation, voice and timing easy to compare.";actions:[StatusBadge{text:controller.readiness.state||"Not Ready";status:(controller.readiness.state||"").toLowerCase().indexOf("ready")>=0?"ready":"warning"}]}
+        PageHeader{Layout.fillWidth:true;title:"Translate & Dub";description:"Keep source, translation, voice and timing easy to compare.";actions:[StatusBadge{text:controller.readiness.state||"Not Ready";status:(controller.readiness.state||"").toLowerCase().indexOf("ready")>=0?"ready":"warning"},SecondaryButton{text:"Open Mixer";compact:true;onClicked:root.navigateRequested("timeline")}]}
         WorkflowStepper{Layout.fillWidth:true;steps:["Video","Transcript","Translation","Voice","Dub","Export"];currentIndex:0;onStepRequested:function(i){if(i===0)root.navigateRequested("media");else if(i===1)root.navigateRequested("transcript");else if(i===2)root.navigateRequested("translation");else if(i===3)root.navigateRequested("voices");else if(i===5)root.navigateRequested("export")}}
         ScrollView{Layout.fillWidth:true;Layout.fillHeight:true;contentWidth:availableWidth
             ColumnLayout{width:parent.width;spacing:Theme.spacing.md

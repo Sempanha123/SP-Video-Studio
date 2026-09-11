@@ -8,6 +8,7 @@ AppCard {
     property var asset: ({})
     property string assetId: asset.id || ""
     property string mediaType: asset.type || ""
+    property string assetSubtype: asset.subtype || ""
     signal selected(string assetId)
     implicitHeight: 196
     interactive: true

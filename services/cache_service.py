@@ -18,6 +18,7 @@ _CACHE_DIRS: dict[StorageCategory, str] = {
     StorageCategory.THUMBNAIL_CACHE: "thumbnails",
     StorageCategory.RENDER_TEMP: "render",
     StorageCategory.GENERATED_AUDIO: "audio",
+    StorageCategory.AUDIO_WAVEFORM_CACHE: "audio/waveforms",
     StorageCategory.TRANSCRIPTION_TEMP: "transcription",
     StorageCategory.TRANSLATION_CACHE: "translation",
     StorageCategory.TEMPLATE_CACHE: "templates",
@@ -234,6 +235,8 @@ class CacheService:
             base = Path(current)
             # Never traverse links/junction-like entries. Canonical delete checks still run later.
             dirs[:] = [name for name in dirs if not (base / name).is_symlink()]
+            if category == StorageCategory.GENERATED_AUDIO and base == self.category_root(StorageCategory.GENERATED_AUDIO):
+                dirs[:] = [name for name in dirs if name != "waveforms"]
             manifest = self.read_manifest(base) or {}
             for name in files:
                 if name == _MANIFEST:

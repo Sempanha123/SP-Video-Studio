@@ -4,12 +4,14 @@ import QtQuick.Layouts 1.15
 import SPVideoStudio.Phase22 1.0
 import SPVideoStudio.Phase23 1.0
 import SPVideoStudio.Phase25 1.0
+import SPVideoStudio.Phase30 1.0 as Phase30
 import "../theme"
 import "../components"
 import "../editor"
 import "../video"
 import "../shorts"
 import "../assets"
+import "../audio"
 
 FocusScope {
     id: root
@@ -41,6 +43,8 @@ FocusScope {
         VideoStudio.setCurrentProject(projectId)
         Shorts.setCurrentProject(projectId)
         AssetLibrary.setCurrentProject(projectId)
+        Phase30.AudioMixer.setProject(projectId, Shorts.workflow || "video")
+        Phase30.AudioMixer.setTimelineState((typeof root.controller.audioClips !== "undefined" ? root.controller.audioClips : []), Number(root.controller.durationMs || 0))
         studioPanelIndex = Shorts.workflow === "shorts" ? 1 : 0
     }
 
@@ -67,6 +71,7 @@ FocusScope {
                         SecondaryButton { text:"Video"; compact:true; enabled:root.studioPanelIndex!==0; onClicked:root.studioPanelIndex=0 }
                         SecondaryButton { text:"Shorts"; compact:true; enabled:root.studioPanelIndex!==1; onClicked:root.studioPanelIndex=1 }
                         SecondaryButton { text:"Library"; compact:true; enabled:root.studioPanelIndex!==2; onClicked:root.studioPanelIndex=2 }
+                        SecondaryButton { text:"Audio"; compact:true; enabled:root.studioPanelIndex!==3; onClicked:root.studioPanelIndex=3 }
                         Item { Layout.fillWidth:true }
                         Text { text:Shorts.workflow==="shorts"?"Short project":"Source project"; color:Theme.colors.timelineText; font.family:Theme.type.family; font.pixelSize:Theme.type.timeline }
                     }
@@ -75,6 +80,7 @@ FocusScope {
                         UniversalVideoPanel { timelineController:root.controller }
                         ShortsStudio { timelineController:root.controller; playbackController:root.playbackController }
                         ProjectAssetPanel { workflow: Shorts.workflow || "video" }
+                        AudioMixer { controller:Phase30.AudioMixer }
                     }
                 }
             }
@@ -143,7 +149,8 @@ FocusScope {
                         onDropped: function(drop) {
                             if (!drop.source || !root.controller) return
                             var projectMs=Math.max(0,Math.round(drop.x/root.controller.pixelsPerSecond*1000))
-                            var track=drop.source.mediaType === "audio" ? "music" : (root.controller.durationMs<=0 ? "video" : "broll")
+                            var subtype=drop.source.assetSubtype || ""
+                            var track=drop.source.mediaType === "audio" ? (subtype === "sfx" ? "sfx" : "music") : (root.controller.durationMs<=0 ? "video" : "broll")
                             if (drop.source.assetId) {
                                 AssetLibrary.setCurrentProject(root.controller.currentProjectId||"")
                                 var result=AssetLibrary.addAtPlayhead(drop.source.assetId,projectMs,track)
@@ -168,6 +175,8 @@ FocusScope {
             var pid=root.controller.currentProjectId||""
             if(VideoStudio.currentProjectId!==pid) VideoStudio.setCurrentProject(pid); else VideoStudio.refresh()
             if(AssetLibrary.currentProjectId!==pid) AssetLibrary.setCurrentProject(pid)
+            if(Phase30.AudioMixer.currentProjectId!==pid) Phase30.AudioMixer.setProject(pid,Shorts.workflow||"video")
+            Phase30.AudioMixer.setTimelineState((typeof root.controller.audioClips !== "undefined" ? root.controller.audioClips : []), Number(root.controller.durationMs || 0))
             if(Shorts.currentProjectId!==pid) Shorts.setCurrentProject(pid); else Shorts.refresh()
         }
         function onOperationSucceeded(message){root.toastRequested(message,"success")}

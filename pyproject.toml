@@ -35,7 +35,7 @@ translation = [
 ]
 
 [project.scripts]
-sp-video-studio = "app.phase29_runtime:run"
+sp-video-studio = "app.phase30_runtime:run"
 
 [tool.pytest.ini_options]
 addopts = "-ra"

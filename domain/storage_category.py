@@ -15,6 +15,7 @@ class StorageCategory(str, Enum):
     PROJECT_DATA = "project_data"
     PROJECT_MEDIA = "project_media"
     GENERATED_AUDIO = "generated_audio"
+    AUDIO_WAVEFORM_CACHE = "audio_waveform_cache"
     PREVIEW_CACHE = "preview_cache"
     THUMBNAIL_CACHE = "thumbnail_cache"
     RENDER_TEMP = "render_temp"
@@ -44,6 +45,7 @@ CATEGORY_DEFINITIONS: dict[StorageCategory, CategoryDefinition] = {
     StorageCategory.PROJECT_DATA: CategoryDefinition(StorageCategory.PROJECT_DATA, "Project Data", StorageSafety.USER_DATA, "Scripts, scenes, timelines, subtitles and project databases."),
     StorageCategory.PROJECT_MEDIA: CategoryDefinition(StorageCategory.PROJECT_MEDIA, "Project Media", StorageSafety.USER_DATA, "Project-owned source media copies."),
     StorageCategory.GENERATED_AUDIO: CategoryDefinition(StorageCategory.GENERATED_AUDIO, "Generated Audio", StorageSafety.REGENERATABLE, "Unreferenced generated speech may be rebuilt; active project audio is protected.", True),
+    StorageCategory.AUDIO_WAVEFORM_CACHE: CategoryDefinition(StorageCategory.AUDIO_WAVEFORM_CACHE, "Audio Waveforms", StorageSafety.SAFE_TO_CLEAR, "Downsampled waveform peak summaries; regenerated on demand.", True),
     StorageCategory.PREVIEW_CACHE: CategoryDefinition(StorageCategory.PREVIEW_CACHE, "Preview Cache", StorageSafety.SAFE_TO_CLEAR, "Low-resolution composition and playback previews.", True),
     StorageCategory.THUMBNAIL_CACHE: CategoryDefinition(StorageCategory.THUMBNAIL_CACHE, "Thumbnail Cache", StorageSafety.SAFE_TO_CLEAR, "Regeneratable project and media thumbnails.", True),
     StorageCategory.RENDER_TEMP: CategoryDefinition(StorageCategory.RENDER_TEMP, "Render Temporary Files", StorageSafety.SAFE_TO_CLEAR, "Intermediate render files not owned by active jobs.", True),

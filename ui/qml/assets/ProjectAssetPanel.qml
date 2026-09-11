@@ -21,7 +21,7 @@ ColumnLayout {
         delegate:Rectangle {
             required property var modelData
             width:ListView.view.width;height:54;radius:Theme.radius.medium;color:Theme.colors.surfaceHover
-            property string assetId:modelData.id||"";property string mediaType:modelData.type||""
+            property string assetId:modelData.id||"";property string mediaType:modelData.type||"";property string assetSubtype:modelData.subtype||""
             Drag.active:drag.active;Drag.source:this;Drag.keys:["sp-global-asset","sp-global-asset-"+mediaType];Drag.supportedActions:Qt.CopyAction
             DragHandler{id:drag;target:null}
             RowLayout { anchors.fill:parent;anchors.margins:7
