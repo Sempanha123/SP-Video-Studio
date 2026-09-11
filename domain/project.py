@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Mapping, Any
 from uuid import uuid4
 
+from domain.language import supported_language_codes
 
-SUPPORTED_LANGUAGES = {"en", "km"}
+SUPPORTED_LANGUAGES = frozenset(supported_language_codes())
 SUPPORTED_ASPECT_RATIOS = {"9:16", "16:9", "1:1"}
 SUPPORTED_FPS = {24, 25, 30, 50, 60}
 PROJECT_VERSION = 1
@@ -60,88 +61,50 @@ class Project:
 
     @property
     def id(self) -> str:
-        """Stable canonical identifier; project_id remains for Phase 0 compatibility."""
         return self.project_id
 
     def to_dict(self) -> dict[str, object]:
-        """Application representation retained for backwards compatibility."""
         return {
-            "project_id": self.project_id,
-            "id": self.project_id,
-            "title": self.title,
-            "workflow": _enum_value(self.workflow),
-            "language": self.language,
-            "aspect_ratio": self.aspect_ratio,
-            "fps": self.fps,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-            "last_opened_at": self.last_opened_at,
-            "thumbnail_path": self.thumbnail_path,
-            "status": _enum_value(self.status),
-            "project_path": self.project_path,
-            "version": self.version,
-            "template": self.template,
+            "project_id": self.project_id, "id": self.project_id, "title": self.title,
+            "workflow": _enum_value(self.workflow), "language": self.language,
+            "aspect_ratio": self.aspect_ratio, "fps": self.fps, "created_at": self.created_at,
+            "updated_at": self.updated_at, "last_opened_at": self.last_opened_at,
+            "thumbnail_path": self.thumbnail_path, "status": _enum_value(self.status),
+            "project_path": self.project_path, "version": self.version, "template": self.template,
             "settings": dict(self.settings),
         }
 
     def to_metadata(self) -> dict[str, object]:
-        """Portable project.json representation; intentionally small and inspectable."""
         return {
-            "version": self.version,
-            "id": self.project_id,
-            "title": self.title,
-            "workflow": _enum_value(self.workflow),
-            "language": self.language,
-            "aspect_ratio": self.aspect_ratio,
-            "fps": self.fps,
-            "created_at": self.created_at,
-            "updated_at": self.updated_at,
-            "last_opened_at": self.last_opened_at,
-            "thumbnail_path": self.thumbnail_path,
-            "status": _enum_value(self.status),
+            "version": self.version, "id": self.project_id, "title": self.title,
+            "workflow": _enum_value(self.workflow), "language": self.language,
+            "aspect_ratio": self.aspect_ratio, "fps": self.fps, "created_at": self.created_at,
+            "updated_at": self.updated_at, "last_opened_at": self.last_opened_at,
+            "thumbnail_path": self.thumbnail_path, "status": _enum_value(self.status),
         }
 
     @classmethod
     def from_record(cls, record: Mapping[str, Any]) -> "Project":
         return cls(
-            project_id=str(record["id"]),
-            title=str(record["title"]),
-            workflow=str(record["workflow"]),
-            language=str(record["language"]),
-            aspect_ratio=str(record["aspect_ratio"]),
-            fps=int(record["fps"]),
-            created_at=str(record["created_at"]),
-            updated_at=str(record["updated_at"]),
-            last_opened_at=record["last_opened_at"],
-            thumbnail_path=record["thumbnail_path"],
-            status=str(record["status"]),
-            project_path=str(record["project_path"]),
-            version=int(record["version"]),
+            project_id=str(record["id"]), title=str(record["title"]), workflow=str(record["workflow"]),
+            language=str(record["language"]), aspect_ratio=str(record["aspect_ratio"]), fps=int(record["fps"]),
+            created_at=str(record["created_at"]), updated_at=str(record["updated_at"]),
+            last_opened_at=record["last_opened_at"], thumbnail_path=record["thumbnail_path"],
+            status=str(record["status"]), project_path=str(record["project_path"]), version=int(record["version"]),
         )
 
     @classmethod
     def from_metadata(cls, metadata: Mapping[str, Any], project_path: str | Path = "") -> "Project":
-        required = {
-            "version", "id", "title", "workflow", "language", "aspect_ratio",
-            "fps", "created_at", "updated_at",
-        }
+        required = {"version", "id", "title", "workflow", "language", "aspect_ratio", "fps", "created_at", "updated_at"}
         missing = required.difference(metadata)
         if missing:
             raise ValueError(f"Project metadata is missing required fields: {', '.join(sorted(missing))}")
         return cls(
-            project_id=str(metadata["id"]),
-            title=str(metadata["title"]),
-            workflow=str(metadata["workflow"]),
-            language=str(metadata["language"]),
-            aspect_ratio=str(metadata["aspect_ratio"]),
-            fps=int(metadata["fps"]),
-            created_at=str(metadata["created_at"]),
-            updated_at=str(metadata["updated_at"]),
-            last_opened_at=metadata.get("last_opened_at"),
-            thumbnail_path=metadata.get("thumbnail_path"),
-            status=str(metadata.get("status", ProjectStatus.DRAFT.value)),
-            project_path=str(project_path),
-            version=int(metadata["version"]),
+            project_id=str(metadata["id"]), title=str(metadata["title"]), workflow=str(metadata["workflow"]),
+            language=str(metadata["language"]), aspect_ratio=str(metadata["aspect_ratio"]), fps=int(metadata["fps"]),
+            created_at=str(metadata["created_at"]), updated_at=str(metadata["updated_at"]),
+            last_opened_at=metadata.get("last_opened_at"), thumbnail_path=metadata.get("thumbnail_path"),
+            status=str(metadata.get("status", ProjectStatus.DRAFT.value)), project_path=str(project_path), version=int(metadata["version"]),
         )
 
     def validate(self) -> None:

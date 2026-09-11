@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Any, Mapping
 from uuid import uuid4
 
+from domain.language import supported_language_codes
 from domain.project import utc_now_iso
 
 
@@ -51,8 +52,11 @@ class Transcript:
     def validate(self) -> None:
         if not self.transcript_id or not self.project_id or not self.media_id:
             raise ValueError("Transcript identity and ownership are required.")
-        if self.language_mode not in {"auto", "en", "km"}:
+        if self.language_mode != "auto" and self.language_mode not in supported_language_codes():
             raise ValueError("Unsupported transcript language mode.")
+        if self.detected_language and self.detected_language not in supported_language_codes(enabled_only=False):
+            # Whisper can detect a language not yet enabled by the application catalog.
+            self.metadata.setdefault("unregisteredDetectedLanguage", self.detected_language)
         if self.status_code not in {item.value for item in TranscriptStatus}:
             raise ValueError("Unsupported transcript status.")
         if self.duration_ms < 0:
@@ -101,9 +105,7 @@ class Transcript:
             model_version=str(record["model_version"] or ""),
             language_mode=str(record["language_mode"]),
             detected_language=str(record["detected_language"]) if record["detected_language"] else None,
-            language_probability=(
-                float(record["language_probability"]) if record["language_probability"] is not None else None
-            ),
+            language_probability=(float(record["language_probability"]) if record["language_probability"] is not None else None),
             device=str(record["device"]),
             compute_type=str(record["compute_type"]),
             duration_ms=int(record["duration_ms"] or 0),
@@ -111,9 +113,7 @@ class Transcript:
             updated_at=str(record["updated_at"]),
             status=str(record["status"]),
             source_fingerprint=str(record["source_fingerprint"] or ""),
-            settings=decode("settings_json"),
-            metadata=decode("metadata_json"),
-            active=bool(record["active"]),
+            settings=decode("settings_json"), metadata=decode("metadata_json"), active=bool(record["active"]),
         )
 
 
