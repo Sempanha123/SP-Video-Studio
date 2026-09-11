@@ -8,6 +8,8 @@ import "../components"
 Item {
     id: root
     property var controller
+    property var ttsController
+    property var playbackController
     property bool syncingText: false
     property string pendingDeleteId: ""
     property string pendingDeleteTitle: ""
@@ -208,6 +210,13 @@ Item {
                         analysis: root.controller ? root.controller.analysis : ({})
                         languageName: root.controller ? (root.controller.script.languageName || "English") : "English"
                         saveState: root.controller ? root.controller.saveState : "Saved"
+                    }
+                    TTSPanel {
+                        Layout.fillWidth: true
+                        controller: root.ttsController
+                        scriptController: root.controller
+                        playbackController: root.playbackController
+                        onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
                     }
                 }
             }

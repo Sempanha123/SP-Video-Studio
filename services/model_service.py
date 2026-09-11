@@ -218,6 +218,25 @@ class ModelService:
             return "repair-required"
         return "not-installed"
 
+    def acquire_model(self, model_id: str, *, loaded: bool = True) -> ModelInstallation:
+        self.registry.get(model_id)
+        current = self.repository.get(model_id) or ModelInstallation(model_id=model_id)
+        current.is_loaded = bool(loaded) or current.is_loaded
+        current.in_use_count = max(0, current.in_use_count) + 1
+        self.repository.upsert(current)
+        self._runtime[model_id] = current
+        return current
+
+    def release_model(self, model_id: str, *, unload: bool = False) -> ModelInstallation:
+        self.registry.get(model_id)
+        current = self.repository.get(model_id) or ModelInstallation(model_id=model_id)
+        current.in_use_count = max(0, current.in_use_count - 1)
+        if unload and current.in_use_count == 0:
+            current.is_loaded = False
+        self.repository.upsert(current)
+        self._runtime[model_id] = current
+        return current
+
     def total_storage_bytes(self) -> int:
         return sum(_directory_size(self.install_path(model)) for model in self.registry.list_all())
 

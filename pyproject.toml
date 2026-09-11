@@ -23,6 +23,10 @@ dev = [
 ai = [
   "faster-whisper>=1.1,<2",
 ]
+tts = [
+  "voxcpm>=2.0.3,<3",
+  "soundfile>=0.13,<1",
+]
 
 [project.scripts]
 sp-video-studio = "app.bootstrap:run"
@@ -31,6 +35,10 @@ sp-video-studio = "app.bootstrap:run"
 addopts = "-ra"
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+  "integration: opt-in integration tests that require external runtime dependencies",
+  "voxcpm: opt-in real VoxCPM2 model tests",
+]
 
 [tool.ruff]
 target-version = "py311"

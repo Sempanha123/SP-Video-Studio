@@ -23,6 +23,7 @@ from storage.repositories.project_repository import ProjectRepository
 if TYPE_CHECKING:
     from services.media_service import MediaService
     from services.script_service import ScriptService
+    from services.narration_service import NarrationService
 
 
 PROJECT_DIRS = (
@@ -88,6 +89,7 @@ class ProjectService:
         self._known_project_roots: set[Path] = {self.project_root.resolve()}
         self._media_service: MediaService | None = None
         self._script_service: ScriptService | None = None
+        self._narration_service: NarrationService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
                 self._known_project_roots.add(Path(existing.project_path).resolve().parent)
@@ -99,6 +101,9 @@ class ProjectService:
     def set_script_service(self, script_service: "ScriptService") -> None:
         """Attach script duplication integration while keeping the project service layered."""
         self._script_service = script_service
+
+    def set_narration_service(self, narration_service: "NarrationService") -> None:
+        self._narration_service = narration_service
 
     def set_project_root(self, project_root: Path) -> None:
         """Change the location used only for newly created projects."""
@@ -239,6 +244,8 @@ class ProjectService:
                 self._media_service.duplicate_project_media(source, duplicate)
             if self._script_service is not None:
                 self._script_service.duplicate_project_script(source.project_id, duplicate.project_id, duplicate.title)
+            if self._narration_service is not None:
+                self._narration_service.duplicate_project_audio(source.project_id, duplicate.project_id)
         except Exception as exc:
             try:
                 if self.repository.get_by_id(duplicate.project_id) is not None:

@@ -12,6 +12,8 @@ from media.probe import FFprobeService
 from media.thumbnails import ThumbnailService
 from engines.model_registry import ModelRegistry
 from engines.model_sources import HuggingFaceSource
+from engines.tts.manager import TTSEngineManager
+from engines.tts.voxcpm2_engine import VoxCPM2Engine
 from services.media_service import MediaService
 from services.model_compatibility_service import ModelCompatibilityService
 from services.model_download_service import ModelDownloadService
@@ -23,7 +25,11 @@ from services.script_service import ScriptService
 from services.project_service import ProjectService
 from services.settings_service import SettingsService
 from services.system_readiness_service import SystemReadinessService
+from services.tts_chunking_service import TTSChunkingService
+from services.tts_service import TTSService
+from services.narration_service import NarrationService
 from storage.database import SQLiteDatabase
+from storage.repositories.generated_audio_repository import GeneratedAudioRepository
 from storage.repositories.media_repository import MediaRepository
 from storage.repositories.model_repository import ModelRepository
 from storage.repositories.project_repository import ProjectRepository
@@ -51,6 +57,7 @@ def build_container() -> DependencyContainer:
     media_repository = MediaRepository(database)
     script_repository = ScriptRepository(database)
     model_repository = ModelRepository(database)
+    generated_audio_repository = GeneratedAudioRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -106,6 +113,23 @@ def build_container() -> DependencyContainer:
         logger=logger,
         model_status_provider=model_service.family_status,
     )
+
+    tts_manager = TTSEngineManager()
+    tts_manager.register(
+        "voxcpm2",
+        VoxCPM2Engine(model_service.install_path(model_registry.get("voxcpm2")), logger),
+    )
+    tts_service = TTSService(tts_manager, model_service, readiness_service, settings_service, logger)
+    tts_chunking_service = TTSChunkingService()
+    narration_service = NarrationService(
+        generated_audio_repository,
+        repository,
+        script_service,
+        tts_service,
+        tts_chunking_service,
+        logger,
+    )
+    project_service.set_narration_service(narration_service)
     worker_pool = WorkerPool(max_workers=2)
 
     container = DependencyContainer()
@@ -116,6 +140,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(MediaRepository, media_repository)
     container.register_instance(ScriptRepository, script_repository)
     container.register_instance(ModelRepository, model_repository)
+    container.register_instance(GeneratedAudioRepository, generated_audio_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -128,6 +153,10 @@ def build_container() -> DependencyContainer:
     container.register_instance(ModelDownloadService, model_download_service)
     container.register_instance(ModelCompatibilityService, model_compatibility_service)
     container.register_instance(ModelService, model_service)
+    container.register_instance(TTSEngineManager, tts_manager)
+    container.register_instance(TTSService, tts_service)
+    container.register_instance(TTSChunkingService, tts_chunking_service)
+    container.register_instance(NarrationService, narration_service)
     container.register_instance(SettingsRepository, settings_repository)
     container.register_instance(SettingsService, settings_service)
     container.register_instance(FFmpegLocator, ffmpeg_locator)
@@ -167,6 +196,7 @@ def run() -> int:
     from ui.controllers.readiness_controller import ReadinessController
     from ui.controllers.script_controller import ScriptController
     from ui.controllers.settings_controller import SettingsController
+    from ui.controllers.tts_controller import TTSController
 
     project_service = container.resolve(ProjectService)
     project_controller = ProjectController(project_service)
@@ -186,7 +216,6 @@ def run() -> int:
         container.resolve(ScriptAnalysisService),
         logger,
     )
-    project_controller.set_before_project_change(script_controller.flush)
     settings_controller = SettingsController(
         container.resolve(SettingsService),
         container.resolve(AppPaths),
@@ -206,8 +235,27 @@ def run() -> int:
         container.resolve(WorkerPool),
         logger,
     )
+    tts_controller = TTSController(
+        container.resolve(NarrationService),
+        container.resolve(TTSService),
+        container.resolve(WorkerPool),
+        logger,
+    )
+
+    def before_project_change() -> bool:
+        if not script_controller.flush():
+            return False
+        if tts_controller.busy:
+            tts_controller.cancel()
+            return False
+        return True
+
+    project_controller.set_before_project_change(before_project_change)
     settings_controller.readinessRelevantChanged.connect(readiness_controller.recheck)
     model_controller.modelStateChanged.connect(readiness_controller.recheck)
+    tts_controller.modelStateChanged.connect(model_controller.refresh)
+    tts_controller.generatedAudioAboutToRemove.connect(playback_controller.externalAudioRemoving)
+    tts_controller.modelStateChanged.connect(readiness_controller.recheck)
 
     container.register_instance(ProjectController, project_controller)
     container.register_instance(MediaController, media_controller)
@@ -216,6 +264,7 @@ def run() -> int:
     container.register_instance(SettingsController, settings_controller)
     container.register_instance(ReadinessController, readiness_controller)
     container.register_instance(ModelController, model_controller)
+    container.register_instance(TTSController, tts_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
@@ -225,6 +274,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("settingsController", settings_controller)
     engine.rootContext().setContextProperty("readinessController", readiness_controller)
     engine.rootContext().setContextProperty("modelController", model_controller)
+    engine.rootContext().setContextProperty("ttsController", tts_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():
@@ -236,6 +286,8 @@ def run() -> int:
         QTimer.singleShot(0, readiness_controller.recheck)
 
     app.aboutToQuit.connect(script_controller.flush)
+    app.aboutToQuit.connect(tts_controller.cancel)
+    app.aboutToQuit.connect(container.resolve(TTSService).unload)
     app.aboutToQuit.connect(lambda: model_controller.cancelDownload(model_controller.activeModelId) if model_controller.activeModelId else None)
     app.aboutToQuit.connect(playback_controller.clear)
     app.aboutToQuit.connect(container.resolve(WorkerPool).shutdown)

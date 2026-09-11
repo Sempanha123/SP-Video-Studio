@@ -64,6 +64,8 @@ Item {
             mediaController.setCurrentProject(root.current().id || "")
         if (typeof playbackController !== "undefined")
             playbackController.setCurrentProject(root.current().id || "")
+        if (typeof ttsController !== "undefined")
+            ttsController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
@@ -80,6 +82,8 @@ Item {
                 mediaController.setCurrentProject(root.current().id || "")
             if (typeof playbackController !== "undefined")
                 playbackController.setCurrentProject(root.current().id || "")
+            if (typeof ttsController !== "undefined")
+                ttsController.setCurrentProject(root.current().id || "")
             if (root.workspaceMode === "script" && typeof scriptController !== "undefined")
                 scriptController.load(root.current().id || "")
         }
@@ -378,6 +382,8 @@ Item {
             Layout.fillHeight: true
             visible: root.workspaceMode === "script"
             controller: typeof scriptController !== "undefined" ? scriptController : null
+            ttsController: typeof ttsController !== "undefined" ? ttsController : null
+            playbackController: typeof playbackController !== "undefined" ? playbackController : null
             onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
         }
     }

@@ -4,7 +4,7 @@ SP Video Studio is a native Windows desktop video-creation application built wit
 
 ## Current milestone
 
-Phase 0 foundation + Phase 1 application shell + Phase 2 persistent projects + Phase 3 settings/readiness + Phase 4 media library + **Phase 5 native media preview/playback**.
+Phase 0 foundation through Phase 7 local model management + **Phase 8 VoxCPM2 narration engine**.
 
 Implemented now:
 
@@ -25,8 +25,14 @@ Implemented now:
 - Play/pause/replay, seek/scrub, volume/mute, playback time, and keyboard shortcuts
 - Runtime preview-error handling without marking valid imported media invalid
 - Playback cleanup on media removal, media switching, project switching, and app shutdown
+- Persistent section-based script editor with English/Khmer narration estimates
+- Local AI Model Manager for VoxCPM2 and faster-whisper variants
+- Lazy official VoxCPM2 TTS adapter with CPU/CUDA device policy
+- English/Khmer narration pipeline with voice design and authorized reference-voice support
+- Full-script and per-section narration generation with chunking, progress, cancellation and WAV validation
+- Project-owned generated narration with freshness hashes, safe deletion, duplication and shared audio preview
 
-Not implemented yet: timeline editing, AI inference, VoxCPM2 inference, Whisper transcription, translation, subtitles, News/Story generation, final rendering/export, model downloads, or batch processing.
+Not implemented yet: full Voice Studio UX, Whisper transcription, translation, subtitles, scenes, timeline editing, News/Story generation, final rendering/export, or batch processing.
 
 ## Requirements
 
@@ -47,6 +53,14 @@ py -3.14 -m venv .venv
 python -m pip install --upgrade pip
 pip install -e ".[dev]"
 ```
+
+For local VoxCPM2 narration, install the optional official TTS runtime:
+
+```powershell
+pip install -e ".[tts]"
+```
+
+The desktop application itself remains Python 3.11–3.14 compatible and starts normally when TTS dependencies are absent. VoxCPM/PyTorch are imported lazily only when narration is loaded/generated; actual wheel/runtime availability still depends on the upstream packages for the selected Python/OS/GPU environment.
 
 ## Run
 
@@ -415,3 +429,48 @@ Compatibility is guidance, not an inference engine. The Model Manager compares m
 Home and Settings update after install, verify, repair, or removal without requiring an application restart. Settings → Storage also shows measured managed model storage.
 
 Phase 7 does **not** load VoxCPM2, run faster-whisper, synthesize speech, transcribe media, clone voices, translate, create subtitles, or render video.
+
+
+## VoxCPM2 narration engine
+
+Phase 8 integrates the official OpenBMB VoxCPM2 Python API behind `VoxCPM2Engine`. The adapter targets the current `voxcpm` 2.0.3 API and managed model identifier `openbmb/VoxCPM2`. Heavy `voxcpm`, PyTorch and audio dependencies are never imported during normal app startup.
+
+The application loads the Phase 7 managed model directory with local-files-only behavior, so a verified installation does not silently trigger a second model download. `TTSEngineManager` owns one reusable engine instance; `TTSService` coordinates Model Manager in-use state, device selection, load/unload and error mapping. CPU and CUDA are explicit choices, while Auto uses current System Readiness and the performance profile.
+
+Supported Phase 8 request modes are:
+
+- **Default** — normal text-to-speech
+- **Designed** — passes an official VoxCPM control instruction using the current `(control)text` format
+- **Reference** — uses a user-authorized reference recording copied into project-managed `audio/references/` before use
+- **Continuation** — represented in the engine request model for prompt-audio + prompt-text workflows; the compact Phase 8 UI intentionally keeps this advanced mode out of the normal panel
+
+CFG, inference steps and optional seed are centralized in the adapter. The UI exposes only a small Advanced section; Phase 9 will build the full Voice Studio. Reference-voice use requires explicit permission confirmation and the application does not include public-figure presets.
+
+### Narration pipeline
+
+Enabled script sections are chunked on paragraph/sentence boundaries (including Khmer `។` punctuation) rather than naïve character slicing. Jobs run through the existing worker pool and expose preparing, model-loading, chunk generation, combining, validating and completion states. Cancellation is immediate between chunks; if upstream inference is already inside one model call, stopping completes at the next safe boundary.
+
+Final narration is stored as lossless WAV under:
+
+```text
+project/audio/narration/<generated-audio-id>.wav
+```
+
+Temporary chunks live under `project/cache/tts/` and are removed after success/failure/cancellation. Chunk concatenation stays in the WAV domain and adds small centralized pauses between chunks/sections. Output is validated before a `generated_audio` database row is marked complete. Schema version 5 adds this table; audio bytes are never stored in SQLite.
+
+Generated narration records preserve engine/model metadata, language, voice configuration, seed/settings, duration/sample rate/channels and a SHA-256 text hash. The hash uses enabled ordered text + language rather than database IDs, so duplicated projects can keep copied narration current while later script edits correctly show **Needs Update**. Regeneration creates a new WAV/record first, so a failed take never destroys the previous working narration.
+
+Project duplication copies generated WAV files to independent new IDs and remaps project-local reference paths. Project deletion removes project-owned generated audio with the project; external source/reference originals are never deleted. Generated narration preview reuses the Phase 5 playback controller instead of creating a separate audio player.
+
+### Testing real VoxCPM2
+
+The standard suite uses `FakeTTSEngine` and never loads the 2B model. A real opt-in integration test is provided:
+
+```powershell
+$env:SPVS_RUN_VOXCPM_INTEGRATION="1"
+$env:SPVS_VOXCPM_MODEL_PATH="C:\path\to\managed\voxcpm2"
+$env:SPVS_VOXCPM_DEVICE="cuda"   # or cpu/auto
+pytest -m voxcpm tests/test_voxcpm_integration.py
+```
+
+A successful file-generation integration test is not a substitute for listening checks. English/Khmer voice quality and reference/design behavior should be listened to on the target machine before release.

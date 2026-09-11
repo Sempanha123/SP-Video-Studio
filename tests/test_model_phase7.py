@@ -98,7 +98,7 @@ def test_registry_loads_official_phase7_entries_and_unique_ids():
 def test_model_installation_serialization_and_repository(tmp_path: Path):
     db = SQLiteDatabase(tmp_path / "app.db")
     db.initialize()
-    assert db.current_version() == 4
+    assert db.current_version() == 5
     repo = ModelRepository(db)
     item = ModelInstallation(
         model_id="demo",
@@ -222,7 +222,7 @@ def test_cuda_model_compatibility_variants():
     ready = compat.assess(model, SystemReadiness(ram_total=32 * 1024**3, cuda_status="available", gpu_memory_total=12 * 1024**3))
     assert ready.status == ModelCompatibility.COMPATIBLE
     cpu_only = compat.assess(model, SystemReadiness(ram_total=32 * 1024**3, cuda_status="unavailable"))
-    assert cpu_only.status == ModelCompatibility.NOT_RECOMMENDED
+    assert cpu_only.status == ModelCompatibility.COMPATIBLE_WITH_WARNING
 
 
 def test_safe_model_deletion_guard_and_remove_does_not_touch_project(tmp_path: Path):

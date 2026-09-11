@@ -180,6 +180,30 @@ class PlaybackController(QObject):
             self.operationFailed.emit(self._friendly_error(exc))
             return False
 
+
+    @Slot(str, str, int, result=bool)
+    def setExternalAudio(self, path: str, name: str = "Generated narration", duration_ms: int = 0) -> bool:
+        candidate = Path(path)
+        if not candidate.is_file():
+            self.operationFailed.emit("Generated audio could not be found.")
+            return False
+        self.releaseRequested.emit()
+        selection = PlaybackSelection(
+            media_id=f"generated:{candidate.name}", project_id=self._project_id, media_type="audio",
+            name=name or candidate.name, path=str(candidate), duration_ms=max(0, int(duration_ms)),
+        )
+        self.playback.select(selection)
+        self._source_url = self.local_path_to_url(candidate)
+        self._selected = {"id": selection.media_id, "name": selection.name, "type": "audio", "sourceUrl": self._source_url, "projectPath": str(candidate), "duration": format_duration(duration_ms), "durationMs": duration_ms, "resolution": "", "fps": "", "sampleRate": "", "channels": "", "status": "ready"}
+        self.selectedMediaChanged.emit(); self.errorChanged.emit(); self.playbackChanged.emit()
+        return True
+
+    @Slot(str)
+    def externalAudioRemoving(self, path: str) -> None:
+        selected_path = str(self._selected.get("projectPath", "")) if self._selected else ""
+        if selected_path and Path(selected_path).resolve() == Path(path).resolve():
+            self.clear()
+
     @Slot()
     def play(self) -> None:
         allowed, restart = self.playback.request_play()

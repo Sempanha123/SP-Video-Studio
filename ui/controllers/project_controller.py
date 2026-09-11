@@ -80,7 +80,7 @@ class ProjectController(QObject):
             return True
         if self._before_project_change():
             return True
-        self.operationFailed.emit("Current script changes could not be saved, so the project was not switched.")
+        self.operationFailed.emit("Current project work could not be safely closed yet. Please try again when it finishes.")
         return False
 
     @Property("QVariantList", notify=projectsChanged)
