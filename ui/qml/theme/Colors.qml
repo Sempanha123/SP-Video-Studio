@@ -1,0 +1,36 @@
+import QtQuick 2.15
+QtObject {
+    property bool darkMode: false
+
+    readonly property color background: darkMode ? "#15171C" : "#F6F7F9"
+    readonly property color surface: darkMode ? "#1C1F26" : "#FFFFFF"
+    readonly property color surfaceRaised: darkMode ? "#23262E" : "#FFFFFF"
+    readonly property color surfaceHover: darkMode ? "#272B34" : "#F1F3F6"
+    readonly property color surfacePressed: darkMode ? "#2D313B" : "#E9ECF1"
+    readonly property color sidebar: darkMode ? "#181B20" : "#FBFBFC"
+    readonly property color border: darkMode ? "#2B3039" : "#E3E6EB"
+    readonly property color borderStrong: darkMode ? "#3A404B" : "#CFD4DC"
+    readonly property color textPrimary: darkMode ? "#F2F4F7" : "#1B1F27"
+    readonly property color textSecondary: darkMode ? "#B7BEC9" : "#596171"
+    readonly property color textMuted: darkMode ? "#858E9D" : "#858D9C"
+    readonly property color accent: darkMode ? "#849BE8" : "#667DCC"
+    readonly property color accentHover: darkMode ? "#91A6ED" : "#5B72C2"
+    readonly property color accentPressed: darkMode ? "#748BD8" : "#5066B2"
+    readonly property color accentSoft: darkMode ? "#29324E" : "#EDF0FB"
+    readonly property color focus: darkMode ? "#9DAEF0" : "#657DCD"
+    readonly property color success: darkMode ? "#69B995" : "#3A8B67"
+    readonly property color successSoft: darkMode ? "#203A31" : "#EAF6F0"
+    readonly property color warning: darkMode ? "#D2AA66" : "#A87425"
+    readonly property color warningSoft: darkMode ? "#3E3320" : "#FBF3E5"
+    readonly property color danger: darkMode ? "#DF8187" : "#B94F58"
+    readonly property color dangerSoft: darkMode ? "#44292C" : "#FBECEE"
+    readonly property color info: darkMode ? "#78A8D8" : "#4F7FAE"
+    readonly property color infoSoft: darkMode ? "#233648" : "#EAF2F8"
+
+    readonly property color news: darkMode ? "#DA7A83" : "#B95A65"
+    readonly property color story: darkMode ? "#A88DE0" : "#8266B7"
+    readonly property color translate: darkMode ? "#70B2A4" : "#4B8F82"
+    readonly property color video: darkMode ? "#7E9CD4" : "#5877AE"
+    readonly property color shorts: darkMode ? "#D8A06A" : "#B47A42"
+    readonly property color batch: darkMode ? "#8AAA79" : "#668B56"
+}

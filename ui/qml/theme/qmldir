@@ -1,0 +1,7 @@
+module SPVideoStudio.Theme
+singleton Theme 1.0 Theme.qml
+Colors 1.0 Colors.qml
+Typography 1.0 Typography.qml
+Spacing 1.0 Spacing.qml
+Radius 1.0 Radius.qml
+AnimationTokens 1.0 AnimationTokens.qml

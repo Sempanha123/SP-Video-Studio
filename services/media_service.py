@@ -1,0 +1,2 @@
+class MediaService:
+    pass

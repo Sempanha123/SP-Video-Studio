@@ -1,0 +1,5 @@
+APP_NAME = "SP Video Studio"
+APP_DATA_DIR_NAME = "MMOVideoStudio"
+APP_VERSION = "0.1.0"
+ORGANIZATION_NAME = "SP Video Studio"
+DEFAULT_LOG_FILE = "sp-video-studio.log"
