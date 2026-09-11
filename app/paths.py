@@ -55,6 +55,10 @@ class AppPaths:
         return self.root / "assets"
 
     @property
+    def recovery(self) -> Path:
+        return self.root / "recovery"
+
+    @property
     def database(self) -> Path:
         return self.data / "app.db"
 
@@ -75,6 +79,7 @@ class AppPaths:
             self.voices,
             self.templates,
             self.assets,
+            self.recovery,
             self.data,
         ):
             directory.mkdir(parents=True, exist_ok=True)
