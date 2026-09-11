@@ -41,6 +41,10 @@ from services.subtitle_preview_service import SubtitlePreviewService
 from services.subtitle_service import SubtitleService
 from services.subtitle_timing_service import SubtitleTimingService
 from services.subtitle_validation_service import SubtitleValidationService
+from services.scene_generation_service import SceneGenerationService
+from services.scene_preview_service import ScenePreviewService
+from services.scene_service import SceneService
+from services.scene_validation_service import SceneValidationService
 from services.tts_chunking_service import TTSChunkingService
 from services.tts_service import TTSService
 from services.narration_service import NarrationService
@@ -55,6 +59,7 @@ from storage.repositories.settings_repository import SettingsRepository
 from storage.repositories.transcript_repository import TranscriptRepository
 from storage.repositories.translation_repository import TranslationRepository
 from storage.repositories.subtitle_repository import SubtitleRepository
+from storage.repositories.scene_repository import SceneRepository
 from storage.repositories.voice_repository import VoiceRepository
 from workers.worker_pool import WorkerPool
 
@@ -83,6 +88,7 @@ def build_container() -> DependencyContainer:
     transcript_repository = TranscriptRepository(database)
     translation_repository = TranslationRepository(database)
     subtitle_repository = SubtitleRepository(database)
+    scene_repository = SceneRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -206,6 +212,14 @@ def build_container() -> DependencyContainer:
         subtitle_generation_service, subtitle_preset_service, subtitle_validation_service, subtitle_timing_service, logger,
     )
     project_service.set_subtitle_service(subtitle_service)
+    scene_generation_service = SceneGenerationService(script_analysis_service, generated_audio_repository)
+    scene_validation_service = SceneValidationService(media_repository, generated_audio_repository, subtitle_repository)
+    scene_preview_service = ScenePreviewService()
+    scene_service = SceneService(
+        scene_repository, repository, media_repository, generated_audio_repository, subtitle_repository,
+        script_service, transcript_repository, scene_generation_service, scene_validation_service, scene_preview_service, logger,
+    )
+    project_service.set_scene_service(scene_service)
     worker_pool = WorkerPool(max_workers=2)
 
     container = DependencyContainer()
@@ -221,6 +235,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(TranscriptRepository, transcript_repository)
     container.register_instance(TranslationRepository, translation_repository)
     container.register_instance(SubtitleRepository, subtitle_repository)
+    container.register_instance(SceneRepository, scene_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -252,6 +267,10 @@ def build_container() -> DependencyContainer:
     container.register_instance(SubtitleTimingService, subtitle_timing_service)
     container.register_instance(SubtitlePreviewService, subtitle_preview_service)
     container.register_instance(SubtitleService, subtitle_service)
+    container.register_instance(SceneGenerationService, scene_generation_service)
+    container.register_instance(SceneValidationService, scene_validation_service)
+    container.register_instance(ScenePreviewService, scene_preview_service)
+    container.register_instance(SceneService, scene_service)
     container.register_instance(AIResourceManager, ai_resource_manager)
     container.register_instance(VoiceRegistry, voice_registry)
     container.register_instance(VoiceService, voice_service)
@@ -298,6 +317,7 @@ def run() -> int:
     from ui.controllers.transcription_controller import TranscriptionController
     from ui.controllers.translation_controller import TranslationController
     from ui.controllers.subtitle_controller import SubtitleController
+    from ui.controllers.scene_controller import SceneController
     from ui.controllers.voice_controller import VoiceController
 
     project_service = container.resolve(ProjectService)
@@ -367,6 +387,13 @@ def run() -> int:
         container.resolve(WorkerPool),
         logger,
     )
+    scene_controller = SceneController(
+        container.resolve(SceneService),
+        container.resolve(MediaService),
+        container.resolve(NarrationService),
+        container.resolve(SubtitleService),
+        logger,
+    )
 
     def before_project_change() -> bool:
         if not script_controller.flush():
@@ -407,6 +434,9 @@ def run() -> int:
     project_controller.currentProjectChanged.connect(
         lambda: subtitle_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
     )
+    project_controller.currentProjectChanged.connect(
+        lambda: scene_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
+    )
     transcription_controller.playbackRequested.connect(
         lambda media_id, start_ms, autoplay: (
             playback_controller.setMedia(media_id),
@@ -428,6 +458,19 @@ def run() -> int:
             playback_controller.play() if autoplay else None,
         )
     )
+    scene_controller.playbackRequested.connect(
+        lambda media_id, start_ms, autoplay: (
+            playback_controller.setMedia(media_id),
+            playback_controller.seek(start_ms),
+            playback_controller.play() if autoplay else None,
+        )
+    )
+    scene_controller.audioPlaybackRequested.connect(
+        lambda path, name, duration_ms: (
+            playback_controller.setExternalAudio(path, name, duration_ms),
+            playback_controller.play(),
+        )
+    )
     playback_controller.playbackChanged.connect(lambda: subtitle_controller.setPlayhead(playback_controller.position))
     project_controller.currentProjectChanged.connect(lambda: voice_controller.setCurrentProject(str(project_controller.currentProject.get("id", ""))))
     script_controller.selectedSectionChanged.connect(lambda: voice_controller.setCurrentSection(str(script_controller.selectedSection.get("id", ""))))
@@ -444,6 +487,7 @@ def run() -> int:
     container.register_instance(TranscriptionController, transcription_controller)
     container.register_instance(TranslationController, translation_controller)
     container.register_instance(SubtitleController, subtitle_controller)
+    container.register_instance(SceneController, scene_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
@@ -458,6 +502,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("transcriptionController", transcription_controller)
     engine.rootContext().setContextProperty("translationController", translation_controller)
     engine.rootContext().setContextProperty("subtitleController", subtitle_controller)
+    engine.rootContext().setContextProperty("sceneController", scene_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():

@@ -221,7 +221,11 @@ class SubtitleService:
         return {"added":added,"changed":changed,"removed":removed}
 
     def duplicate_project_subtitles(self,source_project_id:str,target_project_id:str,*,transcript_map:dict[str,str]|None=None,translation_map:dict[str,str]|None=None,transcript_segment_map:dict[str,str]|None=None,translation_segment_map:dict[str,str]|None=None)->int:
-        transcript_map=transcript_map or {}; translation_map=translation_map or {}; transcript_segment_map=transcript_segment_map or {}; translation_segment_map=translation_segment_map or {}; count=0
+        count, _ = self.duplicate_project_subtitles_with_map(source_project_id,target_project_id,transcript_map=transcript_map,translation_map=translation_map,transcript_segment_map=transcript_segment_map,translation_segment_map=translation_segment_map)
+        return count
+
+    def duplicate_project_subtitles_with_map(self,source_project_id:str,target_project_id:str,*,transcript_map:dict[str,str]|None=None,translation_map:dict[str,str]|None=None,transcript_segment_map:dict[str,str]|None=None,translation_segment_map:dict[str,str]|None=None)->tuple[int,dict[str,str]]:
+        transcript_map=transcript_map or {}; translation_map=translation_map or {}; transcript_segment_map=transcript_segment_map or {}; translation_segment_map=translation_segment_map or {}; count=0; track_map={}
         for track in self.repository.list_for_project(source_project_id):
             style=self.repository.style(track.style_id)
             if style is None: continue
@@ -243,8 +247,8 @@ class SubtitleService:
                     source_seg=(transcript_segment_map if track.is_bilingual else translation_segment_map).get(source_seg, "")
                 cq=SubtitleCue(track_id=clone.track_id,order=cue.order,start_ms=cue.start_ms,end_ms=cue.end_ms,text=cue.text,secondary_text=cue.secondary_text,position=cue.position,alignment=cue.alignment,style_override=dict(cue.style_override),edited=cue.edited,locked=cue.locked,source_segment_id=source_seg,source_hash=cue.source_hash,metadata=dict(cue.metadata))
                 cq.words=[SubtitleWord(cue_id=cq.cue_id,order=w.order,text=w.text,start_ms=w.start_ms,end_ms=w.end_ms,probability=w.probability,highlight_group=w.highlight_group,metadata=dict(w.metadata)) for w in cue.words]; cloned.append(cq)
-            self.repository.create_track(clone,new_style,cloned); count+=1
-        return count
+            self.repository.create_track(clone,new_style,cloned); count+=1; track_map[track.id]=clone.id
+        return count, track_map
 
     def _source_units(self,track:SubtitleTrack)->list[tuple[str,str,int,int,str]]:
         if track.source_type=='transcript':

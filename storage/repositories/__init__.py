@@ -17,3 +17,5 @@ from .transcript_repository import TranscriptRepository
 from storage.repositories.translation_repository import TranslationRepository
 
 from .subtitle_repository import SubtitleRepository
+
+from .scene_repository import SceneRepository

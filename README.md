@@ -4,7 +4,7 @@ SP Video Studio is a native Windows desktop video-creation application built wit
 
 ## Current milestone
 
-Phase 0 foundation through Phase 11 translation + **Phase 12 professional subtitle engine and Subtitle Studio**.
+Phase 0 foundation through Phase 12 subtitles + **Phase 13 reusable Scene Engine and storyboard editor**.
 
 Implemented now:
 
@@ -674,4 +674,56 @@ SRT and VTT imports preserve multiline Unicode text/timing. Basic ASS event impo
 
 English and Khmer export/import are UTF-8. During Phase 12 validation, FFmpeg 7.1.5 + libass successfully rendered a short Khmer ASS preview using the installed **Noto Sans Khmer** font with visible Khmer glyphs and no missing-box rendering in the inspected frame.
 
-Phase 12 does **not** add scenes, a timeline, dubbing, final production video rendering, News/Story workflows, or batch generation. The next phase is **Phase 13 — Scene Engine and Scene Editor**.
+Phase 12 did not include scenes or rendering; Phase 13 now adds the reusable scene/storyboard layer while final rendering and the advanced timeline remain future work.
+
+
+## Scene engine and storyboard editor
+
+Phase 13 introduces one generic scene architecture shared by future normal-video, Shorts, Story, News, documentary, translation and other workflows. Scenes are project-owned editable composition records; workflow-specific automation can add metadata later instead of creating separate scene models.
+
+SQLite schema version **10** adds:
+
+```text
+scenes
+scene_layers
+scene_overlays
+```
+
+A `Scene` has a stable ID, deterministic zero-based order, explicit millisecond duration, enabled state, optional visual/narration/subtitle references, optional script/transcript/translation source relationships, media source range, fit mode, background, audio preferences, transitions and metadata. `SceneLayer` and `SceneOverlay` use normalized 0.0–1.0 geometry so future rendering is independent from the desktop preview size. Overlay records support text/headline, lower-third, label and logo foundations without introducing keyframe animation or a full compositing timeline.
+
+### Scene creation and source relationships
+
+The storyboard can create empty scenes manually, create one scene for each enabled script section, or group a transcript into practical time ranges. Script-created scenes preserve the source section ID and SHA-256 source hash, use narration-duration estimates, and attach the latest completed section narration when available. Transcript-created scenes reuse the project-managed source video and preserve source start/end ranges; they do not create new trimmed files.
+
+Source relationships never make a scene a live mirror. If a script section changes, the scene is marked **Source Changed** while its media, overlays, duration edits and other composition work remain untouched. Deleted script sources become **Source Missing** and the scene remains editable. Explicit **Sync Script** / **Sync Scene from Script** actions update relationship metadata without silently resetting visuals or overlays.
+
+### Storyboard editing
+
+The project workspace now includes **Scenes** with a lightweight storyboard + visual preview + inspector. Users can add, move, duplicate, delete, enable/disable and rename scenes; assign project images/videos; choose Fill/Fit/Stretch; configure a simple video source range; enable a solid background; select generated narration and project subtitle tracks; configure source/narration audio preferences; and choose Cut/Fade/Crossfade/Slide transition metadata.
+
+Scene cards use existing media thumbnails and never instantiate their own media player. **Play Scene** routes through the existing Phase 5 `PlaybackController`; generated narration preview also reuses the shared external-audio playback path. The QML composition preview draws images/thumbnails and normalized overlays interactively, while actual video playback remains in the shared player. This is a preview approximation, not final mix/render accuracy.
+
+### Overlays and Khmer text
+
+Scenes support basic Headline, Lower Third and Logo overlays. Text and positions are stored as Unicode/domain data rather than QML pixel state. English, Khmer and mixed text persist directly through SQLite/JSON serialization. Logo assets reference project media and keep PNG/WebP alpha for the QML preview. Overlay opacity is clamped and geometry is normalized; validation warns when important overlay bounds move outside the recommended safe region.
+
+### Duration, validation and render preparation
+
+Scene duration is always explicit. New scenes default to five seconds. Script-created scenes use estimated narration duration unless a completed section narration supplies a real duration. Users may explicitly **Match Scene Duration to Narration**; the system never silently truncates narration or changes a user-edited duration.
+
+`SceneValidationService` reports missing visual/narration/subtitle assets, invalid video ranges, video-shorter-than-scene warnings, invalid overlay timing/bounds and excessive transition duration. Disabled scenes remain stored but are excluded from total enabled duration and future render sequences.
+
+`ScenePreviewService` produces renderer-neutral data through:
+
+```text
+build_scene_render_spec(scene_id)
+build_project_scene_sequence()
+```
+
+The project sequence contains enabled scenes in stable order with cumulative `startMs`/`endMs` positions. Phase 13 uses a documented **sequential, no-overlap preview timeline**. Crossfade overlap semantics are preserved as transition metadata for the future renderer rather than pretending final render math is already implemented.
+
+### Project lifecycle
+
+Project duplication creates new scene/layer/overlay IDs and remaps all project-owned relationships to the duplicate: media IDs, generated-audio IDs, script-section IDs, transcript/translation segment IDs and subtitle-track IDs. Logo/layer media references are remapped as well. No writable scene child row is shared between projects. Scene deletion removes only scene-owned rows; it never deletes project media, generated narration or subtitle tracks. Project deletion removes scene data through the normal project cascade.
+
+Phase 13 intentionally does **not** implement AI scene generation, AI Director, the advanced timeline, final FFmpeg rendering, automated News/Story workflows, keyframe motion graphics or batch rendering. The recommended next phase is **Phase 14 — AI Director Foundation**.

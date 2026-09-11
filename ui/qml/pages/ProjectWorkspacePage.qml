@@ -46,6 +46,8 @@ Item {
             translationController.setCurrentProject(root.current().id || "")
         if (mode === "subtitles" && typeof subtitleController !== "undefined")
             subtitleController.setCurrentProject(root.current().id || "")
+        if (mode === "scenes" && typeof sceneController !== "undefined")
+            sceneController.setCurrentProject(root.current().id || "")
         root.workspaceMode = mode
     }
 
@@ -87,6 +89,8 @@ Item {
             translationController.setCurrentProject(root.current().id || "")
         if (typeof subtitleController !== "undefined")
             subtitleController.setCurrentProject(root.current().id || "")
+        if (typeof sceneController !== "undefined")
+            sceneController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
@@ -114,6 +118,8 @@ Item {
                 translationController.setCurrentProject(root.current().id || "")
             if (typeof subtitleController !== "undefined")
                 subtitleController.setCurrentProject(root.current().id || "")
+            if (typeof sceneController !== "undefined")
+                sceneController.setCurrentProject(root.current().id || "")
             if (root.workspaceMode === "script" && typeof scriptController !== "undefined")
                 scriptController.load(root.current().id || "")
         }
@@ -157,6 +163,7 @@ Item {
             AppButton { text: "Transcription"; compact: true; variant: root.workspaceMode === "transcription" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("transcription") }
             AppButton { text: "Translation"; compact: true; variant: root.workspaceMode === "translation" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("translation") }
             AppButton { text: "Subtitles"; compact: true; variant: root.workspaceMode === "subtitles" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("subtitles") }
+            AppButton { text: "Scenes"; compact: true; variant: root.workspaceMode === "scenes" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("scenes") }
         }
 
         SplitView {
@@ -502,6 +509,16 @@ Item {
                     aspectRatio: root.current().aspectRatio || "16:9"
                 }
             }
+        }
+
+        SceneEditor {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.workspaceMode === "scenes"
+            controller: typeof sceneController !== "undefined" ? sceneController : null
+            playbackController: typeof playbackController !== "undefined" ? playbackController : null
+            aspectRatio: root.current().aspectRatio || "16:9"
+            onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
         }
 
         ScriptEditor {

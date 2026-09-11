@@ -9,7 +9,7 @@ def test_database_initialization_applies_migrations(tmp_path: Path):
     db = SQLiteDatabase(tmp_path / "data" / "app.db")
     db.initialize()
     assert db.path.is_file()
-    assert db.current_version() == 9
+    assert db.current_version() == 10
 
     with db.connect() as connection:
         tables = {
@@ -33,7 +33,7 @@ def test_database_initialization_is_idempotent(tmp_path: Path):
     db.initialize()
     with db.connect() as connection:
         rows = connection.execute("SELECT version FROM schema_migrations").fetchall()
-    assert [row["version"] for row in rows] == [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    assert [row["version"] for row in rows] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
 
 def test_failed_migration_rolls_back_schema_changes(tmp_path: Path, monkeypatch):

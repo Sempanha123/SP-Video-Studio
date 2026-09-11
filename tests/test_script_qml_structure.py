@@ -21,13 +21,15 @@ def test_script_editor_qml_has_required_manual_workflow():
     assert "Generate Hook" not in qml + toolbar
 
 
-def test_workspace_exposes_only_media_and_script_as_functional_modules():
+def test_workspace_exposes_completed_functional_modules():
     qml = Path("ui/qml/pages/ProjectWorkspacePage.qml").read_text(encoding="utf-8")
     assert 'text: "Media"' in qml
     assert 'text: "Script"' in qml
     assert "ScriptEditor" in qml
     assert "scriptController.flush()" in qml
-    for unfinished in ('text: "Voice"', 'text: "Scenes"', 'text: "Timeline"'):
+    assert 'text: "Scenes"' in qml
+    assert 'SceneEditor' in qml
+    for unfinished in ('text: "Voice"', 'text: "Timeline"'):
         assert unfinished not in qml
 
 

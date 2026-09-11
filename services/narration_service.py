@@ -185,7 +185,7 @@ class NarrationService:
         self.repository.delete(project_id, generated_audio_id)
         target.unlink(missing_ok=True)
 
-    def duplicate_project_audio(self, source_project_id: str, duplicate_project_id: str) -> None:
+    def duplicate_project_audio(self, source_project_id: str, duplicate_project_id: str) -> dict[str, str]:
         source_project = self._project(source_project_id)
         duplicate_project = self._project(duplicate_project_id)
         source_script, source_sections = self.script_service.load_or_create(source_project_id)
@@ -206,6 +206,7 @@ class NarrationService:
         duplicate_narration = duplicate_root / "audio" / "narration"
         shutil.rmtree(duplicate_narration, ignore_errors=True)
         duplicate_narration.mkdir(parents=True, exist_ok=True)
+        id_map: dict[str, str] = {}
         for item in self.repository.list_for_project(source_project_id):
             source_path = Path(item.file_path).resolve()
             if not source_path.is_file() or not _is_within(source_path, source_root):
@@ -246,6 +247,8 @@ class NarrationService:
                 metadata=dict(item.metadata),
             )
             self.repository.create(copy)
+            id_map[item.id] = new_id
+        return id_map
 
     def _generate(
         self,

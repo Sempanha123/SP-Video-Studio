@@ -13,6 +13,7 @@ from .m006_create_voice_studio import migrate as create_voice_studio
 from .m007_create_transcripts import migrate as create_transcripts
 from .m008_create_translations import migrate as create_translations
 from .m009_create_subtitles import migrate as create_subtitles
+from .m010_create_scenes import migrate as create_scenes
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,4 +33,5 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(7, "create_transcripts", create_transcripts),
     Migration(8, "create_translations", create_translations),
     Migration(9, "create_subtitles", create_subtitles),
+    Migration(10, "create_scenes", create_scenes),
 )
