@@ -46,6 +46,23 @@ class AssetRepository:
     def list_all(self)->list[Asset]:
         with self.database.connect() as c:rows=c.execute("SELECT * FROM assets ORDER BY created_at DESC").fetchall()
         return [Asset.from_record(x) for x in rows]
+    def list_with_metadata(self)->list[dict[str,Any]]:
+        """Bulk Asset Library read used by large virtualized views.
+
+        Phase 25 originally loaded tags/collections/usage one asset at a time.
+        This keeps the same domain objects while collapsing the N+1 pattern to
+        four SQLite queries regardless of library size.
+        """
+        with self.database.connect() as c:
+            assets=c.execute("SELECT * FROM assets ORDER BY created_at DESC").fetchall()
+            tag_rows=c.execute("SELECT i.asset_id,t.name FROM asset_tag_items i JOIN asset_tags t ON t.id=i.tag_id ORDER BY t.name COLLATE NOCASE").fetchall()
+            collection_rows=c.execute("SELECT i.asset_id,c.id,c.name FROM asset_collection_items i JOIN asset_collections c ON c.id=i.collection_id ORDER BY c.name COLLATE NOCASE").fetchall()
+            usage_rows=c.execute("SELECT asset_id,COUNT(DISTINCT project_id) n FROM asset_usage GROUP BY asset_id").fetchall()
+        tags:dict[str,list[str]]={};collections:dict[str,list[dict[str,str]]]={};usage={str(r["asset_id"]):int(r["n"]) for r in usage_rows}
+        for r in tag_rows:tags.setdefault(str(r["asset_id"]),[]).append(str(r["name"]))
+        for r in collection_rows:collections.setdefault(str(r["asset_id"]),[]).append({"id":str(r["id"]),"name":str(r["name"])})
+        return [{"asset":Asset.from_record(r),"tags":tags.get(str(r["id"]),[]),"collections":collections.get(str(r["id"]),[]),"usageCount":usage.get(str(r["id"]),0)} for r in assets]
+
     def find_fingerprint(self,fingerprint:str,size:int)->list[Asset]:
         with self.database.connect() as c:rows=c.execute("SELECT * FROM assets WHERE fingerprint=? AND file_size=?",(fingerprint,int(size))).fetchall()
         return [Asset.from_record(x) for x in rows]

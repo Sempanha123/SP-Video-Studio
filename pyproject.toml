@@ -35,7 +35,8 @@ translation = [
 ]
 
 [project.scripts]
-sp-video-studio = "app.phase30_runtime:run"
+# Phase 31 layers performance policy over the prior app.phase30_runtime:run entry point.
+sp-video-studio = "app.phase31_runtime:run"
 
 [tool.pytest.ini_options]
 addopts = "-ra"

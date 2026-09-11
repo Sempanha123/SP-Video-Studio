@@ -4,6 +4,7 @@ import hashlib
 import json
 import subprocess
 import wave
+import threading
 from pathlib import Path
 from domain.storage_category import StorageCategory
 
@@ -14,6 +15,8 @@ class AudioWaveformService:
         self.cache = cache_service
         self.ffmpeg_path_provider = ffmpeg_path_provider or (lambda: None)
         self.logger = logger
+        self._locks_guard = threading.Lock()
+        self._locks: dict[str, threading.Lock] = {}
 
     def fingerprint(self, path: str | Path) -> str:
         source = Path(path)
@@ -28,24 +31,40 @@ class AudioWaveformService:
     def generate(self, path: str | Path, *, buckets: int = 1200, force: bool = False, cancellation=None) -> dict:
         source = Path(path)
         target = self.cache_path(source, buckets)
-        if target.is_file() and not force:
-            try:
-                data = json.loads(target.read_text(encoding="utf-8"))
-                if data.get("version") == self.VERSION:
-                    data["cacheHit"] = True
-                    return data
-            except Exception:
-                pass
-        samples, sample_rate = self._samples(source)
-        if cancellation is not None and getattr(cancellation, "is_cancelled", False):
-            raise RuntimeError("Waveform generation cancelled.")
-        peaks = self._bucket(samples, max(1, min(10000, int(buckets))))
-        data = {"version": self.VERSION, "sourceFingerprint": self.fingerprint(source), "sampleRate": sample_rate, "buckets": peaks, "cacheHit": False}
-        target.parent.mkdir(parents=True, exist_ok=True)
-        temp = target.with_suffix(".tmp")
-        temp.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        temp.replace(target)
-        return data
+        lock = self._lock_for(str(target))
+        with lock:
+            if target.is_file() and not force:
+                try:
+                    data = json.loads(target.read_text(encoding="utf-8"))
+                    if data.get("version") == self.VERSION:
+                        data["cacheHit"] = True
+                        return data
+                except Exception:
+                    pass
+            samples, sample_rate = self._samples(source)
+            if cancellation is not None and getattr(cancellation, "is_cancelled", False):
+                raise RuntimeError("Waveform generation cancelled.")
+            peaks = self._bucket(samples, max(1, min(10000, int(buckets))))
+            data = {"version": self.VERSION, "sourceFingerprint": self.fingerprint(source), "sampleRate": sample_rate, "buckets": peaks, "cacheHit": False}
+            target.parent.mkdir(parents=True, exist_ok=True)
+            temp = target.with_name(target.name + f".{threading.get_ident()}.tmp")
+            temp.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+            temp.replace(target)
+            return data
+
+    def generate_level(self, path: str | Path, level: str = "medium", *, force: bool = False, cancellation=None) -> dict:
+        buckets = {"low": 320, "medium": 1200, "high": 3600}.get(str(level), 1200)
+        return self.generate(path, buckets=buckets, force=force, cancellation=cancellation)
+
+    def _lock_for(self, key: str) -> threading.Lock:
+        with self._locks_guard:
+            lock = self._locks.get(key)
+            if lock is None:
+                # The map is bounded opportunistically; only completed keys are removed.
+                if len(self._locks) > 256:
+                    self._locks.clear()
+                lock = threading.Lock(); self._locks[key] = lock
+            return lock
 
     def invalidate(self, path: str | Path, *, buckets: int = 1200) -> None:
         try:self.cache_path(path, buckets).unlink(missing_ok=True)

@@ -26,14 +26,14 @@ def _path(value):
 
 
 class BatchController(QObject):
-    batchesChanged=Signal(); batchChanged=Signal(); itemsChanged=Signal(); inputChanged=Signal(); dryRunChanged=Signal()
+    batchesChanged=Signal(); batchChanged=Signal(); itemsChanged=Signal(); inputChanged=Signal(); dryRunChanged=Signal(); hasMoreItemsChanged=Signal()
     operationSucceeded=Signal(str); operationFailed=Signal(str); openProjectRequested=Signal(str)
 
     def __init__(self,service,imports,repository,item_repository,templates,scheduler,*,logger=None,parent=None):
         super().__init__(parent)
         self.service=service; self.imports=imports; self.repository=repository; self.item_repository=item_repository
         self.templates=templates; self.scheduler=scheduler; self.logger=logger or logging.getLogger("sp_video_studio.batch_controller")
-        self._batch_id=""; self._rows=[]; self._dry={}; self._filter="all"; self._search=""; self._input_search=""
+        self._batch_id=""; self._rows=[]; self._dry={}; self._filter="all"; self._search=""; self._input_search=""; self._item_limit=240; self._item_page=240; self._has_more=False; self._items_cache=[]
 
     @Property("QVariantList",notify=batchesChanged)
     def batches(self): return self.service.history()
@@ -49,23 +49,32 @@ class BatchController(QObject):
     def currentBatch(self):
         batch=self.repository.get(self._batch_id) if self._batch_id else None
         if batch is None:return {}
-        data=batch.to_dict(); rows=self.item_repository.list_for_batch(batch.id)
-        counts={key:0 for key in ("running","pending","completed","failed","skipped","cancelled")}
-        active={"validating","project_setup","translation","tts","subtitles","scene_setup","rendering","exporting"}
-        for item in rows:
-            status=item.status_code
-            if status in active:counts["running"]+=1
-            elif status in {"failed","interrupted","output_missing","needs_review"}:counts["failed"]+=1
-            elif status in counts:counts[status]+=1
-        data["statusCounts"]=counts
-        data["overallProgress"]=(sum(float(x.progress) for x in rows)/len(rows)) if rows else 0.0
+        data=batch.to_dict(); summary=self.item_repository.summary_for_batch(batch.id) if hasattr(self.item_repository,"summary_for_batch") else None
+        if summary is None:
+            rows=self.item_repository.list_for_batch(batch.id); counts={key:0 for key in ("running","pending","completed","failed","skipped","cancelled")}; active={"validating","project_setup","translation","tts","subtitles","scene_setup","rendering","exporting"}
+            for item in rows:
+                status=item.status_code
+                if status in active:counts["running"]+=1
+                elif status in {"failed","interrupted","output_missing","needs_review"}:counts["failed"]+=1
+                elif status in counts:counts[status]+=1
+            summary={"counts":counts,"overallProgress":(sum(float(x.progress) for x in rows)/len(rows)) if rows else 0.0}
+        data["statusCounts"]=summary["counts"]; data["overallProgress"]=summary["overallProgress"]
         try:data["pauseReason"]=self.repository.pause_reason(batch.id)
         except Exception:data["pauseReason"]=""
         return data
 
     @Property("QVariantList",notify=itemsChanged)
     def items(self):
-        return [x.to_dict() for x in self.item_repository.list_for_batch(self._batch_id,status=self._filter,search=self._search,limit=2000)] if self._batch_id else []
+        if not self._batch_id:return []
+        rows=self.item_repository.list_for_batch(self._batch_id,status=self._filter,search=self._search,limit=self._item_limit+1)
+        self._has_more=len(rows)>self._item_limit;self._items_cache=[x.to_dict() for x in rows[:self._item_limit]]
+        return self._items_cache
+    @Property(bool,notify=hasMoreItemsChanged)
+    def hasMoreItems(self):return bool(self._has_more)
+    @Slot()
+    def loadMoreItems(self):
+        if not self._has_more:return
+        self._item_limit+=self._item_page;self.itemsChanged.emit();self.hasMoreItemsChanged.emit()
 
     @Property("QVariantList",notify=inputChanged)
     def inputRows(self):
@@ -85,7 +94,7 @@ class BatchController(QObject):
 
     @Slot(str)
     def openBatch(self,bid):
-        self._batch_id=str(bid or ""); self.batchChanged.emit(); self.itemsChanged.emit()
+        self._batch_id=str(bid or ""); self._item_limit=self._item_page; self.batchChanged.emit(); self.itemsChanged.emit()
 
     @Slot(str,result=bool)
     def importInput(self,url):
@@ -184,7 +193,7 @@ class BatchController(QObject):
 
     @Slot(str,str)
     def setQueueFilter(self,status,search=""):
-        self._filter=str(status or "all"); self._search=str(search or ""); self.itemsChanged.emit()
+        self._filter=str(status or "all"); self._search=str(search or ""); self._item_limit=self._item_page; self.itemsChanged.emit(); self.hasMoreItemsChanged.emit()
 
     @Slot(str)
     def openGeneratedProject(self,item_id):

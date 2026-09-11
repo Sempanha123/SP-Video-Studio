@@ -7,6 +7,23 @@ Item {
     property var controller
     property real pixelsPerSecond: 80
     property real timelineWidth: 1000
+    property real visibleStartMs: 0
+    property real visibleEndMs: 0
+    property real preloadMarginMs: 1500
+    property var visibleClips: {
+        var clips = track.clips || []
+        if (visibleEndMs <= visibleStartMs) return clips
+        var start = Math.max(0, visibleStartMs - preloadMarginMs)
+        var end = visibleEndMs + preloadMarginMs
+        var result = []
+        for (var i = 0; i < clips.length; ++i) {
+            var clip = clips[i]
+            var clipStart = Number(clip.startMs || 0)
+            var clipEnd = Number(clip.endMs || (clipStart + Number(clip.durationMs || 0)))
+            if (clipEnd >= start && clipStart <= end) result.push(clip)
+        }
+        return result
+    }
     width: timelineWidth
     height: Number(track.height || 64)
 
@@ -30,7 +47,7 @@ Item {
         return Math.max(0, scenes.length-1)
     }
     Repeater {
-        model: root.track.clips || []
+        model: root.visibleClips
         delegate: TimelineClip {
             required property var modelData
             clipData: modelData; pixelsPerSecond: root.pixelsPerSecond; trackLocked: !!root.track.locked

@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Dialogs
 import SPVideoStudio.Phase29 1.0
+import SPVideoStudio.Phase31 1.0
 import "../theme"
 import "../components"
 import "../storage"
@@ -190,16 +191,43 @@ Item {
                     visible: root.section === "Performance"
                     Layout.fillWidth: true
                     title: "Performance Profile"
-                    description: "Profiles prepare resource policies for later AI and media engines."
+                    description: "Profiles now control preview resources, background work and heavy-model lifecycle without changing final render quality."
                     GridLayout {
                         Layout.fillWidth: true
                         columns: width < 650 ? 1 : 2
                         columnSpacing: Theme.spacing.md
                         rowSpacing: Theme.spacing.md
-                        RadioCard { Layout.fillWidth: true; title: "Auto"; description: "Adapt to detected hardware"; value: "auto"; selected: settingsController.performanceProfile === value; onChosen: settingsController.setPerformanceProfile(value) }
-                        RadioCard { Layout.fillWidth: true; title: "Low Memory"; description: "Lower memory and concurrency"; value: "low_memory"; selected: settingsController.performanceProfile === value; onChosen: settingsController.setPerformanceProfile(value) }
-                        RadioCard { Layout.fillWidth: true; title: "Balanced"; description: "Moderate quality and caching"; value: "balanced"; selected: settingsController.performanceProfile === value; onChosen: settingsController.setPerformanceProfile(value) }
-                        RadioCard { Layout.fillWidth: true; title: "Maximum Quality"; description: "Prefer quality when hardware allows"; value: "maximum_quality"; selected: settingsController.performanceProfile === value; onChosen: settingsController.setPerformanceProfile(value) }
+                        RadioCard { Layout.fillWidth: true; title: "Auto"; description: "Adapt to detected hardware"; value: "auto"; selected: settingsController.performanceProfile === value; onChosen: { settingsController.setPerformanceProfile(value); Performance.setProfile(value) } }
+                        RadioCard { Layout.fillWidth: true; title: "Low Memory"; description: "Lower memory and concurrency"; value: "low_memory"; selected: settingsController.performanceProfile === value; onChosen: { settingsController.setPerformanceProfile(value); Performance.setProfile(value) } }
+                        RadioCard { Layout.fillWidth: true; title: "Balanced"; description: "Moderate quality and caching"; value: "balanced"; selected: settingsController.performanceProfile === value; onChosen: { settingsController.setPerformanceProfile(value); Performance.setProfile(value) } }
+                        RadioCard { Layout.fillWidth: true; title: "Maximum Quality"; description: "Prefer quality when hardware allows"; value: "maximum_quality"; selected: settingsController.performanceProfile === value; onChosen: { settingsController.setPerformanceProfile(value); Performance.setProfile(value) } }
+                    }
+                }
+
+                SettingsSection {
+                    visible: root.section === "Performance"
+                    Layout.fillWidth: true
+                    title: "Preview & Background Work"
+                    description: "Editor preview may use lighter temporary resources under load. Export quality is never reduced."
+                    SettingsRow {
+                        title: "Preview Quality"
+                        description: "Auto adapts to scene complexity; Performance uses lighter preview resources; Quality favors editor fidelity."
+                        AppComboBox {
+                            Layout.preferredWidth: 180
+                            model: ["Auto", "Performance", "Quality"]
+                            Component.onCompleted: currentIndex = Math.max(0, ["auto","performance","quality"].indexOf(Performance.previewQuality))
+                            onActivated: Performance.setPreviewQuality(String(currentText).toLowerCase())
+                        }
+                    }
+                    SettingsRow {
+                        title: "Background Worker Limit"
+                        description: "Advanced cap for metadata, cache and interactive background tasks. Heavy AI/render stages keep their own stricter limits."
+                        SpinBox { from: 1; to: 16; value: Performance.workerLimit; onValueModified: Performance.setWorkerLimit(value) }
+                    }
+                    SettingsRow {
+                        title: "Effective profile"
+                        description: "Auto resolves once from available memory and CPU; explicit choices stay fixed."
+                        StatusBadge { text: Performance.effectiveProfile.replaceAll("_"," "); status: "ready" }
                     }
                 }
 

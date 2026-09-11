@@ -1,0 +1,30 @@
+{
+  "asset_search_1000": {
+    "before_ms": 550.746,
+    "after_ms": 68.576,
+    "results": 100,
+    "speedup": 8.0
+  },
+  "subtitle_lookup_5000x3000": {
+    "before_ms": 449.754,
+    "after_ms": 9.186,
+    "speedup": 49.0
+  },
+  "batch_summary_1000": {
+    "before_ms": 9.819,
+    "after_ms": 0.466,
+    "speedup": 21.1,
+    "total": 1000
+  },
+  "ffprobe_same_file_20": {
+    "before_subprocess_calls": 20,
+    "after_subprocess_calls": 1,
+    "after_ms": 0.737
+  },
+  "waveform_same_file_10": {
+    "before_decodes": 10,
+    "after_decodes": 1,
+    "cache_hits": 9,
+    "after_ms": 1.328
+  }
+}

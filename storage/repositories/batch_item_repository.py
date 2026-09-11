@@ -34,6 +34,19 @@ class BatchItemRepository:
         if limit>0:sql+=" LIMIT ? OFFSET ?";params.extend([int(limit),int(offset)])
         with self.database.connect() as c:rows=c.execute(sql,tuple(params)).fetchall()
         return [BatchItem.from_record(r) for r in rows]
+    def summary_for_batch(self,batch_id:str)->dict:
+        """One aggregate query for queue counters/progress instead of loading every item."""
+        active=("validating","project_setup","translation","tts","subtitles","scene_setup","rendering","exporting")
+        with self.database.connect() as c:
+            rows=c.execute("SELECT status,COUNT(*) n,SUM(progress) progress_sum FROM batch_items WHERE batch_id=? GROUP BY status",(batch_id,)).fetchall()
+        counts={key:0 for key in ("running","pending","completed","failed","skipped","cancelled")};total=0;progress=0.0
+        for r in rows:
+            status=str(r["status"]);n=int(r["n"] or 0);total+=n;progress+=float(r["progress_sum"] or 0.0)
+            if status in active:counts["running"]+=n
+            elif status in {"failed","interrupted","output_missing","needs_review"}:counts["failed"]+=n
+            elif status in counts:counts[status]+=n
+        return {"counts":counts,"total":total,"overallProgress":progress/total if total else 0.0}
+
     def count(self,batch_id:str,status:str="")->int:
         sql="SELECT COUNT(*) n FROM batch_items WHERE batch_id=?";params:list[object]=[batch_id]
         if status:sql+=" AND status=?";params.append(status)

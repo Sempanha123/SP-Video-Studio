@@ -19,7 +19,7 @@ Item {
         AssetFilterBar { Layout.fillWidth: true; onQueryChanged: function(v){AssetLibrary.setQuery(v)}; onFilterChanged: function(v){AssetLibrary.setFilter(v)}; onSortChanged: function(v){AssetLibrary.setSort(v)} }
         SplitView { Layout.fillWidth: true; Layout.fillHeight: true
             AssetCollectionSidebar { SplitView.preferredWidth: 184; SplitView.minimumWidth: 150; collections: AssetLibrary.collections; onCollectionSelected: function(id){AssetLibrary.setCollection(id)} }
-            AssetGrid { SplitView.fillWidth: true; SplitView.fillHeight: true; SplitView.minimumWidth: 420; assets: AssetLibrary.assets; onSelected: function(id){AssetLibrary.selectAsset(id)} }
+            AssetGrid { SplitView.fillWidth: true; SplitView.fillHeight: true; SplitView.minimumWidth: 420; assets: AssetLibrary.assets; hasMore: AssetLibrary.hasMore; onSelected: function(id){AssetLibrary.selectAsset(id)}; onLoadMoreRequested: AssetLibrary.loadMore() }
             AppCard { elevated: true; SplitView.preferredWidth: 292; SplitView.minimumWidth: 250; SplitView.maximumWidth: 380; SplitView.fillHeight: true; AssetInspector { anchors.fill: parent; anchors.margins: Theme.spacing.lg; asset: AssetLibrary.selectedAsset } }
         }
     }

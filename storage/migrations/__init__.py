@@ -29,6 +29,7 @@ from .m022_create_asset_library import migrate as create_asset_library
 from .m023_create_batch_factory import migrate as create_batch_factory
 from .m024_create_autosave_recovery import migrate as create_autosave_recovery
 from .m025_create_audio_mixer import migrate as create_audio_mixer
+from .m026_performance_indexes import migrate as create_performance_indexes
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,4 +65,5 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(23, "create_batch_factory", create_batch_factory),
     Migration(24, "create_autosave_recovery", create_autosave_recovery),
     Migration(25, "create_audio_mixer", create_audio_mixer),
+    Migration(26, "performance_indexes", create_performance_indexes),
 )

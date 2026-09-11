@@ -19,7 +19,7 @@ AppCard {
         anchors.fill: parent; anchors.margins: Theme.spacing.sm; spacing: Theme.spacing.sm
         Rectangle {
             Layout.fillWidth: true; Layout.preferredHeight: 112; radius: Theme.radius.medium; color: Theme.colors.surfaceHover; clip: true
-            Image { anchors.fill: parent; fillMode: Image.PreserveAspectCrop; source: asset.thumbnailResolved ? "file:///" + asset.thumbnailResolved : ""; visible: status === Image.Ready; asynchronous: true; cache: true }
+            Image { anchors.fill: parent; fillMode: Image.PreserveAspectCrop; source: asset.thumbnailResolved ? "file:///" + asset.thumbnailResolved : ""; sourceSize.width: 320; sourceSize.height: 180; visible: status === Image.Ready; asynchronous: true; cache: true }
             Icon { anchors.centerIn: parent; width: 25; height: 25; name: mediaType === "audio" ? "mic" : (mediaType === "image" ? "image" : "video"); opacity: 0.65 }
             Rectangle { anchors.left: parent.left; anchors.top: parent.top; anchors.margins: 7; radius: 6; width: badge.implicitWidth + 12; height: 22; color: Theme.colors.elevated; opacity: 0.94
                 Text { id: badge; anchors.centerIn: parent; text: (asset.subtype || mediaType).replaceAll("_", " "); color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }

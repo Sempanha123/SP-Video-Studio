@@ -19,13 +19,15 @@ def _path(value):
     text=str(value or '');return Path(QUrl(text).toLocalFile()) if text.startswith('file:') else Path(text)
 
 class AssetLibraryController(QObject):
-    assetsChanged=Signal();selectedChanged=Signal();filtersChanged=Signal();collectionsChanged=Signal();operationSucceeded=Signal(str);operationFailed=Signal(str);projectMediaAdded=Signal(str)
+    assetsChanged=Signal();selectedChanged=Signal();filtersChanged=Signal();collectionsChanged=Signal();hasMoreChanged=Signal();operationSucceeded=Signal(str);operationFailed=Signal(str);projectMediaAdded=Signal(str)
     def __init__(self,service,repository,usage,project_integration,*,importer,relink,logger=None,parent=None):
-        super().__init__(parent);self.service=service;self.repository=repository;self.usage=usage;self.project_integration=project_integration;self.importer=importer;self.relink=relink;self.logger=logger or logging.getLogger('sp_video_studio.asset_controller');self._rows=[];self._selected={};self._query='';self._filter='all';self._sort='recent_added';self._collection='';self._project_id='';self.refresh()
+        super().__init__(parent);self.service=service;self.repository=repository;self.usage=usage;self.project_integration=project_integration;self.importer=importer;self.relink=relink;self.logger=logger or logging.getLogger('sp_video_studio.asset_controller');self._rows=[];self._selected={};self._query='';self._filter='all';self._sort='recent_added';self._collection='';self._project_id='';self._page_size=160;self._limit=self._page_size;self._has_more=False;self._refresh_rows()
     @Property('QVariantList',notify=assetsChanged)
     def assets(self):return self._rows
     @Property('QVariantMap',notify=selectedChanged)
     def selectedAsset(self):return dict(self._selected)
+    @Property(bool,notify=hasMoreChanged)
+    def hasMore(self):return bool(self._has_more)
     @Property('QVariantList',notify=collectionsChanged)
     def collections(self):return self.service.collections()
     @Property(str,notify=filtersChanged)
@@ -43,13 +45,13 @@ class AssetLibraryController(QObject):
     @Slot(str)
     def setCurrentProject(self,pid):self._project_id=str(pid or '');self.selectedChanged.emit()
     @Slot(str)
-    def setQuery(self,v):self._query=str(v or '');self.filtersChanged.emit();self._refresh_rows()
+    def setQuery(self,v):self._query=str(v or '');self._reset_page();self.filtersChanged.emit();self._refresh_rows()
     @Slot(str)
-    def setFilter(self,v):self._filter=str(v or 'all');self.filtersChanged.emit();self._refresh_rows()
+    def setFilter(self,v):self._filter=str(v or 'all');self._reset_page();self.filtersChanged.emit();self._refresh_rows()
     @Slot(str)
-    def setSort(self,v):self._sort=str(v or 'recent_added');self.filtersChanged.emit();self._refresh_rows()
+    def setSort(self,v):self._sort=str(v or 'recent_added');self._reset_page();self.filtersChanged.emit();self._refresh_rows()
     @Slot(str)
-    def setCollection(self,v):self._collection=str(v or '');self.filtersChanged.emit();self._refresh_rows()
+    def setCollection(self,v):self._collection=str(v or '');self._reset_page();self.filtersChanged.emit();self._refresh_rows()
     @Slot(str,result=bool)
     def selectAsset(self,aid):
         try:self._selected=self.service.details(aid);self.selectedChanged.emit();return True
@@ -114,10 +116,21 @@ class AssetLibraryController(QObject):
     def migrateLibrary(self,path,mode='move'):
         try:self.service.migrate_library(_path(path),mode=mode or 'move');self._refresh_rows();self.operationSucceeded.emit('Asset Library location updated.');return True
         except Exception as exc:self._fail(exc);return False
+    @Slot()
+    def loadMore(self):
+        if not self._has_more:return
+        self._limit += self._page_size;self._refresh_rows()
+    def _reset_page(self):
+        self._limit=self._page_size
     def _refresh_rows(self):
-        self._rows=[]
-        for a in self.service.list_assets(query=self._query,filter_id=self._filter,sort=self._sort,collection_id=self._collection):
-            row=a.to_dict();row.update({'tags':self.repository.tags(a.id),'usageCount':self.repository.usage_count(a.id),'resolvedPath':str(a.resolved_path(self.repository.library_root)),'thumbnailResolved':str(a.resolved_thumbnail(self.repository.library_root) or '')});self._rows.append(row)
-        self.assetsChanged.emit();self.collectionsChanged.emit()
+        service=getattr(self.service,'search_service',None)
+        if service is not None and hasattr(service,'search_rows'):
+            records=service.search_rows(query=self._query,filter_id=self._filter,sort=self._sort,collection_id=self._collection,limit=self._limit+1)
+        else:
+            records=[{'asset':a,'tags':self.repository.tags(a.id),'usageCount':self.repository.usage_count(a.id),'collections':[]} for a in self.service.list_assets(query=self._query,filter_id=self._filter,sort=self._sort,collection_id=self._collection)[:self._limit+1]]
+        self._has_more=len(records)>self._limit;records=records[:self._limit];self._rows=[]
+        for meta in records:
+            a=meta['asset'];row=a.to_dict();row.update({'tags':list(meta.get('tags') or []),'usageCount':int(meta.get('usageCount') or 0),'resolvedPath':str(a.resolved_path(self.repository.library_root)),'thumbnailResolved':str(a.resolved_thumbnail(self.repository.library_root) or '')});self._rows.append(row)
+        self.assetsChanged.emit();self.hasMoreChanged.emit();self.collectionsChanged.emit()
     def _fail(self,exc):
         self.logger.exception('Asset Library action failed');self.operationFailed.emit(str(exc).strip() or getattr(exc,'user_message','Asset action could not be completed.'))

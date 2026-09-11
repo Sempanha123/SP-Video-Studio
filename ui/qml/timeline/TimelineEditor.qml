@@ -135,7 +135,12 @@ FocusScope {
                     }
                     Column {
                         id:trackColumn; y:ruler.height; width:parent.width
-                        Repeater { model:root.controller?root.controller.tracks:[]; delegate:TimelineTrack { required property var modelData; track:modelData; controller:root.controller; pixelsPerSecond:root.controller?root.controller.pixelsPerSecond:80; timelineWidth:timelineContent.width } }
+                        Repeater { model:root.controller?root.controller.tracks:[]; delegate:TimelineTrack {
+                            required property var modelData
+                            track:modelData; controller:root.controller; pixelsPerSecond:root.controller?root.controller.pixelsPerSecond:80; timelineWidth:timelineContent.width
+                            visibleStartMs: Math.floor((timelineFlick.contentX / Math.max(1, pixelsPerSecond) * 1000) / 250) * 250
+                            visibleEndMs: visibleStartMs + Math.ceil(timelineFlick.width / Math.max(1, pixelsPerSecond) * 1000 / 250) * 250
+                        } }
                     }
                     Repeater {
                         model:root.controller?root.controller.markers:[]
