@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.15
 import QtQuick.Dialogs
 import "../theme"
 import "../components"
+import "../editor"
 
 Item {
     id: root
@@ -22,6 +23,13 @@ Item {
 
     function selectMedia(mediaId) {
         root.selectedMediaId = mediaId
+        if (typeof playbackController !== "undefined")
+            playbackController.setMedia(mediaId)
+    }
+
+    function leaveWorkspace() {
+        if (typeof playbackController !== "undefined") playbackController.clear()
+        root.navigateRequested("projects", "")
     }
 
     function showDetails(mediaId) {
@@ -42,7 +50,10 @@ Item {
     Component.onCompleted: {
         if (typeof mediaController !== "undefined")
             mediaController.setCurrentProject(root.current().id || "")
+        if (typeof playbackController !== "undefined")
+            playbackController.setCurrentProject(root.current().id || "")
     }
+    Component.onDestruction: if (typeof playbackController !== "undefined") playbackController.clear()
 
     Connections {
         target: typeof projectController !== "undefined" ? projectController : null
@@ -52,6 +63,8 @@ Item {
             root.selectedMediaId = ""
             if (typeof mediaController !== "undefined")
                 mediaController.setCurrentProject(root.current().id || "")
+            if (typeof playbackController !== "undefined")
+                playbackController.setCurrentProject(root.current().id || "")
         }
     }
 
@@ -62,7 +75,7 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             spacing: Theme.spacing.md
-            SecondaryButton { text: "Projects"; iconName: "back"; onClicked: root.navigateRequested("projects", "") }
+            SecondaryButton { text: "Projects"; iconName: "back"; onClicked: root.leaveWorkspace() }
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 1
@@ -97,11 +110,18 @@ Item {
             }
         }
 
-        AppCard {
-            id: libraryCard
+        SplitView {
+            id: workspaceSplit
             Layout.fillWidth: true
             Layout.fillHeight: true
-            clip: true
+            orientation: root.width < 1080 ? Qt.Vertical : Qt.Horizontal
+
+            AppCard {
+                id: libraryCard
+                SplitView.preferredWidth: root.width * 0.47
+                SplitView.minimumWidth: 460
+                SplitView.fillHeight: true
+                clip: true
 
             ColumnLayout {
                 anchors.fill: parent
@@ -329,6 +349,26 @@ Item {
                 }
             }
         }
+
+            PreviewPlayer {
+                id: previewPlayer
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
+                SplitView.minimumWidth: workspaceSplit.orientation === Qt.Horizontal ? 420 : 0
+                SplitView.minimumHeight: workspaceSplit.orientation === Qt.Vertical ? 300 : 0
+                controller: typeof playbackController !== "undefined" ? playbackController : null
+            }
+        }
+    }
+
+
+    Connections {
+        target: typeof playbackController !== "undefined" ? playbackController : null
+        ignoreUnknownSignals: true
+        function onOperationFailed(message) { root.toastRequested(message, "error") }
+        function onSelectedMediaChanged() {
+            if (playbackController.selectedMediaId === "") root.selectedMediaId = ""
+        }
     }
 
     FileDialog {
@@ -429,6 +469,7 @@ Item {
                 AppButton {
                     text: "Delete Project"; variant: "danger"; iconName: "trash"
                     onClicked: {
+                        if (typeof playbackController !== "undefined") playbackController.clear()
                         if (typeof projectController !== "undefined" && projectController.deleteProject(root.current().id)) {
                             deleteDialog.close()
                             root.navigateRequested("projects", "")

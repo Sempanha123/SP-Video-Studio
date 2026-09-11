@@ -24,6 +24,7 @@ class MediaController(QObject):
     importStateChanged = Signal()
     operationSucceeded = Signal(str)
     operationFailed = Signal(str)
+    mediaAboutToRemove = Signal(str)
     importSummaryReady = Signal(object)
     _progressReady = Signal(int, int, str, str, float)
     _importReady = Signal(object)
@@ -193,6 +194,7 @@ class MediaController(QObject):
         if not self._project_id:
             return False
         try:
+            self.mediaAboutToRemove.emit(asset_id)
             self.service.remove_media(self._project_id, asset_id)
             self.refresh()
             self.operationSucceeded.emit("Media removed. Your original file was not changed.")

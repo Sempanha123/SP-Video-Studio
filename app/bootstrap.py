@@ -11,6 +11,7 @@ from media.ffmpeg_locator import FFmpegLocator
 from media.probe import FFprobeService
 from media.thumbnails import ThumbnailService
 from services.media_service import MediaService
+from services.playback_service import PlaybackService
 from services.project_service import ProjectService
 from services.settings_service import SettingsService
 from services.system_readiness_service import SystemReadinessService
@@ -62,6 +63,7 @@ def build_container() -> DependencyContainer:
         logger=logger,
     )
     project_service.set_media_service(media_service)
+    playback_service = PlaybackService()
 
     readiness_service = SystemReadinessService(
         paths,
@@ -81,6 +83,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
     container.register_instance(MediaService, media_service)
+    container.register_instance(PlaybackService, playback_service)
     container.register_instance(SettingsRepository, settings_repository)
     container.register_instance(SettingsService, settings_service)
     container.register_instance(FFmpegLocator, ffmpeg_locator)
@@ -115,6 +118,7 @@ def run() -> int:
 
     from ui.controllers.media_controller import MediaController
     from ui.controllers.project_controller import ProjectController
+    from ui.controllers.playback_controller import PlaybackController
     from ui.controllers.readiness_controller import ReadinessController
     from ui.controllers.settings_controller import SettingsController
 
@@ -125,6 +129,12 @@ def run() -> int:
         container.resolve(WorkerPool),
         logger,
     )
+    playback_controller = PlaybackController(
+        container.resolve(MediaService),
+        container.resolve(PlaybackService),
+        logger,
+    )
+    media_controller.mediaAboutToRemove.connect(playback_controller.mediaRemoving)
     settings_controller = SettingsController(
         container.resolve(SettingsService),
         container.resolve(AppPaths),
@@ -142,12 +152,14 @@ def run() -> int:
 
     container.register_instance(ProjectController, project_controller)
     container.register_instance(MediaController, media_controller)
+    container.register_instance(PlaybackController, playback_controller)
     container.register_instance(SettingsController, settings_controller)
     container.register_instance(ReadinessController, readiness_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
     engine.rootContext().setContextProperty("mediaController", media_controller)
+    engine.rootContext().setContextProperty("playbackController", playback_controller)
     engine.rootContext().setContextProperty("settingsController", settings_controller)
     engine.rootContext().setContextProperty("readinessController", readiness_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
@@ -159,6 +171,7 @@ def run() -> int:
     if container.resolve(SettingsService).current.readiness_check_on_startup:
         QTimer.singleShot(0, readiness_controller.recheck)
 
+    app.aboutToQuit.connect(playback_controller.clear)
     app.aboutToQuit.connect(container.resolve(WorkerPool).shutdown)
     logger.info("SP Video Studio started")
     return app.exec()

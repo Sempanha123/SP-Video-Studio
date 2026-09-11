@@ -61,3 +61,20 @@ def test_phase4_media_library_ui_is_wired():
     assert "mediaController.removeMedia" in workspace
     assert "mediaController" in main
     assert "Open Project Media" in assets
+
+
+def test_phase5_native_preview_ui_is_wired():
+    workspace = (QML_ROOT / "pages" / "ProjectWorkspacePage.qml").read_text(encoding="utf-8")
+    preview = (QML_ROOT / "editor" / "PreviewPlayer.qml").read_text(encoding="utf-8")
+    required = {
+        "PreviewPlayer.qml", "PlayerControls.qml", "SeekBar.qml", "VolumeControl.qml",
+        "MediaInfoStrip.qml", "AudioPreview.qml", "ImagePreview.qml", "PlayerErrorState.qml",
+    }
+    assert required <= {p.name for p in (QML_ROOT / "editor").glob("*.qml")}
+    assert "SplitView" in workspace
+    assert "playbackController.setMedia" in workspace
+    assert "QtMultimedia" in preview
+    assert "MediaPlayer" in preview
+    assert "AudioOutput" in preview
+    assert "VideoOutput" in preview
+    assert "playbackController" not in preview  # component uses injected controller, not global coupling

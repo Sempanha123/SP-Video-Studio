@@ -1,10 +1,10 @@
 # SP Video Studio
 
-SP Video Studio is a native Windows desktop video-creation application built with Python 3.11, PySide6, Qt Quick, and QML.
+SP Video Studio is a native Windows desktop video-creation application built with Python 3.11–3.14, PySide6, Qt Quick, and QML.
 
 ## Current milestone
 
-Phase 0 foundation + Phase 1 application shell + Phase 2 persistent projects + Phase 3 settings/readiness + **Phase 4 project media import and media library**.
+Phase 0 foundation + Phase 1 application shell + Phase 2 persistent projects + Phase 3 settings/readiness + Phase 4 media library + **Phase 5 native media preview/playback**.
 
 Implemented now:
 
@@ -20,16 +20,21 @@ Implemented now:
 - Missing-media detection without crashing
 - Project duplication that produces independent managed media records/copies
 - Safe project/media deletion that never deletes imported original source files
+- Native Qt Multimedia preview for imported video and audio
+- Aspect-preserving image preview
+- Play/pause/replay, seek/scrub, volume/mute, playback time, and keyboard shortcuts
+- Runtime preview-error handling without marking valid imported media invalid
+- Playback cleanup on media removal, media switching, project switching, and app shutdown
 
-Not implemented yet: video playback/editor preview, timeline editing, AI inference, VoxCPM2 inference, Whisper transcription, translation, subtitles, News/Story generation, final rendering/export, model downloads, or batch processing.
+Not implemented yet: timeline editing, AI inference, VoxCPM2 inference, Whisper transcription, translation, subtitles, News/Story generation, final rendering/export, model downloads, or batch processing.
 
 ## Requirements
 
 - Windows 10/11 recommended
-- Python 3.11
-- PySide6 6.8+
-- psutil 6.1+
-- Pillow 11+
+- Python 3.11, 3.12, 3.13, or 3.14
+- PySide6 6.10.2+
+- psutil 7.2+
+- Pillow 12+
 - FFmpeg + FFprobe for video/audio metadata and video thumbnails
 
 FFmpeg is detected from a validated custom path or `PATH`. SP Video Studio does not download FFmpeg automatically in Phase 4.
@@ -37,7 +42,7 @@ FFmpeg is detected from a validated custom path or `PATH`. SP Video Studio does 
 ## Setup
 
 ```powershell
-py -3.11 -m venv .venv
+py -3.14 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -e ".[dev]"
@@ -263,6 +268,9 @@ QML
   │                              ├── FFprobeService
   │                              ├── ThumbnailService
   │                              └── MediaImporter
+  ├── PlaybackController → PlaybackService → Qt Multimedia (QML MediaPlayer)
+  │                                           ├── AudioOutput
+  │                                           └── VideoOutput
   ├── SettingsController → SettingsService → SettingsRepository → JSON
   └── ReadinessController → WorkerPool → SystemReadinessService
                                       ├── FFmpegLocator
@@ -271,16 +279,41 @@ QML
                                       └── disk/model checks
 ```
 
-## Known Phase 4 limits
+## Playback and preview system
 
-- No video playback or scrubbing yet.
-- No waveform generation yet.
-- No relink/Locate File workflow yet; missing project copies can be removed from the project library.
-- Animated GIF/TIFF import is not enabled.
-- No internet-media downloading.
-- No automatic transcoding of unsupported codecs/containers.
-- Final editing, timeline, subtitles, AI processing, and rendering belong to later phases.
+Phase 5 uses one native Qt Multimedia `MediaPlayer` for the project preview. Video is rendered through `VideoOutput`, audio through one shared `AudioOutput`, and images use the Qt Quick image path. Imported files are previewed from their **project-managed copy**, not the original source path.
+
+Playback state uses explicit values: `idle`, `loading`, `ready`, `playing`, `paused`, `stopped`, `ended`, and `error`. Python owns state/control policy through `PlaybackService` and `PlaybackController`; QML owns the native player surface and visual animations.
+
+Controls:
+
+- Space: Play / Pause / Replay
+- Left / Right: seek 5 seconds
+- Shift + Left / Right: seek 10 seconds
+- M: Mute / Unmute
+- seek slider avoids fighting the playhead while the user is scrubbing
+- mute restores the previous volume instead of forcing 100%
+
+Preview volume is intentionally session-only in Phase 5. The existing Settings architecture can persist it later without introducing a second settings system.
+
+A valid FFprobe-imported file can still fail native preview when the local Qt Multimedia backend cannot decode its codec. That produces a **preview error only**; the Phase 4 media record remains valid for future FFmpeg-based workflows.
+
+Resource cleanup stops playback, clears the source, and releases the current selection when media is removed, another project is opened, the workspace closes, or the application exits. This avoids stale playback and reduces Windows file-handle conflicts.
+
+## Python 3.14 compatibility
+
+The package metadata supports `>=3.11,<3.15`. The dependency floors are selected from releases that provide Python 3.14 support: PySide6 6.10.2+, psutil 7.2+, and Pillow 12+.
+
+## Known Phase 5 limits
+
+- Native preview codec availability depends on the local Qt Multimedia backend/platform codecs.
+- No proxy/transcoded preview fallback yet.
+- No waveform generation.
+- No playback-rate or frame-step controls.
+- No playback-position persistence across application restarts.
+- No fullscreen preview requirement yet.
+- Timeline, subtitles, scene composition, AI processing, and final rendering remain later phases.
 
 ## Phase discipline
 
-Phase 4 is intentionally limited to media ingestion, metadata, thumbnails, and project media organization. The next phase is **Phase 5 — Video Player and Preview System**.
+Phase 5 is intentionally limited to stable native media preview/playback. The next phase is **Phase 6 — Script Editor**.
