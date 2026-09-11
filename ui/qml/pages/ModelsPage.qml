@@ -26,6 +26,7 @@ Item {
         }
         if (root.filterMode === "voice") return item.purpose === "voice"
         if (root.filterMode === "speech") return item.purpose === "speech-to-text"
+        if (root.filterMode === "translation") return item.purpose === "translation"
         if (root.filterMode === "installed") return item.status === "installed"
         return true
     }
@@ -86,6 +87,7 @@ Item {
                 AppButton { text: "All"; variant: root.filterMode === "all" ? "primary" : "ghost"; compact: true; onClicked: root.filterMode = "all" }
                 AppButton { text: "Voice"; variant: root.filterMode === "voice" ? "primary" : "ghost"; compact: true; onClicked: root.filterMode = "voice" }
                 AppButton { text: "Speech-to-Text"; variant: root.filterMode === "speech" ? "primary" : "ghost"; compact: true; onClicked: root.filterMode = "speech" }
+                AppButton { text: "Translation"; variant: root.filterMode === "translation" ? "primary" : "ghost"; compact: true; onClicked: root.filterMode = "translation" }
                 AppButton { text: "Installed"; variant: root.filterMode === "installed" ? "primary" : "ghost"; compact: true; onClicked: root.filterMode = "installed" }
                 Item { Layout.fillWidth: true }
                 Text { text: typeof modelController !== "undefined" && modelController.activeModelId.length > 0 ? "1 download active" : ""; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
@@ -188,7 +190,7 @@ Item {
             Text { Layout.fillWidth: true; text: root.detailModel.description || ""; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; wrapMode: Text.WordWrap }
             GridLayout {
                 Layout.fillWidth: true; columns: 2; columnSpacing: Theme.spacing.xl; rowSpacing: Theme.spacing.sm
-                Text { text: "Purpose"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }; Text { text: root.detailModel.purpose === "voice" ? "Text-to-Speech / Voice" : "Speech-to-Text"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall }
+                Text { text: "Purpose"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }; Text { text: root.detailModel.purpose === "voice" ? "Text-to-Speech / Voice" : (root.detailModel.purpose === "translation" ? "Translation" : "Speech-to-Text"); color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall }
                 Text { text: "Version"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }; Text { text: root.detailModel.version || "Unknown"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall }
                 Text { text: "License"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }; Text { text: root.detailModel.license || "Unknown"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall }
                 Text { text: "Languages"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }; Text { text: (root.detailModel.supportedLanguages || []).join(", "); color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall }

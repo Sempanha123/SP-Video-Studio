@@ -236,9 +236,14 @@ class ScriptService:
         return target
 
     def duplicate_project_script(self, source_project_id: str, duplicate_project_id: str, duplicate_title: str) -> None:
+        self.duplicate_project_script_with_map(source_project_id, duplicate_project_id, duplicate_title)
+
+    def duplicate_project_script_with_map(
+        self, source_project_id: str, duplicate_project_id: str, duplicate_title: str
+    ) -> tuple[dict[str, str], dict[str, str]]:
         source = self.repository.get_primary_by_project(source_project_id)
         if source is None:
-            return
+            return {}, {}
         source_sections = self.repository.list_sections(source.script_id)
         now = utc_now_iso()
         clone = Script(
@@ -253,8 +258,10 @@ class ScriptService:
             version=source.version,
             metadata=dict(source.metadata),
         )
-        cloned_sections = [
-            ScriptSection(
+        section_map: dict[str, str] = {}
+        cloned_sections: list[ScriptSection] = []
+        for section in source_sections:
+            cloned = ScriptSection(
                 script_id=clone.script_id,
                 order=section.order,
                 section_type=section.type,
@@ -266,9 +273,10 @@ class ScriptService:
                 created_at=now,
                 updated_at=now,
             )
-            for section in source_sections
-        ]
+            section_map[section.section_id] = cloned.section_id
+            cloned_sections.append(cloned)
         self.repository.create(clone, cloned_sections)
+        return {source.script_id: clone.script_id}, section_map
 
     def _touch_script(self, script: Script) -> None:
         script.updated_at = utc_now_iso()

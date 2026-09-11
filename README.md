@@ -4,7 +4,7 @@ SP Video Studio is a native Windows desktop video-creation application built wit
 
 ## Current milestone
 
-Phase 0 foundation through Phase 9 Voice Studio + **Phase 10 faster-whisper speech-to-text and transcript editing**.
+Phase 0 foundation through Phase 10 speech-to-text + **Phase 11 multilingual translation and human review**.
 
 Implemented now:
 
@@ -35,8 +35,10 @@ Implemented now:
 - Lazy faster-whisper STT adapter with CPU/CUDA device and compute-type policy
 - Timestamped transcript persistence with optional word timestamps, VAD, search/edit/reset, UTF-8 export, and source-staleness detection
 - Shared AI resource coordination so VoxCPM2 and Whisper do not independently consume conflicting GPU resources
+- Provider-based English↔Khmer translation with local Marian/OPUS and manual-review providers
+- Side-by-side Translation Review with machine-output preservation, human edits, review/lock protection, source synchronization, and UTF-8 export
 
-Not implemented yet: translation, final subtitle styling/export, speaker diarization, dubbing, scenes, timeline editing, News/Story generation, final rendering/export, or batch processing.
+Not implemented yet: final subtitle generation/styling/export, speaker diarization, dubbing, scenes, timeline editing, News/Story generation, final rendering/export, or batch processing.
 
 ## Requirements
 
@@ -69,6 +71,15 @@ For local faster-whisper transcription, install the optional speech-recognition 
 ```powershell
 pip install -e ".[ai]"
 ```
+
+For local English↔Khmer translation, install the optional local translation runtime:
+
+```powershell
+pip install -e ".[translation]"
+```
+
+The desktop app remains usable without this optional runtime because Manual Translation is always available. Local model weights are installed separately through the Model Manager and are never bundled automatically.
+
 
 Phase 10 targets the official `faster-whisper` 1.2.1 API and CTranslate2 4.8.2. The application imports both lazily; missing STT dependencies do not prevent the desktop app from starting.
 
@@ -564,3 +575,61 @@ pytest -m faster_whisper tests/test_faster_whisper_integration.py
 For CUDA, configure the target machine with a CTranslate2-compatible CUDA/cuDNN runtime and select a supported compute type. English and Khmer quality must be reviewed on real authorized audio before release; automated file/persistence tests do not claim perfect recognition accuracy.
 
 Phase 10 does **not** implement translation, final SRT/VTT/ASS subtitle generation/styling, speaker diarization, dubbing, scenes, timeline editing, News workflows, or video rendering.
+
+
+## Multilingual translation and review
+
+Phase 11 adds a provider-based translation layer that keeps source data independent from translated data. `TranslationService` coordinates the generic `TranslationEngine` interface, source synchronization, persistence, review state, and Model Manager integration. The first providers are **Local Translation** (`LocalMarianEngine`) and **Manual Translation**. Manual Translation requires no model or network and creates review rows with empty target text so the localization workflow remains usable even when AI dependencies are unavailable.
+
+SQLite schema version 8 adds:
+
+```text
+translations
+translation_segments
+```
+
+Each translation document records its source type (`transcript`, `script`, or `manual_text`), source/target language, provider/model identity, source fingerprint, status, settings, and metadata. Each translation segment stores source mapping/timestamps, a stable source hash, immutable machine output (`machine_translation`), user-facing reviewed text (`translated_text`), and explicit edit/review/lock state. Human corrections never overwrite the original machine result.
+
+### Local English ↔ Khmer models
+
+The Phase 7 Model Registry now contains two verified Apache-2.0 OPUS/Marian entries:
+
+- `translation-en-km-opus` → `Helsinki-NLP/opus-mt-en-mkh` — English → Khmer
+- `translation-km-en-opus` → `Helsinki-NLP/opus-mt-mkh-en` — Khmer → English
+
+The English→Khmer adapter applies the model-required `>>khm<<` target token internally. Model identifiers, licenses, language pairs, required files, and size guidance live in the registry rather than QML. The adapter uses direct `AutoTokenizer` + `AutoModelForSeq2SeqLM` loading from the Phase 7 managed local folder with `local_files_only=True`; no hidden Hugging Face network download occurs from Translation. Transformers/PyTorch are imported lazily. Auto device selection intentionally prefers CPU for these relatively small models unless the user explicitly chooses CUDA, reducing unnecessary competition with VoxCPM2/Whisper.
+
+The model licenses and canonical identifiers above were verified on 2026-09-11. Application code licensing and model licensing remain separate; the app does not assume that arbitrary open weights are commercially redistributable.
+
+### Review and protection workflow
+
+Transcript translation preserves the Phase 10 segment ID plus start/end timestamps. Script translation preserves enabled section IDs/order/title metadata and excludes disabled sections. Original transcripts/scripts are never modified. The Translation workspace focuses on **SOURCE | TRANSLATION** review with search/filter, debounced editing, Reviewed and Lock states, per-row reset/retranslate, source playback for transcript rows, review progress, approval, and translated/bilingual UTF-8 TXT export.
+
+Machine translation and reviewed text are deliberately separate. Bulk retranslation skips locked rows and protects manually edited rows by default. Retranslating a manually edited row requires an explicit replacement choice. Cancellation keeps successfully completed rows as Draft and Resume processes remaining/failed rows rather than discarding finished work.
+
+Placeholder/term protection covers template placeholders, URLs, email-like tokens, and explicit Keep Terms. Simple post-generation checks flag empty output, missing numbers/protected terms, same-as-source long text, extreme length ratios, and model control tokens as **Needs Attention**; these are review heuristics, not invented confidence scores.
+
+### Source synchronization
+
+Translation documents use SHA-256 source fingerprints and each translation row has a source hash. If the underlying transcript or script changes, the translation becomes **Out of Date** without deletion. **Sync Source** preserves unchanged reviewed/locked translations, updates pure reorder operations, creates Pending rows for new source segments, marks removed rows Orphaned, and marks only changed source rows Needs Attention. This avoids throwing away human localization work.
+
+Project duplication creates independent translation/segment IDs and remaps duplicated transcript/script source IDs while preserving reviewed text, manual edits, and locks. Project deletion removes project-owned translation records through SQLite cascade without touching global models, voice profiles, source media, or external files.
+
+### Future subtitle and dubbing contracts
+
+`get_reviewed_translation_segments()` returns reviewed target text with source timing for the future subtitle engine. `get_dubbing_segments()` exposes source/target/timing/review metadata for a future dubbing phase; Phase 11 itself does not generate translated speech or subtitle files.
+
+### Testing real local translation
+
+Normal tests use `FakeTranslationEngine` and never download real model weights. Real local-model testing is opt-in:
+
+```powershell
+$env:SPVS_RUN_TRANSLATION_INTEGRATION="1"
+$env:SPVS_TRANSLATION_EN_KM_PATH="C:\path\to\managed\en-km-model"
+$env:SPVS_TRANSLATION_KM_EN_PATH="C:\path\to\managed\km-en-model"
+pytest -m translation tests/test_translation_integration.py
+```
+
+A non-empty generated result is only an integration check. English→Khmer and Khmer→English publication quality still requires human review, especially for names, numbers, quotes, and domain terminology.
+
+Phase 11 does **not** implement dubbing, translated TTS, final subtitle files/styling, scenes, timeline editing, News research, or rendering.

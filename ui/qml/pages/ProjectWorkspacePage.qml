@@ -34,18 +34,22 @@ Item {
         if (mode === root.workspaceMode) return
         if (root.workspaceMode === "script" && typeof scriptController !== "undefined" && !scriptController.flush()) return
         if (root.workspaceMode === "transcription" && typeof transcriptionController !== "undefined" && !transcriptionController.saveEdits()) return
+        if (root.workspaceMode === "translation" && typeof translationController !== "undefined" && !translationController.saveEdits()) return
         if (mode === "script") {
             if (typeof playbackController !== "undefined") playbackController.clear()
             if (typeof scriptController !== "undefined" && !scriptController.load(root.current().id || "")) return
         }
         if (mode === "transcription" && typeof transcriptionController !== "undefined")
             transcriptionController.setMedia(root.selectedMediaId)
+        if (mode === "translation" && typeof translationController !== "undefined")
+            translationController.setCurrentProject(root.current().id || "")
         root.workspaceMode = mode
     }
 
     function leaveWorkspace() {
         if (typeof scriptController !== "undefined" && !scriptController.flush()) return
         if (typeof transcriptionController !== "undefined" && !transcriptionController.saveEdits()) return
+        if (typeof translationController !== "undefined" && !translationController.saveEdits()) return
         if (typeof transcriptionController !== "undefined") transcriptionController.cancel()
         if (typeof playbackController !== "undefined") playbackController.clear()
         root.navigateRequested("projects", "")
@@ -75,10 +79,13 @@ Item {
             ttsController.setCurrentProject(root.current().id || "")
         if (typeof transcriptionController !== "undefined")
             transcriptionController.setCurrentProject(root.current().id || "")
+        if (typeof translationController !== "undefined")
+            translationController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
         if (typeof transcriptionController !== "undefined") { transcriptionController.saveEdits(); transcriptionController.cancel() }
+        if (typeof translationController !== "undefined") { translationController.saveEdits(); translationController.cancel() }
         if (typeof playbackController !== "undefined") playbackController.clear()
     }
 
@@ -96,6 +103,8 @@ Item {
                 ttsController.setCurrentProject(root.current().id || "")
             if (typeof transcriptionController !== "undefined")
                 transcriptionController.setCurrentProject(root.current().id || "")
+            if (typeof translationController !== "undefined")
+                translationController.setCurrentProject(root.current().id || "")
             if (root.workspaceMode === "script" && typeof scriptController !== "undefined")
                 scriptController.load(root.current().id || "")
         }
@@ -137,6 +146,7 @@ Item {
             AppButton { text: "Media"; compact: true; variant: root.workspaceMode === "media" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("media") }
             AppButton { text: "Script"; compact: true; variant: root.workspaceMode === "script" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("script") }
             AppButton { text: "Transcription"; compact: true; variant: root.workspaceMode === "transcription" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("transcription") }
+            AppButton { text: "Translation"; compact: true; variant: root.workspaceMode === "translation" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("translation") }
         }
 
         SplitView {
@@ -418,6 +428,33 @@ Item {
                 SplitView.fillHeight: true
                 SplitView.preferredWidth: root.width * 0.40
                 SplitView.minimumWidth: 360
+                controller: typeof playbackController !== "undefined" ? playbackController : null
+            }
+        }
+
+
+        SplitView {
+            visible: root.workspaceMode === "translation"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            orientation: root.width < 1120 ? Qt.Vertical : Qt.Horizontal
+
+            TranslationPage {
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
+                SplitView.preferredWidth: root.width * 0.68
+                SplitView.minimumWidth: 560
+                controller: typeof translationController !== "undefined" ? translationController : null
+                playbackController: typeof playbackController !== "undefined" ? playbackController : null
+                onNavigateRequested: function(page, workflow) { root.navigateRequested(page, workflow) }
+                onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
+            }
+
+            PreviewPlayer {
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
+                SplitView.preferredWidth: root.width * 0.32
+                SplitView.minimumWidth: 320
                 controller: typeof playbackController !== "undefined" ? playbackController : null
             }
         }

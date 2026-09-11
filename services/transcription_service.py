@@ -332,13 +332,23 @@ class TranscriptionService:
         self._owned(project_id, transcript_id)
         self.repository.delete(project_id, transcript_id)
 
-    def duplicate_project_transcripts(self, source_project_id: str, target_project_id: str, media_map: dict[str, str]) -> int:
-        created = 0
+    def duplicate_project_transcripts(
+        self, source_project_id: str, target_project_id: str, media_map: dict[str, str]
+    ) -> int:
+        transcript_map, _ = self.duplicate_project_transcripts_with_map(
+            source_project_id, target_project_id, media_map
+        )
+        return len(transcript_map)
+
+    def duplicate_project_transcripts_with_map(
+        self, source_project_id: str, target_project_id: str, media_map: dict[str, str]
+    ) -> tuple[dict[str, str], dict[str, str]]:
+        transcript_map: dict[str, str] = {}
+        segment_map: dict[str, str] = {}
         for source in self.repository.list_for_project(source_project_id):
             target_media_id = media_map.get(source.media_id)
             if not target_media_id:
                 continue
-            from uuid import uuid4
             new = Transcript(
                 project_id=target_project_id,
                 media_id=target_media_id,
@@ -375,6 +385,7 @@ class TranscriptionService:
                     edited=segment.edited,
                     metadata=dict(segment.metadata),
                 )
+                segment_map[segment.segment_id] = clone_segment.segment_id
                 clone_segment.words = [
                     TranscriptWord(
                         segment_id=clone_segment.segment_id,
@@ -389,8 +400,8 @@ class TranscriptionService:
                 ]
                 cloned_segments.append(clone_segment)
             self.repository.create_with_segments(new, cloned_segments)
-            created += 1
-        return created
+            transcript_map[source.transcript_id] = new.transcript_id
+        return transcript_map, segment_map
 
     def _prepare_request(self, request: TranscriptionRequest) -> TranscriptionRequest:
         if request.language not in {"auto", "en", "km"}:

@@ -13,3 +13,5 @@ from storage.repositories.generated_audio_repository import GeneratedAudioReposi
 from .voice_repository import VoiceRepository
 
 from .transcript_repository import TranscriptRepository
+
+from storage.repositories.translation_repository import TranslationRepository

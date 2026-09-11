@@ -8,6 +8,7 @@ from typing import Any, Mapping
 class ModelPurpose(StrEnum):
     VOICE = "voice"
     SPEECH_TO_TEXT = "speech-to-text"
+    TRANSLATION = "translation"
 
 
 class ModelCompatibility(StrEnum):

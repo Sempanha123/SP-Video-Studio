@@ -28,6 +28,11 @@ tts = [
   "voxcpm>=2.0.3,<3",
   "soundfile>=0.13,<1",
 ]
+translation = [
+  "transformers>=5.17,<6",
+  "torch>=2.5",
+  "sentencepiece>=0.2,<1",
+]
 
 [project.scripts]
 sp-video-studio = "app.bootstrap:run"
@@ -40,6 +45,7 @@ markers = [
   "integration: opt-in integration tests that require external runtime dependencies",
   "voxcpm: opt-in real VoxCPM2 model tests",
   "faster_whisper: opt-in real faster-whisper model tests",
+  "translation: opt-in real local translation model tests",
 ]
 
 [tool.ruff]

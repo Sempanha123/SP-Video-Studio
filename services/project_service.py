@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from services.narration_service import NarrationService
     from services.transcription_service import TranscriptionService
     from services.voice_service import VoiceService
+    from services.translation_service import TranslationService
 
 
 PROJECT_DIRS = (
@@ -94,6 +95,7 @@ class ProjectService:
         self._narration_service: NarrationService | None = None
         self._transcription_service: TranscriptionService | None = None
         self._voice_service: VoiceService | None = None
+        self._translation_service: TranslationService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
                 self._known_project_roots.add(Path(existing.project_path).resolve().parent)
@@ -114,6 +116,9 @@ class ProjectService:
 
     def set_voice_service(self, voice_service: "VoiceService") -> None:
         self._voice_service = voice_service
+
+    def set_translation_service(self, translation_service: "TranslationService") -> None:
+        self._translation_service = translation_service
 
     def set_project_root(self, project_root: Path) -> None:
         """Change the location used only for newly created projects."""
@@ -251,17 +256,32 @@ class ProjectService:
             self._write_metadata(duplicate)
             self.repository.create(duplicate)
             media_id_map: dict[str, str] = {}
+            script_id_map: dict[str, str] = {}
+            script_section_map: dict[str, str] = {}
+            transcript_id_map: dict[str, str] = {}
+            transcript_segment_map: dict[str, str] = {}
             if self._media_service is not None:
                 media_id_map = self._media_service.duplicate_project_media_map(source, duplicate)
             if self._script_service is not None:
-                self._script_service.duplicate_project_script(source.project_id, duplicate.project_id, duplicate.title)
+                script_id_map, script_section_map = self._script_service.duplicate_project_script_with_map(
+                    source.project_id, duplicate.project_id, duplicate.title
+                )
             if self._voice_service is not None:
                 self._voice_service.duplicate_project_assignments(source.project_id, duplicate.project_id)
             if self._narration_service is not None:
                 self._narration_service.duplicate_project_audio(source.project_id, duplicate.project_id)
             if self._transcription_service is not None:
-                self._transcription_service.duplicate_project_transcripts(
+                transcript_id_map, transcript_segment_map = self._transcription_service.duplicate_project_transcripts_with_map(
                     source.project_id, duplicate.project_id, media_id_map
+                )
+            if self._translation_service is not None:
+                self._translation_service.duplicate_project_translations(
+                    source.project_id,
+                    duplicate.project_id,
+                    transcript_map=transcript_id_map,
+                    transcript_segment_map=transcript_segment_map,
+                    script_map=script_id_map,
+                    script_section_map=script_section_map,
                 )
         except Exception as exc:
             try:
