@@ -2,17 +2,18 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import "../theme"
-Rectangle { id:root; property var itemData:({}); property var controller; signal selected(var data); height:50; color:mouse.containsMouse?Qt.rgba(1,1,1,0.035):"transparent"; border.color:Qt.rgba(1,1,1,0.07)
-    MouseArea { id:mouse; anchors.fill:parent; hoverEnabled:true; onClicked:root.selected(root.itemData) }
-    RowLayout { anchors.fill:parent; anchors.margins:8; spacing:10
-        Text { text:(itemData.rowIndex+1); color:Theme.colors.textSecondary; Layout.preferredWidth:36 }
-        Text { text:(itemData.resolvedData && (itemData.resolvedData.title || itemData.resolvedData.headline)) || itemData.itemKey || ""; color:Theme.colors.textPrimary; elide:Text.ElideRight; Layout.fillWidth:true }
-        Text { text:(itemData.resolvedData && itemData.resolvedData.language) || "—"; color:Theme.colors.textSecondary; Layout.preferredWidth:52 }
-        Text { text:(itemData.metadata && itemData.metadata.variant && itemData.metadata.variant.platform) || "—"; color:Theme.colors.textSecondary; Layout.preferredWidth:86 }
-        Text { text:itemData.currentStage || ""; color:Theme.colors.textSecondary; Layout.preferredWidth:105 }
-        ProgressBar { value:itemData.progress || 0; Layout.preferredWidth:88 }
-        Text { text:Math.round((itemData.progress||0)*100)+"%"; color:Theme.colors.textSecondary; Layout.preferredWidth:42 }
-        Text { text:itemData.status || ""; color:Theme.colors.textPrimary; Layout.preferredWidth:96 }
-        ToolButton { text:"↻"; visible:itemData.status==="failed" || itemData.status==="interrupted" || itemData.status==="output_missing" || itemData.status==="needs_review"; onClicked:controller.retryItem(itemData.id) }
+import "../components"
+Rectangle {
+    id: root; property var itemData: ({}); property var controller; signal selected(var data)
+    height: 48; radius: Theme.radius.small; color: mouse.containsMouse ? Theme.colors.surfaceHover : "transparent"; border.width: 1; border.color: Theme.colors.border
+    MouseArea { id: mouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.selected(root.itemData) }
+    RowLayout { anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 8; spacing: Theme.spacing.sm
+        Text { text: (itemData.rowIndex+1); color: Theme.colors.textMuted; font.family:Theme.type.family; font.pixelSize:Theme.type.caption; Layout.preferredWidth: 30 }
+        Text { text: (itemData.resolvedData && (itemData.resolvedData.title || itemData.resolvedData.headline)) || itemData.itemKey || ""; color: Theme.colors.textPrimary; font.family:Theme.type.family; font.pixelSize:Theme.type.bodySmall; elide: Text.ElideRight; Layout.fillWidth: true }
+        Text { text: (itemData.resolvedData && itemData.resolvedData.language) || "—"; color: Theme.colors.textSecondary; font.family:Theme.type.family; font.pixelSize:Theme.type.caption; Layout.preferredWidth: 48 }
+        Text { text: itemData.currentStage || ""; color: Theme.colors.textMuted; font.family:Theme.type.family; font.pixelSize:Theme.type.caption; Layout.preferredWidth: 96; elide:Text.ElideRight }
+        SoftProgressBar { value: itemData.progress || 0; Layout.preferredWidth: 78 }
+        StatusBadge { text: String(itemData.status || "pending").replaceAll("_"," "); status: String(itemData.status || "pending") }
+        ToolButton { text: "↻"; visible: itemData.status === "failed" || itemData.status === "interrupted" || itemData.status === "output_missing" || itemData.status === "needs_review"; ToolTip.visible:hovered; ToolTip.text:"Retry item"; onClicked: controller.retryItem(itemData.id); background:Rectangle{radius:Theme.radius.small;color:parent.hovered?Theme.colors.surfaceHover:"transparent"} }
     }
 }

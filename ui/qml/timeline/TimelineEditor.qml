@@ -53,7 +53,8 @@ FocusScope {
             Layout.fillWidth:true
             Layout.preferredHeight:Math.min(390,root.height*.44)
             orientation:Qt.Horizontal
-            AppCard {
+            Rectangle {
+                radius:Theme.radius.card; color:Theme.colors.previewBackground; border.color:Theme.colors.borderStrong
                 SplitView.fillWidth:true; SplitView.minimumWidth:420
                 PreviewPlayer { anchors.fill:parent; anchors.margins:Theme.spacing.sm; controller:root.playbackController }
             }
@@ -67,7 +68,7 @@ FocusScope {
                         SecondaryButton { text:"Shorts"; compact:true; enabled:root.studioPanelIndex!==1; onClicked:root.studioPanelIndex=1 }
                         SecondaryButton { text:"Library"; compact:true; enabled:root.studioPanelIndex!==2; onClicked:root.studioPanelIndex=2 }
                         Item { Layout.fillWidth:true }
-                        Text { text:Shorts.workflow==="shorts"?"Short project":"Source project"; color:Theme.colors.textMuted; font.family:Theme.type.family; font.pixelSize:Theme.type.caption }
+                        Text { text:Shorts.workflow==="shorts"?"Short project":"Source project"; color:Theme.colors.timelineText; font.family:Theme.type.family; font.pixelSize:Theme.type.timeline }
                     }
                     StackLayout {
                         Layout.fillWidth:true; Layout.fillHeight:true; currentIndex:root.studioPanelIndex
@@ -86,17 +87,17 @@ FocusScope {
                 id: labels
                 Layout.preferredWidth:174; Layout.fillHeight:true
                 Rectangle {
-                    width:174; height:34; color:Theme.colors.surfaceRaised; border.color:Theme.colors.border
+                    width:174; height:34; color:Theme.colors.timelineRuler; border.color:Theme.colors.borderStrong
                     RowLayout { anchors.fill:parent; anchors.margins:6
-                        Text { Layout.fillWidth:true; text:"TRACKS"; color:Theme.colors.textMuted; font.family:Theme.type.family; font.pixelSize:Theme.type.caption }
-                        Text { text:"Frame: , ."; color:Theme.colors.textMuted; font.family:Theme.type.family; font.pixelSize:9 }
+                        Text { Layout.fillWidth:true; text:"TRACKS"; color:Theme.colors.timelineText; font.family:Theme.type.family; font.pixelSize:Theme.type.timeline }
+                        Text { text:"Frame: , ."; color:Theme.colors.timelineText; font.family:Theme.type.family; font.pixelSize:Theme.type.timeline }
                     }
                 }
                 Repeater {
                     model:root.controller?root.controller.tracks:[]
                     delegate:Rectangle {
                         required property var modelData
-                        width:174; height:Number(modelData.height||64); color:Theme.colors.surfaceRaised; border.color:Theme.colors.border
+                        width:174; height:Number(modelData.height||64); color:Theme.colors.timelineRuler; border.color:Theme.colors.borderStrong
                         RowLayout { anchors.fill:parent; anchors.margins:6; spacing:3
                             Text { Layout.fillWidth:true; text:modelData.name; elide:Text.ElideRight; color:Theme.colors.textSecondary; font.family:Theme.type.family; font.pixelSize:Theme.type.caption }
                             SecondaryButton { text:modelData.locked?"🔒":"🔓"; compact:true; onClicked:if(root.controller)root.controller.setTrackLocked(modelData.type,!modelData.locked) }

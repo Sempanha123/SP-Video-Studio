@@ -1,6 +1,7 @@
 import QtQuick 2.15
 QtObject {
-    readonly property int fast: 120
-    readonly property int normal: 180
-    readonly property int slow: 240
+    property bool reducedMotion: false
+    readonly property int fast: reducedMotion ? 0 : 120
+    readonly property int normal: reducedMotion ? 0 : 180
+    readonly property int slow: reducedMotion ? 0 : 260
 }
