@@ -2,8 +2,10 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Dialogs
+import SPVideoStudio.Phase29 1.0
 import "../theme"
 import "../components"
+import "../storage"
 
 Item {
     id: root
@@ -118,7 +120,7 @@ Item {
                             if (root.section === "Projects") return "Choose where new projects are created."
                             if (root.section === "Performance") return "Tune performance and review system readiness."
                             if (root.section === "Rendering") return "Set defaults for future rendering workflows."
-                            if (root.section === "Storage") return "Review application storage locations."
+                            if (root.section === "Storage") return "Review storage usage, safe cache cleanup and disk health."
                             return "Diagnostics and advanced application preferences."
                         }
                         color: Theme.colors.textSecondary
@@ -338,25 +340,10 @@ Item {
                     }
                 }
 
-                SettingsSection {
+                StoragePage {
                     visible: root.section === "Storage"
                     Layout.fillWidth: true
-                    title: "Storage Locations"
-                    description: "Critical application folders are system-managed. The Projects location can be changed from Projects settings."
-                    SettingsRow {
-                        title: "AI Model Storage"
-                        description: "Measured managed model files. Refreshed after install, repair or removal."
-                        StatusBadge { text: typeof modelController !== "undefined" ? modelController.totalModelStorage : "0 B"; status: "ready" }
-                    }
-                    Repeater {
-                        model: ["Application Data", "Projects", "Cache", "Models", "Temporary", "Logs", "Exports"]
-                        delegate: SettingsRow {
-                            required property string modelData
-                            title: modelData
-                            description: settingsController.storagePaths[modelData] || "Unavailable"
-                            SecondaryButton { text: "Open Folder"; compact: true; onClicked: settingsController.openStorageFolder(modelData) }
-                        }
-                    }
+                    controller: Storage
                 }
 
                 SettingsSection {
