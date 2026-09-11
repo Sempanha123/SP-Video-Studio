@@ -14,3 +14,11 @@ Phase 31 keeps the existing creator architecture and final renderer intact while
 The shared WorkerPool is now bounded and priority-aware (Interactive / Normal / Background), stale preview/thumbnail requests carry request versions so late work cannot replace current UI state, and Settings → Performance exposes Auto / Low Memory / Balanced / Maximum Quality plus preview quality and worker limits. Phase 31 does not preload VoxCPM2, Whisper, or translation models and does not change final render resolution/quality.
 
 See `docs/performance.md` for the profiling method, measured before/after numbers, cache/index strategy, worker/model lifecycle, memory-scope results, and target-machine measurements that still require a real Windows/PySide6/CUDA environment.
+
+## Phase 32 — Manual Speech & TTS Editor
+
+Phase 32 adds one reusable, virtualized Manual Speech/TTS workspace across Timeline, News, Story, Translate & Dub, and Shorts. `SpeechBlock` remains canonical; generated takes remain `GeneratedAudio`; the existing Phase 22 TTS/AI resource lifecycle, Phase 17 Timeline, Phase 27 autosave/recovery state, and Phase 30 Audio Mixer remain authoritative.
+
+Manual text/timing/speaker/voice/language edits invalidate only affected rows and preserve prior takes. Users can generate selected/outdated/all rows, reactivate older takes, perform Unicode find/replace, split/merge speech, synchronize explicitly with subtitles, and create speech from transcript/translation segments. The editor uses recycled ListView delegates so large 1,000-row projects do not instantiate 1,000 text editors.
+
+See `docs/PHASE32_MANUAL_SPEECH_TTS_EDITOR.md` for schema compatibility, timing/take behavior, workflow reuse, subtitle safety, autosave integration, and performance notes.

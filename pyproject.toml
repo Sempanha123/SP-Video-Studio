@@ -15,28 +15,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-  "pytest>=8.3,<10",
-  "pytest-cov>=6,<8",
-  "ruff>=0.9,<1",
-]
-ai = [
-  "faster-whisper>=1.2.1,<2",
-  "ctranslate2>=4.8.2,<5",
-]
-tts = [
-  "voxcpm>=2.0.3,<3",
-  "soundfile>=0.13,<1",
-]
-translation = [
-  "transformers>=5.17,<6",
-  "torch>=2.5",
-  "sentencepiece>=0.2,<1",
-]
+dev = ["pytest>=8.3,<10", "pytest-cov>=6,<8", "ruff>=0.9,<1"]
+ai = ["faster-whisper>=1.2.1,<2", "ctranslate2>=4.8.2,<5"]
+tts = ["voxcpm>=2.0.3,<3", "soundfile>=0.13,<1"]
+translation = ["transformers>=5.17,<6", "torch>=2.5", "sentencepiece>=0.2,<1"]
 
 [project.scripts]
-# Phase 31 layers performance policy over the prior app.phase30_runtime:run entry point.
-sp-video-studio = "app.phase31_runtime:run"
+# Manual Speech/TTS Editor layers on the Phase 31 performance runtime.
+sp-video-studio = "app.manual_speech_runtime:run"
 
 [tool.pytest.ini_options]
 addopts = "-ra"
@@ -52,13 +38,10 @@ markers = [
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
-
 [tool.setuptools]
 py-modules = ["main"]
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*", "domain*", "engines*", "workers*", "services*", "storage*", "media*", "rendering*", "workflows*", "ui*"]
