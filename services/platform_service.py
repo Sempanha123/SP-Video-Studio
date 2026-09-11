@@ -20,3 +20,15 @@ def reveal_in_folder(path: str | Path) -> None:
         return
     folder = target if target.is_dir() else target.parent
     subprocess.Popen(["xdg-open", str(folder)], shell=False)
+
+
+def open_path(path: str | Path) -> None:
+    """Open a file with the OS default handler without constructing a shell command."""
+    target = Path(path)
+    if sys.platform.startswith("win"):
+        os.startfile(str(target))  # type: ignore[attr-defined]
+        return
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", str(target)], shell=False)
+        return
+    subprocess.Popen(["xdg-open", str(target)], shell=False)

@@ -54,7 +54,7 @@ def caps(*encoders: str) -> FFmpegCapabilities:
 def test_phase15_database_migration_tables(tmp_path: Path):
     db = SQLiteDatabase(tmp_path / "app.db")
     db.initialize()
-    assert db.current_version() == 12
+    assert db.current_version() == 13
     with db.connect() as con:
         tables = {row["name"] for row in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"render_jobs", "render_outputs"} <= tables
@@ -258,7 +258,7 @@ def test_render_tables_cascade_on_project_delete(tmp_path: Path):
 
 def test_render_qml_workspace_wiring():
     page=Path('ui/qml/pages/ProjectWorkspacePage.qml').read_text(encoding='utf-8')
-    assert 'text: "Render"' in page and 'RenderDialog {' in page and 'renderController' in page
+    assert 'text: "Export"' in page and 'ExportPage {' in page and 'exportController' in page
     for name in ['RenderDialog.qml','RenderSettings.qml','RenderProgress.qml','RenderResult.qml']:
         assert (Path('ui/qml/render')/name).is_file()
 
@@ -273,7 +273,7 @@ def test_upgrade_from_phase14_schema_applies_render_migration(tmp_path: Path):
             migration.apply(con); con.execute("INSERT INTO schema_migrations(version,name,applied_at) VALUES(?,?,?)",(migration.version,migration.name,'old'))
         con.commit()
     assert db.current_version()==11
-    db.initialize(); assert db.current_version()==12
+    db.initialize(); assert db.current_version()==13
     with db.connect() as con:
         assert con.execute("SELECT COUNT(*) FROM render_jobs").fetchone()[0]==0
 

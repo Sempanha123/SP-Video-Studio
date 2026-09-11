@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "presets": [
+    {
+      "id": "tiktok",
+      "name": "TikTok",
+      "platform": "tiktok",
+      "description": "Optimized vertical social video.",
+      "width": 1080,
+      "height": 1920,
+      "aspectRatio": "9:16",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "burn",
+      "recommendedMaxDurationMs": 180000,
+      "metadata": {
+        "category": "Social",
+        "icon": "smartphone"
+      }
+    },
+    {
+      "id": "youtube_shorts",
+      "name": "YouTube Shorts",
+      "platform": "youtube_shorts",
+      "description": "Vertical short-form video with flexible 30/60 FPS output.",
+      "width": 1080,
+      "height": 1920,
+      "aspectRatio": "9:16",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "burn",
+      "recommendedMaxDurationMs": 180000,
+      "metadata": {
+        "category": "Social",
+        "icon": "play"
+      }
+    },
+    {
+      "id": "instagram_reels",
+      "name": "Instagram Reels",
+      "platform": "instagram_reels",
+      "description": "Clean vertical reel export without added branding.",
+      "width": 1080,
+      "height": 1920,
+      "aspectRatio": "9:16",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "burn",
+      "recommendedMaxDurationMs": 180000,
+      "metadata": {
+        "category": "Social",
+        "icon": "video"
+      }
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "platform": "youtube",
+      "description": "Full HD landscape video for standard YouTube publishing workflows.",
+      "width": 1920,
+      "height": 1080,
+      "aspectRatio": "16:9",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "none",
+      "metadata": {
+        "category": "Landscape",
+        "useProjectFps": true,
+        "icon": "play"
+      }
+    },
+    {
+      "id": "facebook_vertical",
+      "name": "Facebook Vertical",
+      "platform": "facebook",
+      "description": "Vertical Facebook video preset.",
+      "width": 1080,
+      "height": 1920,
+      "aspectRatio": "9:16",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "none",
+      "metadata": {
+        "category": "Social",
+        "icon": "smartphone"
+      }
+    },
+    {
+      "id": "facebook_square",
+      "name": "Facebook Square",
+      "platform": "facebook",
+      "description": "Square Facebook feed video preset.",
+      "width": 1080,
+      "height": 1080,
+      "aspectRatio": "1:1",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "none",
+      "metadata": {
+        "category": "Square",
+        "icon": "square"
+      }
+    },
+    {
+      "id": "facebook_landscape",
+      "name": "Facebook Landscape",
+      "platform": "facebook",
+      "description": "Landscape Facebook video preset.",
+      "width": 1920,
+      "height": 1080,
+      "aspectRatio": "16:9",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "none",
+      "metadata": {
+        "category": "Landscape",
+        "icon": "video"
+      }
+    },
+    {
+      "id": "generic_vertical",
+      "name": "Generic Vertical",
+      "platform": "generic",
+      "description": "Platform-neutral 9:16 Full HD export.",
+      "width": 1080,
+      "height": 1920,
+      "aspectRatio": "9:16",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "none",
+      "metadata": {
+        "category": "Social",
+        "icon": "smartphone"
+      }
+    },
+    {
+      "id": "generic_landscape",
+      "name": "Generic Landscape",
+      "platform": "generic",
+      "description": "Platform-neutral 16:9 Full HD export.",
+      "width": 1920,
+      "height": 1080,
+      "aspectRatio": "16:9",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "none",
+      "metadata": {
+        "category": "Landscape",
+        "icon": "video"
+      }
+    },
+    {
+      "id": "generic_square",
+      "name": "Generic Square",
+      "platform": "generic",
+      "description": "Platform-neutral 1:1 Full HD export.",
+      "width": 1080,
+      "height": 1080,
+      "aspectRatio": "1:1",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "none",
+      "metadata": {
+        "category": "Square",
+        "icon": "square"
+      }
+    },
+    {
+      "id": "custom",
+      "name": "Custom",
+      "platform": "custom",
+      "description": "Start from editable export settings and save your own preset.",
+      "width": 1920,
+      "height": 1080,
+      "aspectRatio": "16:9",
+      "fps": 30,
+      "container": "mp4",
+      "videoCodec": "h264",
+      "audioCodec": "aac",
+      "qualityProfile": "balanced",
+      "subtitleMode": "none",
+      "metadata": {
+        "category": "Custom",
+        "icon": "settings"
+      }
+    }
+  ]
+}

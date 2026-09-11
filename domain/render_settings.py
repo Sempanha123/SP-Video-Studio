@@ -27,6 +27,7 @@ class RenderSettings:
     pixel_format: str = "yuv420p"
     audio_codec: str = "aac"
     audio_bitrate: str = "192k"
+    include_audio: bool = True
     keep_temp: bool = False
     allow_hardware_fallback: bool = True
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -61,6 +62,7 @@ class RenderSettings:
             "pixelFormat": self.pixel_format,
             "audioCodec": self.audio_codec,
             "audioBitrate": self.audio_bitrate,
+            "includeAudio": self.include_audio,
             "keepTemp": self.keep_temp,
             "allowHardwareFallback": self.allow_hardware_fallback,
             "metadata": dict(self.metadata),
@@ -79,6 +81,7 @@ class RenderSettings:
             pixel_format=str(data.get("pixelFormat", "yuv420p")),
             audio_codec=str(data.get("audioCodec", "aac")),
             audio_bitrate=str(data.get("audioBitrate", "192k")),
+            include_audio=bool(data.get("includeAudio", True)),
             keep_temp=bool(data.get("keepTemp", False)),
             allow_hardware_fallback=bool(data.get("allowHardwareFallback", True)),
             metadata=dict(data.get("metadata", {}) or {}),

@@ -45,8 +45,8 @@ class RenderService:
             desired={"9:16":"vertical_full_hd","16:9":"landscape_full_hd","1:1":"square_full_hd"}.get(project.aspect_ratio,"landscape_full_hd"); preset=next(p for p in BUILTIN_RENDER_PRESETS if p.id==desired)
         return RenderSettings(preset.width,preset.height,project.fps,quality=preset.quality_profile)
 
-    def encoder_options(self)->list[dict]:
-        _,encoders,_=self._runtime(); return [{"id":x.encoder_id,"name":x.name,"hardware":x.hardware,"available":x.available,"runtimeReady":x.runtime_ready} for x in encoders.list(validate_hardware=False)]
+    def encoder_options(self, *, validate_hardware: bool=False)->list[dict]:
+        _,encoders,_=self._runtime(); return [{"id":x.encoder_id,"name":x.name,"hardware":x.hardware,"available":x.available,"runtimeReady":x.runtime_ready} for x in encoders.list(validate_hardware=validate_hardware)]
 
     def build_plan(self,project_id:str,settings:RenderSettings,*,preset_id:str="custom",job_id:str="") -> RenderPlan:
         project=self._project(project_id); runner,encoders,version=self._runtime(); settings.validate()
@@ -55,7 +55,7 @@ class RenderService:
             if not scene.enabled: continue
             specs.append(self.scenes.build_scene_render_spec(project_id,scene.id))
         output=Path(settings.output_path) if settings.output_path else self._default_output(project,settings)
-        if output.exists(): output=self._collision_path(output)
+        if output.exists() and str(settings.metadata.get("overwritePolicy", "keep_both")) != "replace": output=self._collision_path(output)
         settings.output_path=str(output)
         temp=Path(project.project_path)/"cache"/"render"/(job_id or "preview-plan")
         expected=expected_sequence_duration_ms(specs)
@@ -89,11 +89,11 @@ class RenderService:
                 if progress_callback: progress_callback(state)
             execution=renderer.render(plan,cancellation=cancellation,progress_callback=on_progress)
             job.status=RenderJobStatus.VALIDATING_OUTPUT; job.progress=.99; self.jobs.update(job)
-            probe=FFprobeService(self.ffprobe_provider); validation=OutputValidator(probe).validate(execution.output_path,width=settings.width,height=settings.height,fps=settings.fps,expected_duration_ms=plan.expected_duration_ms,audio_expected=True)
+            probe=FFprobeService(self.ffprobe_provider); validation=OutputValidator(probe).validate(execution.output_path,width=settings.width,height=settings.height,fps=settings.fps,expected_duration_ms=plan.expected_duration_ms,audio_expected=settings.include_audio)
             thumb_path=Path(self._project(project_id).project_path)/"thumbnails"/"renders"/f"{job.id}.jpg"; thumb=""
             try: thumb=str(self.thumbnail_service.generate_video_thumbnail(execution.output_path,thumb_path,duration_ms=validation.probe.duration_ms))
             except Exception: self.logger.info("Render thumbnail generation failed",exc_info=True)
-            output=RenderOutput(project_id,job.id,str(execution.output_path),settings.width,settings.height,float(validation.probe.fps or settings.fps),int(validation.probe.duration_ms or plan.expected_duration_ms),str(validation.probe.codec or "h264"),str(validation.probe.audio_codec or ""),validation.file_size,thumb,metadata={"encoder":execution.encoder,"ffmpegVersion":version,"renderGraph":execution.graph,"snapshotSchemaVersion":plan.schema_version})
+            output=RenderOutput(project_id,job.id,str(execution.output_path),settings.width,settings.height,float(validation.probe.fps or settings.fps),int(validation.probe.duration_ms or plan.expected_duration_ms),str(validation.probe.codec or "h264"),str(validation.probe.audio_codec or ""),validation.file_size,thumb,metadata={**dict(settings.metadata),"encoder":execution.encoder,"ffmpegVersion":version,"renderGraph":execution.graph,"snapshotSchemaVersion":plan.schema_version})
             self.outputs.create(output); job.status=RenderJobStatus.COMPLETED; job.progress=1.0; job.actual_duration_ms=output.duration_ms; job.completed_at=utc_now_iso(); job.metadata["actualEncoder"]=execution.encoder; self.jobs.update(job); self.logger.info("Render completed: %s",job.id)
             if manager and not settings.keep_temp: manager.cleanup()
             return output

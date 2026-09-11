@@ -821,3 +821,46 @@ Project renders live under `project/renders/`; render intermediates live under t
 The normal automated suite uses tiny fixtures. A separate Phase 15 performance smoke rendered a real **60-second 1920×1080 / 30 fps** sequence of six alternating image/video scenes using software `libx264` Fast quality. On this validation host it completed in **24.73 seconds (~2.43× realtime)**, produced a 59.967-second validated video, and the Python process reported roughly 102 MiB peak RSS. This is a functional smoke on simple synthetic content, not a hardware performance guarantee.
 
 Phase 15 intentionally does **not** add the advanced timeline, News/Story/Shorts automation, dubbing workflow, Batch Factory, publishing, cloud rendering, or the polished Phase 16 export experience.
+
+## Polished export workflow and platform presets
+
+Phase 16 adds a dedicated Export layer **above** the Phase 15 renderer. The export UI never creates FFmpeg commands and does not contain a second rendering implementation. The production flow is now:
+
+```text
+ExportPreset → ExportRequest → Export validation → RenderPlan snapshot
+             → existing RenderService → RenderOutput / export history
+```
+
+### Export presets
+
+Builtin presets are stored in the versioned `resources/export/presets.json` registry rather than QML. The registry currently provides TikTok, YouTube Shorts, Instagram Reels, YouTube, Facebook Vertical/Square/Landscape, Generic Vertical/Landscape/Square, and an editable Custom starting point. These are MMO Video Studio defaults, not claims that a platform accepts only one resolution or duration.
+
+Vertical presets start at 1080×1920 / 9:16 / 30 FPS, square at 1080×1080, and landscape at 1920×1080. YouTube can follow the project FPS. Basic quality remains Fast/Balanced/High Quality and delegates to the Phase 15 encoder-quality mappings. Encoder choices are friendly names backed by the Phase 15 runtime encoder registry; hardware entries are shown only when the FFmpeg build exposes them **and** the runtime probe succeeds. Software H.264 remains the safe fallback.
+
+SQLite schema version **13** adds `export_presets` for user-created presets and `project_export_profiles` for per-project last-used export choices. Builtin presets are immutable. Users can duplicate any preset into a custom preset, rename/edit/delete user presets, and save the current settings as a new preset. Custom preset data survives restart without mutating builtin definitions.
+
+### Filenames, output folders, and conflicts
+
+`ExportFilenameService` preserves normal Unicode—including Khmer—while replacing only invalid filesystem characters and reserved device names. MP4 extension normalization converts inputs such as `video`, `video.mp4`, or `video.mov` to one clear `.mp4` filename instead of producing double extensions.
+
+File conflicts are explicit: **Keep Both** (default) produces `video_2.mp4`, **Replace** targets the recorded path intentionally, and **Cancel** refuses to start. Output folders are checked/created and write-tested before export. Export history records whether the output is managed under the project or is an external user-selected path. Managed deletion remains path-guarded; external files require an explicit stronger confirmation and only the exact recorded output is eligible for deletion.
+
+### Subtitle and audio behavior
+
+Export can use no subtitles, burn a selected Phase 12 subtitle track into the video, or export SRT/VTT/ASS beside the completed MP4. External subtitle serialization delegates to `SubtitleService`; Phase 16 does not duplicate SRT/VTT/ASS writers. The project default subtitle track is preferred when one exists. Bilingual tracks continue through the validated Phase 12/15 ASS/libass path.
+
+Audio may be enabled with Standard or High AAC quality, or disabled entirely. No-audio output is implemented as a small Phase 15 setting extension: scene composition stays deterministic, while the final MP4 encode omits the audio stream and output validation expects no audio.
+
+### Export UX, progress, and history
+
+The project workspace now exposes **Export** and `Ctrl+E` opens the same workflow. Users choose a preset, review resolution/FPS/quality/encoder/subtitles, choose Fit/Fill/Stretch behavior for aspect conversion, select folder/filename/conflict policy, validate, then start export. Validation reuses Phase 15 project/render checks and adds informational platform/aspect-duration warnings plus an explicitly labeled estimated output size.
+
+Before export starts, Script, Transcript, Translation, and Subtitle autosaves are flushed. A failed save prevents the export snapshot from starting. Once started, settings are immutable for that render job and progress/cancellation come directly from the existing RenderService machine-readable FFmpeg progress path. The UI does not invent a second progress system or imply that rendering continues after the app exits.
+
+Completed exports show Play Video, Open File, Open Folder, and Export Another Version. Playback reuses the Phase 5 player. Export Again restores the settings saved in the previous `RenderOutput` metadata but renders the **current** project content. Recent exports remain persistent after restart, expose missing-file state safely, and can be removed from history without crashing if a user moved/deleted a file externally.
+
+### Phase 16 validation
+
+The normal suite uses small deterministic fixtures, while real FFmpeg integration verifies the Export layer against the Phase 15 renderer. Validated outputs include a real TikTok 1080×1920 export, YouTube 1920×1080 export, Khmer burned subtitle output in a Khmer-named directory/file, external UTF-8 Khmer SRT, Keep Both collision generation, and render-history reload after a new application container is created. Phase 15's real bilingual English+Khmer burn, cancellation, output validation, and hardware-fallback tests continue to run unchanged.
+
+Phase 16 remains fully local: no upload, social-platform API, cloud render service, telemetry, advanced timeline, News/Story/Translate&Dub workflow, or Batch Factory is introduced. The recommended next phase is **Phase 17 — Advanced Timeline Editor**.

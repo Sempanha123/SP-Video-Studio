@@ -7,6 +7,7 @@ import "../components"
 import "../editor"
 import "../director"
 import "../render"
+import "../export"
 
 Item {
     id: root
@@ -19,6 +20,8 @@ Item {
     property string workspaceMode: "media"
     signal navigateRequested(string page, string workflow)
     signal toastRequested(string message, string variant)
+
+    Shortcut { sequence: "Ctrl+E"; onActivated: root.setWorkspaceMode("export") }
 
     function current() {
         return typeof projectController !== "undefined" ? projectController.currentProject : ({})
@@ -54,6 +57,8 @@ Item {
             directorController.setCurrentProject(root.current().id || "")
         if (mode === "render" && typeof renderController !== "undefined")
             renderController.setCurrentProject(root.current().id || "")
+        if (mode === "export" && typeof exportController !== "undefined")
+            exportController.setCurrentProject(root.current().id || "")
         root.workspaceMode = mode
     }
 
@@ -101,6 +106,8 @@ Item {
             directorController.setCurrentProject(root.current().id || "")
         if (typeof renderController !== "undefined")
             renderController.setCurrentProject(root.current().id || "")
+        if (typeof exportController !== "undefined")
+            exportController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
@@ -134,6 +141,8 @@ Item {
                 directorController.setCurrentProject(root.current().id || "")
             if (typeof renderController !== "undefined")
                 renderController.setCurrentProject(root.current().id || "")
+            if (typeof exportController !== "undefined")
+                exportController.setCurrentProject(root.current().id || "")
             if (root.workspaceMode === "script" && typeof scriptController !== "undefined")
                 scriptController.load(root.current().id || "")
         }
@@ -179,7 +188,7 @@ Item {
             AppButton { text: "Subtitles"; compact: true; variant: root.workspaceMode === "subtitles" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("subtitles") }
             AppButton { text: "Scenes"; compact: true; variant: root.workspaceMode === "scenes" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("scenes") }
             AppButton { text: "Director"; compact: true; variant: root.workspaceMode === "director" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("director") }
-            AppButton { text: "Render"; compact: true; variant: root.workspaceMode === "render" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("render") }
+            AppButton { text: "Export"; compact: true; variant: root.workspaceMode === "export" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("export") }
         }
 
         SplitView {
@@ -546,14 +555,11 @@ Item {
             onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
         }
 
-        RenderDialog {
+        ExportPage {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            visible: root.workspaceMode === "render"
-            controller: typeof renderController !== "undefined" ? renderController : null
-            aspectRatio: root.current().aspectRatio || "16:9"
-            projectFps: root.current().fps || 30
-            onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
+            visible: root.workspaceMode === "export"
+            controller: typeof exportController !== "undefined" ? exportController : null
         }
 
         ScriptEditor {

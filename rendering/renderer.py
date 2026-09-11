@@ -63,7 +63,12 @@ class FFmpegRenderer:
                 ass=self.subtitle_renderer.prepare_ass(plan.project_id,plan.subtitle_track_id,temp/"project-subtitles.ass",width=plan.settings.width,height=plan.settings.height)
                 vf.append(subtitles_filter(ass,fonts_dir=self.fonts_dir)); graph.add("subtitles","subtitle_burn",inputs=["combine"],trackId=plan.subtitle_track_id,file=str(ass))
             vf.append("format="+plan.settings.pixel_format)
-            final_args += ["-vf",",".join(vf),"-map","0:v:0","-map","0:a:0","-c:v",encoder,*self.encoders.quality_args(encoder,plan.settings.quality_code),"-pix_fmt",plan.settings.pixel_format,"-r",str(plan.settings.fps),"-c:a",plan.settings.audio_codec,"-b:a",plan.settings.audio_bitrate,"-ar","48000","-ac","2","-movflags","+faststart",str(partial)]
+            final_args += ["-vf",",".join(vf),"-map","0:v:0","-c:v",encoder,*self.encoders.quality_args(encoder,plan.settings.quality_code),"-pix_fmt",plan.settings.pixel_format,"-r",str(plan.settings.fps)]
+            if plan.settings.include_audio:
+                final_args += ["-map","0:a:0","-c:a",plan.settings.audio_codec,"-b:a",plan.settings.audio_bitrate,"-ar","48000","-ac","2"]
+            else:
+                final_args += ["-an"]
+            final_args += ["-movflags","+faststart",str(partial)]
             graph.add("encode","final_encode",inputs=["subtitles" if plan.subtitle_track_id else "combine"],encoder=encoder,destination=str(output))
             def final_progress(info,fraction):
                 if progress_callback: progress_callback(mapper.final(fraction,info.out_time_ms,info.speed))

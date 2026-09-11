@@ -16,6 +16,7 @@ from .m009_create_subtitles import migrate as create_subtitles
 from .m010_create_scenes import migrate as create_scenes
 from .m011_create_director import migrate as create_director
 from .m012_create_rendering import migrate as create_rendering
+from .m013_create_export_presets import migrate as create_export_presets
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,4 +39,5 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(10, "create_scenes", create_scenes),
     Migration(11, "create_director", create_director),
     Migration(12, "create_rendering", create_rendering),
+    Migration(13, "create_export_presets", create_export_presets),
 )
