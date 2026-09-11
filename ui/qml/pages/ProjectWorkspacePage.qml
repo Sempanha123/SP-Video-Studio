@@ -26,20 +26,27 @@ Item {
         root.selectedMediaId = mediaId
         if (typeof playbackController !== "undefined")
             playbackController.setMedia(mediaId)
+        if (typeof transcriptionController !== "undefined")
+            transcriptionController.setMedia(mediaId)
     }
 
     function setWorkspaceMode(mode) {
         if (mode === root.workspaceMode) return
         if (root.workspaceMode === "script" && typeof scriptController !== "undefined" && !scriptController.flush()) return
+        if (root.workspaceMode === "transcription" && typeof transcriptionController !== "undefined" && !transcriptionController.saveEdits()) return
         if (mode === "script") {
             if (typeof playbackController !== "undefined") playbackController.clear()
             if (typeof scriptController !== "undefined" && !scriptController.load(root.current().id || "")) return
         }
+        if (mode === "transcription" && typeof transcriptionController !== "undefined")
+            transcriptionController.setMedia(root.selectedMediaId)
         root.workspaceMode = mode
     }
 
     function leaveWorkspace() {
         if (typeof scriptController !== "undefined" && !scriptController.flush()) return
+        if (typeof transcriptionController !== "undefined" && !transcriptionController.saveEdits()) return
+        if (typeof transcriptionController !== "undefined") transcriptionController.cancel()
         if (typeof playbackController !== "undefined") playbackController.clear()
         root.navigateRequested("projects", "")
     }
@@ -66,9 +73,12 @@ Item {
             playbackController.setCurrentProject(root.current().id || "")
         if (typeof ttsController !== "undefined")
             ttsController.setCurrentProject(root.current().id || "")
+        if (typeof transcriptionController !== "undefined")
+            transcriptionController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
+        if (typeof transcriptionController !== "undefined") { transcriptionController.saveEdits(); transcriptionController.cancel() }
         if (typeof playbackController !== "undefined") playbackController.clear()
     }
 
@@ -84,6 +94,8 @@ Item {
                 playbackController.setCurrentProject(root.current().id || "")
             if (typeof ttsController !== "undefined")
                 ttsController.setCurrentProject(root.current().id || "")
+            if (typeof transcriptionController !== "undefined")
+                transcriptionController.setCurrentProject(root.current().id || "")
             if (root.workspaceMode === "script" && typeof scriptController !== "undefined")
                 scriptController.load(root.current().id || "")
         }
@@ -124,6 +136,7 @@ Item {
             Item { Layout.fillWidth: true }
             AppButton { text: "Media"; compact: true; variant: root.workspaceMode === "media" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("media") }
             AppButton { text: "Script"; compact: true; variant: root.workspaceMode === "script" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("script") }
+            AppButton { text: "Transcription"; compact: true; variant: root.workspaceMode === "transcription" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("transcription") }
         }
 
         SplitView {
@@ -164,6 +177,12 @@ Item {
                         text: "Details"
                         compact: true
                         onClicked: root.showDetails(root.selectedMediaId)
+                    }
+                    SecondaryButton {
+                        visible: root.selectedMediaId !== "" && typeof transcriptionController !== "undefined" && transcriptionController.canTranscribe
+                        text: "Transcribe"
+                        compact: true
+                        onClicked: root.setWorkspaceMode("transcription")
                     }
                     AppButton {
                         text: "Import Media"
@@ -373,6 +392,32 @@ Item {
                 SplitView.fillHeight: true
                 SplitView.minimumWidth: workspaceSplit.orientation === Qt.Horizontal ? 420 : 0
                 SplitView.minimumHeight: workspaceSplit.orientation === Qt.Vertical ? 300 : 0
+                controller: typeof playbackController !== "undefined" ? playbackController : null
+            }
+        }
+
+        SplitView {
+            visible: root.workspaceMode === "transcription"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            orientation: root.width < 1120 ? Qt.Vertical : Qt.Horizontal
+
+            TranscriptionPanel {
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
+                SplitView.preferredWidth: root.width * 0.60
+                SplitView.minimumWidth: 520
+                controller: typeof transcriptionController !== "undefined" ? transcriptionController : null
+                playbackController: typeof playbackController !== "undefined" ? playbackController : null
+                onNavigateRequested: function(page, workflow) { root.navigateRequested(page, workflow) }
+                onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
+            }
+
+            PreviewPlayer {
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
+                SplitView.preferredWidth: root.width * 0.40
+                SplitView.minimumWidth: 360
                 controller: typeof playbackController !== "undefined" ? playbackController : null
             }
         }

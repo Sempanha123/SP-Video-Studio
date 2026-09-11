@@ -32,7 +32,7 @@ def script_system(tmp_path: Path):
 def test_script_migration_and_existing_database_upgrade(tmp_path: Path):
     db = SQLiteDatabase(tmp_path / "app.db")
     db.initialize()
-    assert db.current_version() == 6
+    assert db.current_version() == 7
     with db.connect() as connection:
         tables = {r["name"] for r in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         indexes = {r["name"] for r in connection.execute("SELECT name FROM sqlite_master WHERE type='index'")}
@@ -304,10 +304,10 @@ def test_upgrade_from_phase5_schema_applies_only_script_migration(tmp_path: Path
         connection.execute("INSERT INTO schema_migrations VALUES (2, 'create_media_assets', 'old')")
         connection.commit()
     db.initialize()
-    assert db.current_version() == 6
+    assert db.current_version() == 7
     with db.connect() as connection:
         versions = [row["version"] for row in connection.execute("SELECT version FROM schema_migrations ORDER BY version")]
-    assert versions == [1, 2, 3, 4, 5, 6]
+    assert versions == [1, 2, 3, 4, 5, 6, 7]
 
 
 def test_scene_source_marker_persists_without_creating_scenes(script_system):

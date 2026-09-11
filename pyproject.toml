@@ -21,7 +21,8 @@ dev = [
   "ruff>=0.9,<1",
 ]
 ai = [
-  "faster-whisper>=1.1,<2",
+  "faster-whisper>=1.2.1,<2",
+  "ctranslate2>=4.8.2,<5",
 ]
 tts = [
   "voxcpm>=2.0.3,<3",
@@ -38,6 +39,7 @@ pythonpath = ["."]
 markers = [
   "integration: opt-in integration tests that require external runtime dependencies",
   "voxcpm: opt-in real VoxCPM2 model tests",
+  "faster_whisper: opt-in real faster-whisper model tests",
 ]
 
 [tool.ruff]

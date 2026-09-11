@@ -14,7 +14,7 @@ build/
 Thumbs.db
 .idea/
 .vscode/
-models/
+/models/
 cache/
 temp/
 logs/

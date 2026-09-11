@@ -368,10 +368,13 @@ class MediaService:
             raise MediaServiceError("This media item could not be removed safely.") from exc
 
     def duplicate_project_media(self, source: Project, duplicate: Project) -> int:
+        return len(self.duplicate_project_media_map(source, duplicate))
+
+    def duplicate_project_media_map(self, source: Project, duplicate: Project) -> dict[str, str]:
         source_root = Path(source.project_path).resolve()
         duplicate_root = Path(duplicate.project_path).resolve()
         assets = self.repository.list_by_project(source.project_id)
-        created = 0
+        mapping: dict[str, str] = {}
         for asset in assets:
             new_id = str(uuid4())
             source_managed = Path(asset.project_path)
@@ -419,8 +422,8 @@ class MediaService:
                 metadata_json=dict(asset.metadata_json),
             )
             self.repository.create(clone)
-            created += 1
-        return created
+            mapping[asset.asset_id] = new_id
+        return mapping
 
     @staticmethod
     def _media_directory(project_root: Path, media_type: str) -> Path:

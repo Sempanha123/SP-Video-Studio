@@ -13,8 +13,11 @@ from media.thumbnails import ThumbnailService
 from engines.model_registry import ModelRegistry
 from engines.model_sources import HuggingFaceSource
 from engines.tts.manager import TTSEngineManager
+from engines.stt.faster_whisper_engine import FasterWhisperEngine
+from engines.stt.manager import STTEngineManager
 from engines.tts.voxcpm2_engine import VoxCPM2Engine
 from engines.voice_registry import VoiceRegistry
+from services.ai_resource_manager import AIResourceManager
 from services.media_service import MediaService
 from services.model_compatibility_service import ModelCompatibilityService
 from services.model_download_service import ModelDownloadService
@@ -26,6 +29,8 @@ from services.script_service import ScriptService
 from services.project_service import ProjectService
 from services.settings_service import SettingsService
 from services.system_readiness_service import SystemReadinessService
+from services.transcript_analysis_service import TranscriptAnalysisService
+from services.transcription_service import TranscriptionService
 from services.tts_chunking_service import TTSChunkingService
 from services.tts_service import TTSService
 from services.narration_service import NarrationService
@@ -37,6 +42,7 @@ from storage.repositories.model_repository import ModelRepository
 from storage.repositories.project_repository import ProjectRepository
 from storage.repositories.script_repository import ScriptRepository
 from storage.repositories.settings_repository import SettingsRepository
+from storage.repositories.transcript_repository import TranscriptRepository
 from storage.repositories.voice_repository import VoiceRepository
 from workers.worker_pool import WorkerPool
 
@@ -62,6 +68,7 @@ def build_container() -> DependencyContainer:
     model_repository = ModelRepository(database)
     generated_audio_repository = GeneratedAudioRepository(database)
     voice_repository = VoiceRepository(database)
+    transcript_repository = TranscriptRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -137,6 +144,25 @@ def build_container() -> DependencyContainer:
     voice_registry = VoiceRegistry()
     voice_service = VoiceService(voice_registry, voice_repository, paths.voices, tts_service.validate_reference, logger)
     project_service.set_voice_service(voice_service)
+
+    ai_resource_manager = AIResourceManager()
+    tts_service.set_resource_manager(ai_resource_manager)
+    stt_manager = STTEngineManager(FasterWhisperEngine(logger))
+    transcript_analysis_service = TranscriptAnalysisService()
+    transcription_service = TranscriptionService(
+        transcript_repository,
+        media_service,
+        model_service,
+        stt_manager,
+        readiness_service,
+        settings_service,
+        transcript_analysis_service,
+        ai_resource_manager,
+        logger,
+    )
+    ai_resource_manager.register("tts", tts_service.unload, lambda: tts_service.active_jobs > 0)
+    ai_resource_manager.register("stt", transcription_service.unload, lambda: transcription_service.active_jobs > 0)
+    project_service.set_transcription_service(transcription_service)
     worker_pool = WorkerPool(max_workers=2)
 
     container = DependencyContainer()
@@ -149,6 +175,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(ModelRepository, model_repository)
     container.register_instance(GeneratedAudioRepository, generated_audio_repository)
     container.register_instance(VoiceRepository, voice_repository)
+    container.register_instance(TranscriptRepository, transcript_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -167,6 +194,10 @@ def build_container() -> DependencyContainer:
     container.register_instance(NarrationService, narration_service)
     container.register_instance(VoiceRegistry, voice_registry)
     container.register_instance(VoiceService, voice_service)
+    container.register_instance(STTEngineManager, stt_manager)
+    container.register_instance(TranscriptAnalysisService, transcript_analysis_service)
+    container.register_instance(TranscriptionService, transcription_service)
+    container.register_instance(AIResourceManager, ai_resource_manager)
     container.register_instance(VoiceRegistry, voice_registry)
     container.register_instance(VoiceService, voice_service)
     container.register_instance(SettingsRepository, settings_repository)
@@ -209,6 +240,7 @@ def run() -> int:
     from ui.controllers.script_controller import ScriptController
     from ui.controllers.settings_controller import SettingsController
     from ui.controllers.tts_controller import TTSController
+    from ui.controllers.transcription_controller import TranscriptionController
     from ui.controllers.voice_controller import VoiceController
 
     project_service = container.resolve(ProjectService)
@@ -260,12 +292,22 @@ def run() -> int:
         container.resolve(ModelService),
         logger,
     )
+    transcription_controller = TranscriptionController(
+        container.resolve(TranscriptionService),
+        container.resolve(WorkerPool),
+        logger,
+    )
 
     def before_project_change() -> bool:
         if not script_controller.flush():
             return False
         if tts_controller.busy:
             tts_controller.cancel()
+            return False
+        if transcription_controller.busy:
+            transcription_controller.cancel()
+            return False
+        if not transcription_controller.saveEdits():
             return False
         return True
 
@@ -277,6 +319,18 @@ def run() -> int:
     tts_controller.modelStateChanged.connect(readiness_controller.recheck)
     tts_controller.previewReady.connect(lambda path, _name, duration: voice_controller.previewGenerated(path, duration))
     model_controller.modelStateChanged.connect(voice_controller.refresh)
+    model_controller.modelStateChanged.connect(transcription_controller.modelsChanged.emit)
+    media_controller.mediaAboutToRemove.connect(transcription_controller.mediaRemoving)
+    project_controller.currentProjectChanged.connect(
+        lambda: transcription_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
+    )
+    transcription_controller.playbackRequested.connect(
+        lambda media_id, start_ms, autoplay: (
+            playback_controller.setMedia(media_id),
+            playback_controller.seek(start_ms),
+            playback_controller.play() if autoplay else None,
+        )
+    )
     project_controller.currentProjectChanged.connect(lambda: voice_controller.setCurrentProject(str(project_controller.currentProject.get("id", ""))))
     script_controller.selectedSectionChanged.connect(lambda: voice_controller.setCurrentSection(str(script_controller.selectedSection.get("id", ""))))
 
@@ -289,6 +343,7 @@ def run() -> int:
     container.register_instance(ModelController, model_controller)
     container.register_instance(TTSController, tts_controller)
     container.register_instance(VoiceController, voice_controller)
+    container.register_instance(TranscriptionController, transcription_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
@@ -300,6 +355,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("modelController", model_controller)
     engine.rootContext().setContextProperty("ttsController", tts_controller)
     engine.rootContext().setContextProperty("voiceController", voice_controller)
+    engine.rootContext().setContextProperty("transcriptionController", transcription_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():
@@ -312,7 +368,10 @@ def run() -> int:
 
     app.aboutToQuit.connect(script_controller.flush)
     app.aboutToQuit.connect(tts_controller.cancel)
+    app.aboutToQuit.connect(transcription_controller.cancel)
+    app.aboutToQuit.connect(transcription_controller.saveEdits)
     app.aboutToQuit.connect(container.resolve(TTSService).unload)
+    app.aboutToQuit.connect(container.resolve(TranscriptionService).unload)
     app.aboutToQuit.connect(lambda: model_controller.cancelDownload(model_controller.activeModelId) if model_controller.activeModelId else None)
     app.aboutToQuit.connect(playback_controller.clear)
     app.aboutToQuit.connect(container.resolve(WorkerPool).shutdown)

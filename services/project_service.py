@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from services.media_service import MediaService
     from services.script_service import ScriptService
     from services.narration_service import NarrationService
+    from services.transcription_service import TranscriptionService
     from services.voice_service import VoiceService
 
 
@@ -91,6 +92,7 @@ class ProjectService:
         self._media_service: MediaService | None = None
         self._script_service: ScriptService | None = None
         self._narration_service: NarrationService | None = None
+        self._transcription_service: TranscriptionService | None = None
         self._voice_service: VoiceService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
@@ -106,6 +108,9 @@ class ProjectService:
 
     def set_narration_service(self, narration_service: "NarrationService") -> None:
         self._narration_service = narration_service
+
+    def set_transcription_service(self, transcription_service: "TranscriptionService") -> None:
+        self._transcription_service = transcription_service
 
     def set_voice_service(self, voice_service: "VoiceService") -> None:
         self._voice_service = voice_service
@@ -245,14 +250,19 @@ class ProjectService:
                     shutil.copytree(src, dst, dirs_exist_ok=True)
             self._write_metadata(duplicate)
             self.repository.create(duplicate)
+            media_id_map: dict[str, str] = {}
             if self._media_service is not None:
-                self._media_service.duplicate_project_media(source, duplicate)
+                media_id_map = self._media_service.duplicate_project_media_map(source, duplicate)
             if self._script_service is not None:
                 self._script_service.duplicate_project_script(source.project_id, duplicate.project_id, duplicate.title)
             if self._voice_service is not None:
                 self._voice_service.duplicate_project_assignments(source.project_id, duplicate.project_id)
             if self._narration_service is not None:
                 self._narration_service.duplicate_project_audio(source.project_id, duplicate.project_id)
+            if self._transcription_service is not None:
+                self._transcription_service.duplicate_project_transcripts(
+                    source.project_id, duplicate.project_id, media_id_map
+                )
         except Exception as exc:
             try:
                 if self.repository.get_by_id(duplicate.project_id) is not None:

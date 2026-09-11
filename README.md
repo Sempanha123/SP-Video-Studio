@@ -4,7 +4,7 @@ SP Video Studio is a native Windows desktop video-creation application built wit
 
 ## Current milestone
 
-Phase 0 foundation through Phase 7 local model management + **Phase 8 VoxCPM2 narration engine**.
+Phase 0 foundation through Phase 9 Voice Studio + **Phase 10 faster-whisper speech-to-text and transcript editing**.
 
 Implemented now:
 
@@ -31,8 +31,12 @@ Implemented now:
 - English/Khmer narration pipeline with voice design and authorized reference-voice support
 - Full-script and per-section narration generation with chunking, progress, cancellation and WAV validation
 - Project-owned generated narration with freshness hashes, safe deletion, duplication and shared audio preview
+- Polished Voice Studio with English/Khmer presets, Designed/Reference voices, favorites, and project/section assignments
+- Lazy faster-whisper STT adapter with CPU/CUDA device and compute-type policy
+- Timestamped transcript persistence with optional word timestamps, VAD, search/edit/reset, UTF-8 export, and source-staleness detection
+- Shared AI resource coordination so VoxCPM2 and Whisper do not independently consume conflicting GPU resources
 
-Not implemented yet: full Voice Studio UX, Whisper transcription, translation, subtitles, scenes, timeline editing, News/Story generation, final rendering/export, or batch processing.
+Not implemented yet: translation, final subtitle styling/export, speaker diarization, dubbing, scenes, timeline editing, News/Story generation, final rendering/export, or batch processing.
 
 ## Requirements
 
@@ -59,6 +63,14 @@ For local VoxCPM2 narration, install the optional official TTS runtime:
 ```powershell
 pip install -e ".[tts]"
 ```
+
+For local faster-whisper transcription, install the optional speech-recognition runtime:
+
+```powershell
+pip install -e ".[ai]"
+```
+
+Phase 10 targets the official `faster-whisper` 1.2.1 API and CTranslate2 4.8.2. The application imports both lazily; missing STT dependencies do not prevent the desktop app from starting.
 
 The desktop application itself remains Python 3.11–3.14 compatible and starts normally when TTS dependencies are absent. VoxCPM/PyTorch are imported lazily only when narration is loaded/generated; actual wheel/runtime availability still depends on the upstream packages for the selected Python/OS/GPU environment.
 
@@ -490,4 +502,65 @@ The Voice Studio uses the existing Phase 8 `TTSController`, `TTSService`, and `N
 
 The Script workspace shows the current project voice and selected-section override. Section narration resolves the override first; full narration uses the project voice. The Voice Studio remains browsable when VoxCPM2 is not installed and links to Models instead of crashing or hiding the catalog.
 
-Phase 9 does **not** add Whisper, transcription, translation, subtitles, scenes, timeline editing, News automation, final rendering, or batch voice generation.
+Phase 9 itself remains focused on Voice Studio. Phase 10 adds speech-to-text separately without changing the Phase 9 voice-profile architecture.
+
+
+## faster-whisper speech-to-text
+
+Phase 10 integrates the official `faster-whisper` API behind `FasterWhisperEngine`. The adapter targets the current 1.2.1 API and keeps `faster_whisper`/CTranslate2 imports lazy, so the application can still launch when speech-recognition dependencies or models are missing. The optional `ai` dependency group pins a current CTranslate2 4.8.x runtime.
+
+The engine loads only Phase 7 managed Whisper model folders (`whisper-small`, `whisper-medium`, `whisper-large-v3`) with local-files-only behavior. It supports standard `WhisperModel` transcription and the current `BatchedInferencePipeline`, optional word timestamps, Silero VAD, initial prompts, hotwords, English/Khmer explicit language selection, and automatic language detection. Translation mode is intentionally not exposed in Phase 10.
+
+### Device and compute policy
+
+Device/precision selection is service-owned rather than hardcoded in QML:
+
+- **CPU** defaults to `int8` when supported.
+- **CUDA** defaults to `float16`; Low Memory may prefer `int8_float16` when CTranslate2 reports support.
+- **Auto** chooses CUDA only when current readiness plus a live CTranslate2 capability check confirm it; otherwise CPU is used.
+- Unsupported device/compute combinations produce typed, user-friendly STT errors instead of raw CTranslate2 exceptions.
+
+CTranslate2 CUDA readiness is deliberately separate from PyTorch CUDA readiness. Current upstream GPU builds require a compatible CUDA/cuDNN runtime; the adapter asks CTranslate2 for supported compute types before loading.
+
+### Transcript storage
+
+SQLite schema version 7 adds:
+
+```text
+transcripts
+transcript_segments
+transcript_words
+```
+
+A transcript stores model/device/language/settings metadata and an efficient source fingerprint. Segment and word timestamps are stored as integer milliseconds. Segment edits preserve `original_text`, allowing **Reset to Generated Text** without retranscribing. Regeneration creates a new transcript first and only makes it active after successful completion, so a failure or cancellation never destroys the previous good transcript.
+
+If the project-managed source media changes after transcription, the old transcript is kept and marked **Out of Date**. TXT export is UTF-8 and preserves Khmer text. Project duplication creates new transcript/segment/word IDs and remaps them to the duplicated media IDs; project deletion removes transcript rows through the normal project-owned database lifecycle.
+
+### Transcription workflow
+
+The project workspace now provides **Media / Script / Transcription**. Selecting an audio/video item carries its managed Phase 4 path into the Transcription panel. The normal setup exposes model, Auto/English/Khmer language, Auto/CPU/CUDA device, Word timestamps, and VAD; compute type, batch mode/size, beam size, initial prompt, and hotwords remain under **Advanced**.
+
+The faster-whisper segment iterator is always consumed inside the worker job. Progress is estimated from the latest segment end versus media duration when duration is known. Cancellation is checked between generated segments and discards incomplete output by default. No hidden model download occurs from Transcribe; missing models link users back to Models.
+
+Transcript rows are editable with debounced autosave, local search, original-text reset, Copy Full Transcript, and TXT export. Clicking **Play** on a segment reuses the Phase 5 playback controller and seeks the selected media to the segment start rather than creating another player.
+
+### AI memory coordination
+
+`AIResourceManager` coordinates heavy local engines. Before CUDA STT loads, an idle VoxCPM2 engine can be unloaded; an active TTS job blocks conflicting STT acquisition rather than allowing both models to consume GPU memory unpredictably. The same coordinator is registered with TTS for the reverse direction.
+
+### Testing real faster-whisper
+
+The normal test suite uses `FakeSTTEngine` and fake current-API adapters. It never loads a real Whisper model. The real integration test is explicitly opt-in:
+
+```powershell
+$env:SPVS_RUN_FASTER_WHISPER_INTEGRATION="1"
+$env:SPVS_WHISPER_MODEL_PATH="C:\\path\\to\\managed\\whisper-model"
+$env:SPVS_WHISPER_MEDIA_PATH="C:\\path\\to\\short-authorized-audio.wav"
+$env:SPVS_WHISPER_DEVICE="cpu"
+$env:SPVS_WHISPER_COMPUTE_TYPE="int8"
+pytest -m faster_whisper tests/test_faster_whisper_integration.py
+```
+
+For CUDA, configure the target machine with a CTranslate2-compatible CUDA/cuDNN runtime and select a supported compute type. English and Khmer quality must be reviewed on real authorized audio before release; automated file/persistence tests do not claim perfect recognition accuracy.
+
+Phase 10 does **not** implement translation, final SRT/VTT/ASS subtitle generation/styling, speaker diarization, dubbing, scenes, timeline editing, News workflows, or video rendering.

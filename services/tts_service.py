@@ -15,6 +15,7 @@ from engines.tts.errors import (
 )
 from engines.tts.manager import TTSEngineManager
 from engines.tts.types import TTSRequest, TTSResult
+from services.ai_resource_manager import AIResourceConflict, AIResourceManager
 from services.model_service import ModelService
 from services.settings_service import SettingsService
 from services.system_readiness_service import SystemReadinessService
@@ -38,6 +39,15 @@ class TTSService:
         self.readiness = readiness
         self.settings = settings
         self.logger = logger or logging.getLogger("sp_video_studio.tts")
+        self.resource_manager: AIResourceManager | None = None
+        self._active_jobs = 0
+
+    @property
+    def active_jobs(self) -> int:
+        return self._active_jobs
+
+    def set_resource_manager(self, manager: AIResourceManager) -> None:
+        self.resource_manager = manager
 
     def model_path(self) -> Path:
         return self.model_service.install_path(self.model_service.registry.get(self.MODEL_ID))
@@ -74,6 +84,11 @@ class TTSService:
     def load(self, device: str = "auto") -> str:
         self.ensure_model_ready()
         resolved = self.resolve_device(device)
+        if self.resource_manager is not None:
+            try:
+                self.resource_manager.prepare("tts", resolved)
+            except AIResourceConflict as exc:
+                raise TTSUnsupportedDevice(str(exc)) from exc
         engine = self.manager.get(self.ENGINE_ID)
         if not engine.is_available():
             raise TTSDependencyMissing(
@@ -105,9 +120,11 @@ class TTSService:
         if not engine.is_loaded():
             self.load(resolved)
         self.model_service.acquire_model(self.MODEL_ID, loaded=True)
+        self._active_jobs += 1
         try:
             return engine.generate(request, cancellation)
         finally:
+            self._active_jobs = max(0, self._active_jobs - 1)
             self.model_service.release_model(self.MODEL_ID, unload=False)
 
     def validate_reference(self, path: str | Path) -> Path:
