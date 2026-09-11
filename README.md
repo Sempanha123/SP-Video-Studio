@@ -955,3 +955,40 @@ Sources can be exported as provenance-focused TXT/JSON lists containing title/pu
 Manual/local News work is fully offline. URL mode sends a direct request only to the user-selected public source and validated redirects. No telemetry or external AI receives source text, claims, scripts, or private notes in Phase 18. News source fetching is intentionally controlled through the existing worker pool rather than launching unbounded concurrent crawling.
 
 The recommended next phase is **Phase 19 — News Visual System and News Graphics**.
+
+
+## Professional News visual system
+
+Phase 19 adds a project-scoped News visual layer on top of the existing Phase 18 provenance model and generic Scene/SceneOverlay renderer. It does not create News-only scenes or a second renderer. Approved claims, quotes, sources, brief/script roles, and manual editor text are converted into normal generic scene overlays plus small News metadata records for theme/layout/provenance tracking.
+
+SQLite schema version **16** adds `news_visual_themes`, `news_scene_layouts`, and `news_visual_elements`. Generic overlay text, geometry, timing, opacity, and renderer behavior remain canonical in the existing Scene system. `NewsVisualElement` stores only the News graphic type, claim/source link, source/claim snapshot hashes, theme-follow/customization status, and the referenced generic `SceneOverlay` ID. Project duplication remaps these links to duplicated Phase 18 source/claim and Scene IDs; project deletion cascades only project-owned visual records.
+
+### Themes, presets, and layouts
+
+Six restrained builtin themes are versioned in `resources/news/presets/themes.json`: Clean News, Modern News, Breaking News, Documentary News, Minimal News, and Tech News. Themes provide project branding colors, typography, spacing, optional logo references, and safe defaults without copying identifiable broadcaster branding. User changes produce project-specific theme values; existing scene visuals retain their effective values unless the user explicitly reapplies or keeps them following the theme.
+
+Versioned graphic presets cover headline, breaking, fact, number/stat, quote, source attribution, lower third, topic, intro, and outro graphics. Layout presets include Headline Focus, Media + Headline, Media + Lower Third, Fact Focus, Quote Focus, Number Focus, Source Focus, Split Visual, Full Media, Intro, and Outro. Layout geometry is resolved in Python using normalized coordinates for **16:9, 9:16, and 1:1**. Vertical layouts can rearrange content rather than merely scaling a desktop design, and critical text/source elements are checked against application safe-area recommendations.
+
+Applying a News layout preserves the scene's primary media and replaces only overlays previously marked as News-managed. Unrelated user overlays are never silently deleted. Detaching a layout converts the News-managed elements to normal manual overlays. Reapplying a customized layout requires an explicit replacement/missing-elements choice in the News Visual Studio workflow.
+
+### Provenance-aware cards
+
+Fact cards must reference an approved Phase 18 claim. Quote cards retain exact/translated/paraphrase metadata so paraphrases are not rendered as direct quotations. Number cards require explicit value/unit/label confirmation and keep the raw source value in metadata instead of guessing or silently rounding it. Source attribution graphics reference the existing News source and display publisher/organization metadata rather than full URLs by default. Manual visual text is marked **Manual Content** instead of being presented as sourced evidence.
+
+News graphics preserve claim/source IDs plus source/claim fingerprints. If a linked claim changes, the visual becomes **Source Changed** without overwriting the editor's current card text. `Update from Claim` is explicit. If a claim becomes rejected, unsupported, or conflicting, visual validation and Phase 18 readiness show warnings/errors rather than silently presenting the card as current. The visual layer never creates factual claims.
+
+### Generic overlay and renderer integration
+
+Phase 19 extends the generic `SceneOverlay` architecture with a reusable **shape** primitive for rectangles/panels/accent bars. This is intentionally not News-specific, so Story and other workflows can reuse it later. `ScenePreview.qml`, Timeline, Scene render specs, and the Phase 15 renderer consume the same shape/text overlays. FFmpeg renders generic shape overlays with `drawbox` before the existing ASS/libass Unicode text path; News visuals are never captured from QML screenshots.
+
+Text fit, contrast, safe-area, missing-font/media, linked-claim state, quote-type, and layout-boundary checks are centralized in News visual validation services. Long factual text is warned rather than silently truncated. Khmer uses the same existing font fallback/libass path as subtitles and prior text overlays. Real Phase 19 FFmpeg checks rendered `ព័ត៌មានបច្ចេកវិទ្យាថ្មី`, `ក្រុមហ៊ុនបានប្រកាសផលិតផលថ្មីនៅថ្ងៃនេះ។`, and mixed English + Khmer without missing glyphs.
+
+### Visual Studio, Timeline, and readiness
+
+News Studio now includes a **Visuals** workspace that reuses the existing Scene list. Users choose a scene, theme/layout/graphic preset, inspect provenance, preview the result, and continue editing through Storyboard or Timeline. News overlays appear on the existing Phase 17 Overlay track—there is no separate News timeline track. Timing changes made in Timeline are immediately reflected because both editors modify the same generic `SceneOverlay` rows.
+
+The Phase 18 News readiness summary is extended with visual ready/warning/error counts while preserving the original factual readiness checks. A visual linked to rejected/unsupported/conflicting provenance is surfaced before export; rendering/export still use the normal Phase 15/16 systems.
+
+Phase 19 deliberately does not add maps, charts, broadcaster-specific branding, keyframe motion graphics, external template marketplaces, autonomous research, publishing, or a second renderer. Rounded corners are preview-only in this phase because the production generic shape renderer currently uses FFmpeg `drawbox`; exported card geometry/colors/opacity/timing/text remain canonical.
+
+The recommended next phase is **Phase 20 — Story Studio**.

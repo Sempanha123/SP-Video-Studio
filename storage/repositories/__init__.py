@@ -30,3 +30,5 @@ from .export_preset_repository import ExportPresetRepository
 from storage.repositories.timeline_repository import TimelineRepository
 
 from .news_repository import NewsRepository
+
+from .news_visual_repository import NewsVisualRepository

@@ -63,8 +63,10 @@ Item {
             renderController.setCurrentProject(root.current().id || "")
         if (mode === "export" && typeof exportController !== "undefined")
             exportController.setCurrentProject(root.current().id || "")
-        if (mode === "news" && typeof newsController !== "undefined")
+        if (mode === "news" && typeof newsController !== "undefined") {
             newsController.setCurrentProject(root.current().id || "")
+            if (typeof newsVisualController !== "undefined") newsVisualController.setCurrentProject(root.current().id || "")
+        }
         root.workspaceMode = mode
     }
 
@@ -116,6 +118,8 @@ Item {
             exportController.setCurrentProject(root.current().id || "")
         if (typeof newsController !== "undefined")
             newsController.setCurrentProject(root.current().id || "")
+        if (typeof newsVisualController !== "undefined")
+            newsVisualController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
@@ -551,6 +555,7 @@ Item {
             Layout.fillHeight: true
             visible: root.workspaceMode === "news"
             controller: typeof newsController !== "undefined" ? newsController : null
+            visualController: typeof newsVisualController !== "undefined" ? newsVisualController : null
             onNavigateRequested: function(mode) { root.setWorkspaceMode(mode) }
             onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
         }

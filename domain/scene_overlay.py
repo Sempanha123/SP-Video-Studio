@@ -13,6 +13,7 @@ class SceneOverlayType(StrEnum):
     LOWER_THIRD = "lower_third"
     LABEL = "label"
     LOGO = "logo"
+    SHAPE = "shape"
 
 
 DEFAULT_TEXT_STYLE = {"fontFamily":"Noto Sans","fontSize":48.0,"fontWeight":600,"color":"#FFFFFFFF","alignment":"center"}

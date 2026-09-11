@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from services.ai_director_service import AIDirectorService
     from services.timeline_service import TimelineService
     from services.news_service import NewsService
+    from services.news_visual_service import NewsVisualService
 
 
 PROJECT_DIRS = (
@@ -107,6 +108,7 @@ class ProjectService:
         self._director_service: AIDirectorService | None = None
         self._timeline_service: TimelineService | None = None
         self._news_service: NewsService | None = None
+        self._news_visual_service: NewsVisualService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
                 self._known_project_roots.add(Path(existing.project_path).resolve().parent)
@@ -145,6 +147,9 @@ class ProjectService:
 
     def set_news_service(self, news_service: "NewsService") -> None:
         self._news_service = news_service
+
+    def set_news_visual_service(self, news_visual_service: "NewsVisualService") -> None:
+        self._news_visual_service = news_visual_service
 
     def set_project_root(self, project_root: Path) -> None:
         """Change the location used only for newly created projects."""
@@ -335,10 +340,16 @@ class ProjectService:
                 )
             if self._timeline_service is not None:
                 self._timeline_service.duplicate_project_timeline(source.project_id, duplicate.project_id)
+            news_maps: dict[str, dict[str, str]] = {}
             if self._news_service is not None:
-                self._news_service.duplicate_project_news(
+                news_maps = self._news_service.duplicate_project_news(
                     source.project_id, duplicate.project_id,
                     script_map=script_id_map, section_map=script_section_map,
+                )
+            if self._news_visual_service is not None:
+                self._news_visual_service.duplicate_project_visuals(
+                    source.project_id, duplicate.project_id, scene_map=scene_id_map,
+                    claim_map=news_maps.get("claim", {}), source_map=news_maps.get("source", {}), media_map=media_id_map,
                 )
         except Exception as exc:
             try:

@@ -13,9 +13,9 @@ from storage.repositories.news_repository import NewsRepository
 from storage.repositories.project_repository import ProjectRepository
 
 class NewsService:
-    def __init__(self,repository:NewsRepository,project_repository:ProjectRepository,sources:NewsSourceService,claims:NewsClaimService,briefs:NewsBriefService,scripts:NewsScriptService,validation:NewsValidationService,logger=None,*,voice_service=None,narration_service=None,subtitle_service=None)->None:
+    def __init__(self,repository:NewsRepository,project_repository:ProjectRepository,sources:NewsSourceService,claims:NewsClaimService,briefs:NewsBriefService,scripts:NewsScriptService,validation:NewsValidationService,logger=None,*,voice_service=None,narration_service=None,subtitle_service=None,visual_service=None)->None:
         self.repository=repository; self.project_repository=project_repository; self.sources=sources; self.claims=claims; self.briefs=briefs; self.scripts=scripts; self.validation=validation; self.logger=logger or logging.getLogger("sp_video_studio.news")
-        self.voice_service=voice_service; self.narration_service=narration_service; self.subtitle_service=subtitle_service
+        self.voice_service=voice_service; self.narration_service=narration_service; self.subtitle_service=subtitle_service; self.visual_service=visual_service
     def load_or_create(self,project_id:str)->NewsProjectMetadata:
         project=self.project_repository.get_by_id(project_id)
         if project is None: raise NewsInvalidSource("Project could not be found.")
@@ -41,8 +41,10 @@ class NewsService:
         voice_ready=bool(self.voice_service and self.voice_service.project_voice(project_id))
         narration=self.narration_service.active(project_id) if self.narration_service else None
         subtitle_count=len(self.subtitle_service.list_tracks(project_id)) if self.subtitle_service else 0
+        visuals=self.visual_service.readiness(project_id) if self.visual_service else {"ready":0,"warnings":0,"errors":0,"total":0}
         return {**m.to_dict(),**readiness,"scenes":scenes,"scriptReady":bool(script and any(s.content.strip() for s in self.scripts.script_service.repository.list_sections(script.id))),
-                "voiceReady":voice_ready,"narrationReady":bool(narration),"narrationCurrent":bool(narration and self.narration_service.narration_is_current(project_id,narration)) if narration else False,"subtitleCount":subtitle_count,"subtitlesReady":subtitle_count>0}
+                "voiceReady":voice_ready,"narrationReady":bool(narration),"narrationCurrent":bool(narration and self.narration_service.narration_is_current(project_id,narration)) if narration else False,"subtitleCount":subtitle_count,"subtitlesReady":subtitle_count>0,
+                "newsVisualReady":visuals.get("ready",0),"newsVisualWarnings":visuals.get("warnings",0)+visuals.get("errors",0),"newsVisualTotal":visuals.get("total",0)}
     def source_fingerprint(self,project_id:str)->str:return source_fingerprint(self.repository,project_id)
     def refresh_outdated_state(self,project_id:str)->dict[str,int]:
         fp=source_fingerprint(self.repository,project_id); briefs=0;mappings=0

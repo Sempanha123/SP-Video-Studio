@@ -55,7 +55,7 @@ class TimelineMappingService:
             if not start<=value<end: continue
             local=value-start
             for overlay in self.scenes.overlays(str(item["sceneId"])):
-                if overlay.visible and overlay.start_offset_ms<=local<overlay.end_offset_ms: result.append(overlay)
+                if overlay.visible and overlay.start_offset_ms<=local<(overlay.end_offset_ms if overlay.end_offset_ms is not None else int(item["durationMs"])): result.append(overlay)
         return result
 
     def get_active_subtitle_cues(self,project_id:str,project_ms:int):
@@ -75,7 +75,7 @@ class TimelineMappingService:
             source_type="scene_image" if media and media.type=="image" else "scene_video"
             out["video"].append(TimelineClip(f"scene:{scene.id}",tracks["video"].id,source_type,scene.id,start,duration,scene.source_start_ms,scene.source_end_ms,scene.enabled,tracks["video"].locked,False,scene.name,{"thumbnail":media.thumbnail_path if media else "","missing":bool(scene.primary_media_id and media is None),"fitMode":scene.fit_mode,"transitionType":scene.transition_out.type_code,"transitionDurationMs":scene.transition_out.duration_ms}))
             for overlay in self.scenes.overlays(scene.id):
-                dur=max(1,overlay.end_offset_ms-overlay.start_offset_ms)
+                dur=max(1,(overlay.end_offset_ms if overlay.end_offset_ms is not None else scene.duration_ms)-overlay.start_offset_ms)
                 out["overlay"].append(TimelineClip(f"overlay:{overlay.id}",tracks["overlay"].id,"scene_overlay",overlay.id,start+overlay.start_offset_ms,dur,0,None,overlay.visible,tracks["overlay"].locked,False,overlay.text or overlay.type_code,{"sceneId":scene.id,"overlayType":overlay.type_code}))
             if scene.narration_audio_id:
                 audio=self.audio.get(scene.narration_audio_id); offset=max(0,int(scene.metadata.get("narrationOffsetMs",0) or 0)); adur=(audio.duration_ms if audio else duration)

@@ -19,6 +19,7 @@ from .m012_create_rendering import migrate as create_rendering
 from .m013_create_export_presets import migrate as create_export_presets
 from .m014_create_timeline import migrate as create_timeline
 from .m015_create_news_studio import migrate as create_news_studio
+from .m016_create_news_visuals import migrate as create_news_visuals
 
 
 @dataclass(frozen=True, slots=True)
@@ -44,4 +45,5 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(13, "create_export_presets", create_export_presets),
     Migration(14, "create_timeline", create_timeline),
     Migration(15, "create_news_studio", create_news_studio),
+    Migration(16, "create_news_visuals", create_news_visuals),
 )

@@ -23,7 +23,7 @@ class OverlayRenderer:
     ) -> Path | None:
         events: list[str] = []
         for item in sorted(overlays, key=lambda value: int(value.get("order", 0) or 0)):
-            if not item.get("visible", True) or str(item.get("type", "")) == "logo":
+            if not item.get("visible", True) or str(item.get("type", "")) in {"logo", "shape"}:
                 continue
             text = str(item.get("text", "") or "")
             secondary = str(item.get("secondaryText", "") or "")

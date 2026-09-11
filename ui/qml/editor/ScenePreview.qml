@@ -67,14 +67,14 @@ AppCard {
                     }
                     Rectangle {
                         anchors.fill: parent
-                        visible: modelData.type === "lower_third"
-                        radius: 5
-                        color: "#AA10151F"
+                        visible: modelData.type === "shape" || modelData.type === "lower_third"
+                        radius: modelData.type === "shape" && modelData.style && modelData.style.radius ? Math.min(modelData.style.radius, 18) : 5
+                        color: modelData.type === "shape" && modelData.style && modelData.style.fillColor ? modelData.style.fillColor : "#AA10151F"
                     }
                     Column {
                         anchors.centerIn: parent
                         width: parent.width
-                        visible: modelData.type !== "logo"
+                        visible: modelData.type !== "logo" && modelData.type !== "shape"
                         spacing: 2
                         Text {
                             width: parent.width

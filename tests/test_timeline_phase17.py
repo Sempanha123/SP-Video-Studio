@@ -79,7 +79,7 @@ def add_standard_scenes(s):
 
 
 def test_phase17_schema_tracks_and_state(tmp_path: Path):
-    s=make_system(tmp_path); assert s.db.current_version() == 15
+    s=make_system(tmp_path); assert s.db.current_version() == 16
     with s.db.connect() as c: tables={r['name'] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {'timeline_state','timeline_tracks','timeline_markers'} <= tables
     tracks=s.timeline.ensure_tracks('p1'); assert [x.type_code for x in tracks][:5]==['overlay','video','subtitle','voice','source_audio']
@@ -260,7 +260,7 @@ def test_phase16_schema_migrates_to_phase17_without_fresh_database(tmp_path: Pat
     from storage.migrations import MIGRATIONS
     path=tmp_path/'upgrade.db'; original=MIGRATIONS
     monkeypatch.setattr(database_module,'MIGRATIONS',original[:13]); old=SQLiteDatabase(path); old.initialize(); assert old.current_version()==13
-    monkeypatch.setattr(database_module,'MIGRATIONS',original); old.initialize(); assert old.current_version() == 15
+    monkeypatch.setattr(database_module,'MIGRATIONS',original); old.initialize(); assert old.current_version() == 16
     with old.connect() as c:
         tables={r['name'] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {'timeline_state','timeline_tracks','timeline_markers'} <= tables

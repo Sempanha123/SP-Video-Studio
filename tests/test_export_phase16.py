@@ -44,7 +44,7 @@ def make_project_with_scene(tmp_path: Path, monkeypatch, *, aspect="16:9"):
 
 def test_phase16_schema_migration_and_tables(tmp_path: Path):
     db=SQLiteDatabase(tmp_path/"app.db"); db.initialize()
-    assert db.current_version() == 15
+    assert db.current_version() == 16
     with db.connect() as c:
         names={r["name"] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"export_presets","project_export_profiles"} <= names
@@ -60,7 +60,7 @@ def test_upgrade_from_phase15_schema_applies_export_migration(tmp_path: Path):
             m.apply(c); c.execute("INSERT INTO schema_migrations VALUES(?,?,?)",(m.version,m.name,"old"))
         c.commit()
     assert db.current_version()==12
-    db.initialize(); assert db.current_version() == 15
+    db.initialize(); assert db.current_version() == 16
     with db.connect() as c: assert c.execute("SELECT COUNT(*) FROM export_presets").fetchone()[0]==0
 
 

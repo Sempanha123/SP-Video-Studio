@@ -55,6 +55,15 @@ class SceneRenderer:
         chain += fade_filters(duration_ms,dict(spec.get("transitionIn",{}) or {}),dict(spec.get("transitionOut",{}) or {}))
         filters.append(f"[{visual_input}:v]{','.join(chain)}[v0]")
         current="v0"
+        # Generic shape overlays are renderer-supported project data, not News-only drawing.
+        for n,overlay in enumerate([o for o in overlays if str(o.get("type",""))=="shape" and o.get("visible",True)],1):
+            x=round(float(overlay.get("x",0))*settings.width); y=round(float(overlay.get("y",0))*settings.height)
+            w=max(1,round(float(overlay.get("width",.2))*settings.width)); h=max(1,round(float(overlay.get("height",.1))*settings.height))
+            style=dict(overlay.get("style",{}) or {}); fill=str(style.get("fillColor") or style.get("backgroundColor") or "#000000")
+            opacity=max(0,min(1,float(overlay.get("opacity",1) or 0))); start=max(0,int(overlay.get("startOffsetMs",0) or 0))/1000.0
+            raw_end=int(overlay.get("endOffsetMs",-1) or -1); end=duration if raw_end<0 else min(duration,raw_end/1000.0)
+            color=fill[:7] if fill.startswith("#") and len(fill)>=7 else "#000000"
+            out=f"vshape{n}"; filters.append(f"[{current}]drawbox=x={x}:y={y}:w={w}:h={h}:color={color}@{opacity:.4f}:t=fill:enable='between(t,{start:.6f},{end:.6f})'[{out}]"); current=out
         for n,(idx,overlay) in enumerate(logo_inputs,1):
             w=max(2,round(float(overlay.get("width",.1))*settings.width)); h=max(2,round(float(overlay.get("height",.1))*settings.height))
             x=round(float(overlay.get("x",0))*settings.width); y=round(float(overlay.get("y",0))*settings.height); opacity=max(0,min(1,float(overlay.get("opacity",1) or 0)))
