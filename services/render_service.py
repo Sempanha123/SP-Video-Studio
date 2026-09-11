@@ -29,12 +29,13 @@ from services.subtitle_service import SubtitleService
 from storage.repositories.project_repository import ProjectRepository
 from storage.repositories.render_job_repository import RenderJobRepository
 from storage.repositories.render_output_repository import RenderOutputRepository
+from storage.repositories.timeline_repository import TimelineRepository
 from workers.cancellation import CancellationToken
 
 
 class RenderService:
-    def __init__(self,project_repository:ProjectRepository,scene_service:SceneService,subtitle_service:SubtitleService,job_repository:RenderJobRepository,output_repository:RenderOutputRepository,ffmpeg_provider:Callable[[],str|Path|None],ffprobe_provider:Callable[[],str|Path|None],thumbnail_service:ThumbnailService,validation:RenderValidationService|None=None,logger:logging.Logger|None=None) -> None:
-        self.projects=project_repository; self.scenes=scene_service; self.subtitles=subtitle_service; self.jobs=job_repository; self.outputs=output_repository; self.ffmpeg_provider=ffmpeg_provider; self.ffprobe_provider=ffprobe_provider; self.thumbnail_service=thumbnail_service; self.validation=validation or RenderValidationService(); self.logger=logger or logging.getLogger("sp_video_studio.render")
+    def __init__(self,project_repository:ProjectRepository,scene_service:SceneService,subtitle_service:SubtitleService,job_repository:RenderJobRepository,output_repository:RenderOutputRepository,ffmpeg_provider:Callable[[],str|Path|None],ffprobe_provider:Callable[[],str|Path|None],thumbnail_service:ThumbnailService,validation:RenderValidationService|None=None,logger:logging.Logger|None=None,timeline_repository:TimelineRepository|None=None) -> None:
+        self.projects=project_repository; self.scenes=scene_service; self.subtitles=subtitle_service; self.jobs=job_repository; self.outputs=output_repository; self.ffmpeg_provider=ffmpeg_provider; self.ffprobe_provider=ffprobe_provider; self.thumbnail_service=thumbnail_service; self.validation=validation or RenderValidationService(); self.logger=logger or logging.getLogger("sp_video_studio.render"); self.timeline_repository=timeline_repository
         self._runtime_path=""; self._runner:FFmpegRunner|None=None; self._encoders:EncoderRegistry|None=None; self._lock=threading.Lock()
 
     def presets(self)->tuple[RenderPreset,...]: return BUILTIN_RENDER_PRESETS
@@ -54,6 +55,18 @@ class RenderService:
         for scene in self.scenes.list_scenes(project_id):
             if not scene.enabled: continue
             specs.append(self.scenes.build_scene_render_spec(project_id,scene.id))
+        if self.timeline_repository is not None:
+            self.timeline_repository.ensure_tracks(project_id)
+            overlay_track=self.timeline_repository.track_by_type(project_id,"overlay")
+            voice_track=self.timeline_repository.track_by_type(project_id,"voice")
+            source_track=self.timeline_repository.track_by_type(project_id,"source_audio")
+            for spec in specs:
+                if overlay_track is not None and not overlay_track.visible:
+                    spec["overlays"]=[]
+                audio=dict(spec.get("audio",{}) or {})
+                if voice_track is not None and voice_track.muted: audio["narrationEnabled"]=False
+                if source_track is not None and source_track.muted: audio["sourceAudioEnabled"]=False
+                spec["audio"]=audio
         output=Path(settings.output_path) if settings.output_path else self._default_output(project,settings)
         if output.exists() and str(settings.metadata.get("overwritePolicy", "keep_both")) != "replace": output=self._collision_path(output)
         settings.output_path=str(output)

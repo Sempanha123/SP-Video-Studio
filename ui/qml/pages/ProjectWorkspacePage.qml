@@ -8,6 +8,7 @@ import "../editor"
 import "../director"
 import "../render"
 import "../export"
+import "../timeline"
 
 Item {
     id: root
@@ -53,6 +54,8 @@ Item {
             subtitleController.setCurrentProject(root.current().id || "")
         if (mode === "scenes" && typeof sceneController !== "undefined")
             sceneController.setCurrentProject(root.current().id || "")
+        if (mode === "timeline" && typeof timelineController !== "undefined")
+            timelineController.setCurrentProject(root.current().id || "")
         if (mode === "director" && typeof directorController !== "undefined")
             directorController.setCurrentProject(root.current().id || "")
         if (mode === "render" && typeof renderController !== "undefined")
@@ -187,6 +190,7 @@ Item {
             AppButton { text: "Translation"; compact: true; variant: root.workspaceMode === "translation" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("translation") }
             AppButton { text: "Subtitles"; compact: true; variant: root.workspaceMode === "subtitles" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("subtitles") }
             AppButton { text: "Scenes"; compact: true; variant: root.workspaceMode === "scenes" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("scenes") }
+            AppButton { text: "Timeline"; compact: true; variant: root.workspaceMode === "timeline" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("timeline") }
             AppButton { text: "Director"; compact: true; variant: root.workspaceMode === "director" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("director") }
             AppButton { text: "Export"; compact: true; variant: root.workspaceMode === "export" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("export") }
         }
@@ -544,6 +548,17 @@ Item {
             playbackController: typeof playbackController !== "undefined" ? playbackController : null
             aspectRatio: root.current().aspectRatio || "16:9"
             onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
+        }
+
+        TimelineEditor {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.workspaceMode === "timeline"
+            controller: typeof timelineController !== "undefined" ? timelineController : null
+            playbackController: typeof playbackController !== "undefined" ? playbackController : null
+            aspectRatio: root.current().aspectRatio || "16:9"
+            onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
+            onOpenStoryboardRequested: root.setWorkspaceMode("scenes")
         }
 
         AIDirectorPage {

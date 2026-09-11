@@ -8,7 +8,6 @@ def test_translation_workspace_and_components_are_wired():
     assert "translationController.setCurrentProject" in workspace
     assert "translationController.saveEdits" in workspace
     assert 'text: "Subtitles"' in workspace
-    assert 'text: "Timeline"' not in workspace
 
 
 def test_translation_review_is_side_by_side_and_protects_human_review_actions():

@@ -7,8 +7,6 @@ def test_workspace_exposes_transcription_without_future_phase_features():
     assert "TranscriptionPanel" in workspace
     assert "transcriptionController.setMedia" in workspace
     assert "transcriptionController.saveEdits" in workspace
-    for future in ('text: "Timeline"',):
-        assert future not in workspace
 
 
 def test_transcription_panel_keeps_basic_flow_simple_and_advanced_collapsed():

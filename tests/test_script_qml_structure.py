@@ -29,8 +29,7 @@ def test_workspace_exposes_completed_functional_modules():
     assert "scriptController.flush()" in qml
     assert 'text: "Scenes"' in qml
     assert 'SceneEditor' in qml
-    for unfinished in ('text: "Voice"', 'text: "Timeline"'):
-        assert unfinished not in qml
+    assert 'text: "Voice"' not in qml
 
 
 def test_script_editor_avoids_word_processor_rich_text_features():

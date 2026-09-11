@@ -864,3 +864,37 @@ Completed exports show Play Video, Open File, Open Folder, and Export Another Ve
 The normal suite uses small deterministic fixtures, while real FFmpeg integration verifies the Export layer against the Phase 15 renderer. Validated outputs include a real TikTok 1080×1920 export, YouTube 1920×1080 export, Khmer burned subtitle output in a Khmer-named directory/file, external UTF-8 Khmer SRT, Keep Both collision generation, and render-history reload after a new application container is created. Phase 15's real bilingual English+Khmer burn, cancellation, output validation, and hardware-fallback tests continue to run unchanged.
 
 Phase 16 remains fully local: no upload, social-platform API, cloud render service, telemetry, advanced timeline, News/Story/Translate&Dub workflow, or Batch Factory is introduced. The recommended next phase is **Phase 17 — Advanced Timeline Editor**.
+
+## Advanced multi-track timeline editor
+
+Phase 17 adds a detailed Timeline editing mode **on top of the existing Scene/Subtitle/Audio domain**. It is not a second project model. Storyboard, Timeline, Subtitle Studio, Voice/Narration, and the Phase 15 renderer all continue to read/write the same canonical records.
+
+SQLite schema version **14** adds only timeline-specific persistence that cannot be derived safely: `timeline_state`, `timeline_tracks`, and `timeline_markers`. Scene video/image clips are derived from `Scene`; narration and source-audio clips are derived from Scene audio relationships; overlay clips are derived from `SceneOverlay`; subtitle clips are derived from `SubtitleCue`. This keeps edits synchronized without redundant writable clip rows. Music, SFX, and B-roll tracks are present as future-ready track infrastructure but Phase 17 does not create renderer-ignored compositing data.
+
+### Time mapping and tracks
+
+`TimelineMappingService` uses the same `project_time_map()` / `expected_sequence_duration_ms()` helpers as the production renderer. Primary scenes remain an ordered ripple sequence. Crossfade/Slide transition overlap reduces project duration using the same semantics as Phase 15; during an overlap, timeline editing maps the playhead to the incoming scene. All canonical edit times remain integer milliseconds, with project-FPS frame quantization available for approximate Previous/Next Frame stepping.
+
+Default tracks are Overlays, Video, Subtitles, Voice, Source Audio, Music, SFX, and B-roll. Track lock state prevents canonical edits. Voice/Source Audio mute and Overlay visibility are persisted render-affecting settings; `RenderService` reads those track settings when building a snapshot. Primary Scene visibility is intentionally not exposed as an ambiguous track-level hide operation—scene `enabled` remains the canonical render switch.
+
+### Editing behavior
+
+The Timeline supports playhead click/drag seeking, best-effort scrub through the shared Phase 5 playback stack, zoom in/out/fit, clip selection, primary-scene reorder, right/left trim, split, duplicate/delete, overlay/subtitle timing edits, narration/source-audio volume and mute, transition type/duration, markers, snapping, and frame-step approximation. Primary scene duration changes ripple following scene positions automatically because project time is always derived from canonical scene order/duration.
+
+Video trims are non-destructive and modify only `source_start_ms`, `source_end_ms`, and Scene duration. Image trims modify duration only. Splitting a video creates two Scene records with complementary source ranges; image splits share the read-only media asset. Generated narration files are never physically split—when a Scene is split, the second half does not silently replay the same narration. Scene/overlay deletion never deletes shared media or generated audio.
+
+Snapping uses a screen-distance threshold (default 8 px converted to time at the current zoom) against playhead, scene boundaries, marker positions, and project start/end. Timeline markers are project data and persist independently. Timeline zoom/playhead/scroll/selection preferences are stored as editor state rather than duplicated creative data.
+
+### Undo/redo and synchronization
+
+Phase 17 introduces a command-based `CommandStack` with a 150-command in-memory history. Trim, split, delete, duplicate, reorder, audio settings, track settings, overlay/subtitle timing, transition edits, and overlay deletion record only the affected values/records. Slider-style value edits with the same semantic key coalesce rather than creating hundreds of undo entries. Undo history intentionally does **not** survive restart; the resulting project state does.
+
+Storyboard ↔ Timeline synchronization is immediate because both modify `Scene`. Subtitle timing changed in Timeline writes `SubtitleCue`, and Subtitle Studio changes appear on the next Timeline refresh. Narration assignment/volume/mute changes remain Scene audio settings, so Voice/Scene workflows and Timeline share them. Timeline controller signals refresh when Scene/Subtitle controllers change while avoiding a second playback lifecycle.
+
+### Renderer integration and limits
+
+Timeline edits require no special conversion step before export. Reorder, scene trim/source range, split, overlay timing, subtitle timing, transition settings, and audio volumes already flow into Phase 13 Scene render specs and Phase 15 `RenderPlan`. Phase 17 additionally lets Timeline track mute/visibility settings influence narration/source audio and overlays when the render snapshot is built.
+
+A real FFmpeg regression renders a project after Timeline reorder + video source trim + Scene split, validates output duration, decodes the first frame to confirm reordered visual order, and decodes the trimmed section to confirm the selected 2–4 second video source range is used.
+
+Preview scrubbing remains limited by Qt Multimedia seek precision and is not advertised as frame-accurate. Crossfade preview selects the incoming scene during overlap rather than simulating final FFmpeg blending. No waveform generation, audio effects/EQ, speed ramping, keyframes, color grading, multicam, masks, proxy workflow, nested sequences, or unsupported B-roll compositing is introduced in Phase 17. Storyboard remains fully usable without Timeline.

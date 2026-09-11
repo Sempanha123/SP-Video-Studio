@@ -46,6 +46,11 @@ from services.scene_generation_service import SceneGenerationService
 from services.scene_preview_service import ScenePreviewService
 from services.scene_service import SceneService
 from services.scene_validation_service import SceneValidationService
+from services.timeline_mapping_service import TimelineMappingService
+from services.timeline_snap_service import TimelineSnapService
+from services.timeline_validation_service import TimelineValidationService
+from services.timeline_edit_service import TimelineEditService
+from services.timeline_service import TimelineService
 from services.director_rule_engine import DirectorRuleEngine
 from services.director_validation_service import DirectorValidationService
 from services.ai_director_service import AIDirectorService
@@ -75,6 +80,7 @@ from storage.repositories.director_plan_repository import DirectorPlanRepository
 from storage.repositories.render_job_repository import RenderJobRepository
 from storage.repositories.render_output_repository import RenderOutputRepository
 from storage.repositories.export_preset_repository import ExportPresetRepository
+from storage.repositories.timeline_repository import TimelineRepository
 from storage.repositories.voice_repository import VoiceRepository
 from workers.worker_pool import WorkerPool
 
@@ -108,6 +114,7 @@ def build_container() -> DependencyContainer:
     render_job_repository = RenderJobRepository(database)
     render_output_repository = RenderOutputRepository(database)
     export_preset_repository = ExportPresetRepository(database)
+    timeline_repository = TimelineRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -239,6 +246,13 @@ def build_container() -> DependencyContainer:
         script_service, transcript_repository, scene_generation_service, scene_validation_service, scene_preview_service, logger,
     )
     project_service.set_scene_service(scene_service)
+    timeline_mapping_service = TimelineMappingService(scene_repository, media_repository, generated_audio_repository, subtitle_repository, timeline_repository)
+    timeline_snap_service = TimelineSnapService()
+    timeline_validation_service = TimelineValidationService()
+    from commands.command_stack import CommandStack
+    timeline_edit_service = TimelineEditService(scene_service, scene_repository, subtitle_service, subtitle_repository, timeline_repository, CommandStack(150))
+    timeline_service = TimelineService(timeline_repository, repository, timeline_mapping_service, timeline_edit_service, timeline_snap_service, timeline_validation_service)
+    project_service.set_timeline_service(timeline_service)
     director_rules = DirectorRuleEngine()
     director_provider = DeterministicDirectorProvider(director_rules)
     director_validation = DirectorValidationService(
@@ -256,7 +270,7 @@ def build_container() -> DependencyContainer:
     render_validation_service = RenderValidationService()
     render_service = RenderService(
         repository, scene_service, subtitle_service, render_job_repository, render_output_repository,
-        lambda: media_tool_paths()[0], lambda: media_tool_paths()[1], thumbnail_service, render_validation_service, logger,
+        lambda: media_tool_paths()[0], lambda: media_tool_paths()[1], thumbnail_service, render_validation_service, logger, timeline_repository,
     )
     export_filename_service = ExportFilenameService()
     export_preset_service = ExportPresetService(export_preset_repository)
@@ -285,6 +299,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(RenderJobRepository, render_job_repository)
     container.register_instance(RenderOutputRepository, render_output_repository)
     container.register_instance(ExportPresetRepository, export_preset_repository)
+    container.register_instance(TimelineRepository, timeline_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -320,6 +335,11 @@ def build_container() -> DependencyContainer:
     container.register_instance(SceneValidationService, scene_validation_service)
     container.register_instance(ScenePreviewService, scene_preview_service)
     container.register_instance(SceneService, scene_service)
+    container.register_instance(TimelineMappingService, timeline_mapping_service)
+    container.register_instance(TimelineSnapService, timeline_snap_service)
+    container.register_instance(TimelineValidationService, timeline_validation_service)
+    container.register_instance(TimelineEditService, timeline_edit_service)
+    container.register_instance(TimelineService, timeline_service)
     container.register_instance(DirectorRuleEngine, director_rules)
     container.register_instance(DeterministicDirectorProvider, director_provider)
     container.register_instance(DirectorValidationService, director_validation)
@@ -378,6 +398,7 @@ def run() -> int:
     from ui.controllers.translation_controller import TranslationController
     from ui.controllers.subtitle_controller import SubtitleController
     from ui.controllers.scene_controller import SceneController
+    from ui.controllers.timeline_controller import TimelineController
     from ui.controllers.ai_director_controller import AIDirectorController
     from ui.controllers.render_controller import RenderController
     from ui.controllers.export_controller import ExportController
@@ -457,6 +478,7 @@ def run() -> int:
         container.resolve(SubtitleService),
         logger,
     )
+    timeline_controller = TimelineController(container.resolve(TimelineService), logger)
     director_controller = AIDirectorController(
         container.resolve(AIDirectorService),
         container.resolve(DirectorApplyService),
@@ -536,6 +558,9 @@ def run() -> int:
         lambda: scene_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
     )
     project_controller.currentProjectChanged.connect(
+        lambda: timeline_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
+    )
+    project_controller.currentProjectChanged.connect(
         lambda: render_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
     )
     project_controller.currentProjectChanged.connect(
@@ -587,7 +612,20 @@ def run() -> int:
             playback_controller.play(),
         )
     )
+    timeline_controller.playbackRequested.connect(
+        lambda media_id, start_ms, autoplay: (
+            playback_controller.setMedia(media_id),
+            playback_controller.seek(start_ms),
+            playback_controller.play() if autoplay else None,
+        )
+    )
+    timeline_controller.togglePlaybackRequested.connect(playback_controller.togglePlayback)
     playback_controller.playbackChanged.connect(lambda: subtitle_controller.setPlayhead(playback_controller.position))
+    playback_controller.playbackChanged.connect(lambda: timeline_controller.setPreviewLocalPosition(playback_controller.position))
+    scene_controller.scenesChanged.connect(timeline_controller.refresh)
+    scene_controller.sceneChanged.connect(timeline_controller.refresh)
+    subtitle_controller.trackChanged.connect(timeline_controller.refresh)
+    subtitle_controller.tracksChanged.connect(timeline_controller.refresh)
     project_controller.currentProjectChanged.connect(lambda: voice_controller.setCurrentProject(str(project_controller.currentProject.get("id", ""))))
     script_controller.selectedSectionChanged.connect(lambda: voice_controller.setCurrentSection(str(script_controller.selectedSection.get("id", ""))))
 
@@ -604,6 +642,7 @@ def run() -> int:
     container.register_instance(TranslationController, translation_controller)
     container.register_instance(SubtitleController, subtitle_controller)
     container.register_instance(SceneController, scene_controller)
+    container.register_instance(TimelineController, timeline_controller)
     container.register_instance(AIDirectorController, director_controller)
     container.register_instance(RenderController, render_controller)
     container.register_instance(ExportController, export_controller)
@@ -622,6 +661,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("translationController", translation_controller)
     engine.rootContext().setContextProperty("subtitleController", subtitle_controller)
     engine.rootContext().setContextProperty("sceneController", scene_controller)
+    engine.rootContext().setContextProperty("timelineController", timeline_controller)
     engine.rootContext().setContextProperty("directorController", director_controller)
     engine.rootContext().setContextProperty("renderController", render_controller)
     engine.rootContext().setContextProperty("exportController", export_controller)

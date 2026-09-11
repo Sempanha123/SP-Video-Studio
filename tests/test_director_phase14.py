@@ -67,7 +67,7 @@ def request(project_id: str, **kwargs):
 def test_phase14_schema_migration(tmp_path, monkeypatch):
     c, _ = make_app(tmp_path, monkeypatch)
     db = c.resolve(SQLiteDatabase)
-    assert db.current_version() == 13
+    assert db.current_version() == 14
     with db.connect() as con:
         tables = {r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         assert {"director_plans", "director_scene_plans"} <= tables
@@ -395,7 +395,7 @@ def test_upgrade_from_phase13_schema_applies_director_migration_only(tmp_path):
         con.commit()
     assert db.current_version() == 10
     db.initialize()
-    assert db.current_version() == 13
+    assert db.current_version() == 14
     with db.connect() as con:
         assert con.execute("SELECT COUNT(*) FROM director_plans").fetchone()[0] == 0
 

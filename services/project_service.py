@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from services.subtitle_service import SubtitleService
     from services.scene_service import SceneService
     from services.ai_director_service import AIDirectorService
+    from services.timeline_service import TimelineService
 
 
 PROJECT_DIRS = (
@@ -102,6 +103,7 @@ class ProjectService:
         self._subtitle_service: SubtitleService | None = None
         self._scene_service: SceneService | None = None
         self._director_service: AIDirectorService | None = None
+        self._timeline_service: TimelineService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
                 self._known_project_roots.add(Path(existing.project_path).resolve().parent)
@@ -134,6 +136,9 @@ class ProjectService:
 
     def set_director_service(self, director_service: "AIDirectorService") -> None:
         self._director_service = director_service
+
+    def set_timeline_service(self, timeline_service: "TimelineService") -> None:
+        self._timeline_service = timeline_service
 
     def set_project_root(self, project_root: Path) -> None:
         """Change the location used only for newly created projects."""
@@ -322,6 +327,8 @@ class ProjectService:
                     script_section_map=script_section_map, transcript_map=transcript_id_map,
                     translation_map=translation_id_map, scene_map=scene_id_map,
                 )
+            if self._timeline_service is not None:
+                self._timeline_service.duplicate_project_timeline(source.project_id, duplicate.project_id)
         except Exception as exc:
             try:
                 if self.repository.get_by_id(duplicate.project_id) is not None:

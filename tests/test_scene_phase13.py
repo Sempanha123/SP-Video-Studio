@@ -49,7 +49,7 @@ def make_system(tmp_path: Path):
 
 
 def test_phase13_schema_and_scene_serialization(tmp_path: Path):
-    sys=make_system(tmp_path); assert sys.db.current_version()==13
+    sys=make_system(tmp_path); assert sys.db.current_version()==14
     scene=Scene(project_id='p',order=2,name='Main',duration_ms=8000); data=scene.to_dict(); assert data['order']==2 and data['durationMs']==8000
     with sys.db.connect() as c: tables={r['name'] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {'scenes','scene_layers','scene_overlays'} <= tables

@@ -26,3 +26,5 @@ from .render_job_repository import RenderJobRepository
 from .render_output_repository import RenderOutputRepository
 
 from .export_preset_repository import ExportPresetRepository
+
+from storage.repositories.timeline_repository import TimelineRepository
