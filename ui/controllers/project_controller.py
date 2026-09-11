@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from collections.abc import Callable
 
 from PySide6.QtCore import QObject, Property, Signal, Slot
 
@@ -66,7 +67,21 @@ class ProjectController(QObject):
         self._projects: list[dict[str, object]] = []
         self._recent_projects: list[dict[str, object]] = []
         self._current_project: dict[str, object] = {}
+        self._before_project_change: Callable[[], bool] | None = None
         self.refresh()
+
+
+    def set_before_project_change(self, callback: Callable[[], bool] | None) -> None:
+        self._before_project_change = callback
+
+    def _can_change_project(self, target_id: str = "") -> bool:
+        current_id = str(self._current_project.get("id", ""))
+        if not current_id or current_id == target_id or self._before_project_change is None:
+            return True
+        if self._before_project_change():
+            return True
+        self.operationFailed.emit("Current script changes could not be saved, so the project was not switched.")
+        return False
 
     @Property("QVariantList", notify=projectsChanged)
     def projects(self) -> list[dict[str, object]]:
@@ -99,6 +114,8 @@ class ProjectController(QObject):
         fps: int,
     ) -> str:
         try:
+            if not self._can_change_project(""):
+                return ""
             project = self.service.create_project(title, workflow, language, aspect_ratio, fps)
             self._set_current(project)
             self.refresh()
@@ -111,6 +128,8 @@ class ProjectController(QObject):
     @Slot(str, result=bool)
     def openProject(self, project_id: str) -> bool:
         try:
+            if not self._can_change_project(project_id):
+                return False
             project = self.service.open_project(project_id)
             self._set_current(project)
             self.refresh()
@@ -148,6 +167,8 @@ class ProjectController(QObject):
     @Slot(str, result=bool)
     def deleteProject(self, project_id: str) -> bool:
         try:
+            if self._current_project.get("id") == project_id and not self._can_change_project(""):
+                return False
             self.service.delete_project(project_id)
             if self._current_project.get("id") == project_id:
                 self._current_project = {}
@@ -162,6 +183,8 @@ class ProjectController(QObject):
     @Slot(str, result=bool)
     def removeFromLibrary(self, project_id: str) -> bool:
         try:
+            if self._current_project.get("id") == project_id and not self._can_change_project(""):
+                return False
             self.service.remove_from_library(project_id)
             if self._current_project.get("id") == project_id:
                 self._current_project = {}

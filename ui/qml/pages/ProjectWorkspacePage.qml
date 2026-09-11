@@ -14,6 +14,7 @@ Item {
     property string removeMediaName: ""
     property bool gridView: true
     property bool dropActive: false
+    property string workspaceMode: "media"
     signal navigateRequested(string page, string workflow)
     signal toastRequested(string message, string variant)
 
@@ -27,7 +28,18 @@ Item {
             playbackController.setMedia(mediaId)
     }
 
+    function setWorkspaceMode(mode) {
+        if (mode === root.workspaceMode) return
+        if (root.workspaceMode === "script" && typeof scriptController !== "undefined" && !scriptController.flush()) return
+        if (mode === "script") {
+            if (typeof playbackController !== "undefined") playbackController.clear()
+            if (typeof scriptController !== "undefined" && !scriptController.load(root.current().id || "")) return
+        }
+        root.workspaceMode = mode
+    }
+
     function leaveWorkspace() {
+        if (typeof scriptController !== "undefined" && !scriptController.flush()) return
         if (typeof playbackController !== "undefined") playbackController.clear()
         root.navigateRequested("projects", "")
     }
@@ -53,7 +65,10 @@ Item {
         if (typeof playbackController !== "undefined")
             playbackController.setCurrentProject(root.current().id || "")
     }
-    Component.onDestruction: if (typeof playbackController !== "undefined") playbackController.clear()
+    Component.onDestruction: {
+        if (typeof scriptController !== "undefined") scriptController.flush()
+        if (typeof playbackController !== "undefined") playbackController.clear()
+    }
 
     Connections {
         target: typeof projectController !== "undefined" ? projectController : null
@@ -65,6 +80,8 @@ Item {
                 mediaController.setCurrentProject(root.current().id || "")
             if (typeof playbackController !== "undefined")
                 playbackController.setCurrentProject(root.current().id || "")
+            if (root.workspaceMode === "script" && typeof scriptController !== "undefined")
+                scriptController.load(root.current().id || "")
         }
     }
 
@@ -101,16 +118,12 @@ Item {
             StatusBadge { text: root.current().statusName || "Draft"; status: root.current().status || "offline" }
             Text { text: "Last updated " + (root.current().updatedDisplay || "—"); color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
             Item { Layout.fillWidth: true }
-            Rectangle {
-                radius: Theme.radius.medium
-                color: Theme.colors.accentSoft
-                implicitHeight: 30
-                implicitWidth: mediaLabel.implicitWidth + Theme.spacing.lg * 2
-                Text { id: mediaLabel; anchors.centerIn: parent; text: "Media"; color: Theme.colors.accent; font.family: Theme.type.family; font.pixelSize: Theme.type.caption; font.weight: Theme.type.semibold }
-            }
+            AppButton { text: "Media"; compact: true; variant: root.workspaceMode === "media" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("media") }
+            AppButton { text: "Script"; compact: true; variant: root.workspaceMode === "script" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("script") }
         }
 
         SplitView {
+            visible: root.workspaceMode === "media"
             id: workspaceSplit
             Layout.fillWidth: true
             Layout.fillHeight: true
@@ -359,6 +372,14 @@ Item {
                 controller: typeof playbackController !== "undefined" ? playbackController : null
             }
         }
+
+        ScriptEditor {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.workspaceMode === "script"
+            controller: typeof scriptController !== "undefined" ? scriptController : null
+            onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
+        }
     }
 
 
@@ -469,6 +490,7 @@ Item {
                 AppButton {
                     text: "Delete Project"; variant: "danger"; iconName: "trash"
                     onClicked: {
+                        if (typeof scriptController !== "undefined" && !scriptController.flush()) return
                         if (typeof playbackController !== "undefined") playbackController.clear()
                         if (typeof projectController !== "undefined" && projectController.deleteProject(root.current().id)) {
                             deleteDialog.close()

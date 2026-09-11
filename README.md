@@ -317,3 +317,41 @@ The package metadata supports `>=3.11,<3.15`. The dependency floors are selected
 ## Phase discipline
 
 Phase 5 is intentionally limited to stable native media preview/playback. The next phase is **Phase 6 — Script Editor**.
+
+
+## Script editor
+
+Phase 6 adds a reusable manual narration-script foundation shared by every future workflow. Script data is stored in SQLite through `ScriptRepository` and `ScriptService`; QML never accesses SQL directly.
+
+Each project gets one primary script on first opening of the Script workspace. The default structure is **Hook / Body / Outro**, while users can add Body or Custom sections, rename, duplicate, reorder, enable/disable, and delete sections. Sections use independent stable IDs and sequential zero-based ordering. A lightweight `scene_source` metadata marker prepares sections for future scene generation without creating scenes in Phase 6.
+
+Database schema version 3 adds:
+
+```text
+scripts
+script_sections
+```
+
+Existing Phase 2–5 databases migrate in place; no fresh database is required. Project duplication creates a new script ID and new section IDs, while project deletion relies on the existing SQLite project lifecycle and foreign-key cleanup without affecting other projects.
+
+### Autosave and editing
+
+The QML editor uses a multiline plain-text `TextArea` with native selection/copy/cut/paste and text undo/redo. Content changes are held in memory, statistics are recalculated after a short debounce, and script changes autosave about 1.5 seconds after typing stops. Ctrl+S flushes immediately. Pending script changes are also flushed when leaving Script, switching projects, deleting/closing the current project, or closing the application.
+
+Save state is exposed as **Saved**, **Saving…**, **Unsaved changes**, or **Save failed**. Structural actions save pending text first. Deleting non-empty sections requires confirmation; structural operations are intentionally outside the native text undo stack in this phase.
+
+### Language and narration estimates
+
+Script language is stored as a stable code (`en` or `km`). Changing the language never translates content.
+
+- English uses a token-oriented word count and configurable Slow / Normal / Fast words-per-minute assumptions.
+- Khmer uses non-whitespace character count plus a character-rate narration heuristic rather than pretending whitespace is an exact Khmer word boundary.
+- Duration is always an estimate until real synthesized audio exists.
+
+`ScriptAnalysisService` also prepares future TTS input by combining enabled sections in order while preserving punctuation and section character boundaries. No model-specific text rewriting is performed.
+
+### TXT import/export
+
+UTF-8 `.txt` import supports BOM and Khmer/Unicode text. Users can add imported text as a new section or replace the current structure with one **Imported Script** section. TXT export writes enabled section titles and content in UTF-8. **Copy Full Script** copies the enabled combined narration text.
+
+Phase 6 does **not** include AI script generation, News research, VoxCPM2, Whisper, translation, subtitles, scene generation, timeline editing, or rendering.

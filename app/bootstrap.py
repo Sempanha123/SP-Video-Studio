@@ -12,12 +12,15 @@ from media.probe import FFprobeService
 from media.thumbnails import ThumbnailService
 from services.media_service import MediaService
 from services.playback_service import PlaybackService
+from services.script_analysis_service import ScriptAnalysisService
+from services.script_service import ScriptService
 from services.project_service import ProjectService
 from services.settings_service import SettingsService
 from services.system_readiness_service import SystemReadinessService
 from storage.database import SQLiteDatabase
 from storage.repositories.media_repository import MediaRepository
 from storage.repositories.project_repository import ProjectRepository
+from storage.repositories.script_repository import ScriptRepository
 from storage.repositories.settings_repository import SettingsRepository
 from workers.worker_pool import WorkerPool
 
@@ -39,6 +42,7 @@ def build_container() -> DependencyContainer:
     database.initialize()
     repository = ProjectRepository(database)
     media_repository = MediaRepository(database)
+    script_repository = ScriptRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -63,6 +67,9 @@ def build_container() -> DependencyContainer:
         logger=logger,
     )
     project_service.set_media_service(media_service)
+    script_analysis_service = ScriptAnalysisService()
+    script_service = ScriptService(script_repository, repository, script_analysis_service, logger)
+    project_service.set_script_service(script_service)
     playback_service = PlaybackService()
 
     readiness_service = SystemReadinessService(
@@ -79,10 +86,13 @@ def build_container() -> DependencyContainer:
     container.register_instance(SQLiteDatabase, database)
     container.register_instance(ProjectRepository, repository)
     container.register_instance(MediaRepository, media_repository)
+    container.register_instance(ScriptRepository, script_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
     container.register_instance(MediaService, media_service)
+    container.register_instance(ScriptAnalysisService, script_analysis_service)
+    container.register_instance(ScriptService, script_service)
     container.register_instance(PlaybackService, playback_service)
     container.register_instance(SettingsRepository, settings_repository)
     container.register_instance(SettingsService, settings_service)
@@ -120,6 +130,7 @@ def run() -> int:
     from ui.controllers.project_controller import ProjectController
     from ui.controllers.playback_controller import PlaybackController
     from ui.controllers.readiness_controller import ReadinessController
+    from ui.controllers.script_controller import ScriptController
     from ui.controllers.settings_controller import SettingsController
 
     project_service = container.resolve(ProjectService)
@@ -135,6 +146,12 @@ def run() -> int:
         logger,
     )
     media_controller.mediaAboutToRemove.connect(playback_controller.mediaRemoving)
+    script_controller = ScriptController(
+        container.resolve(ScriptService),
+        container.resolve(ScriptAnalysisService),
+        logger,
+    )
+    project_controller.set_before_project_change(script_controller.flush)
     settings_controller = SettingsController(
         container.resolve(SettingsService),
         container.resolve(AppPaths),
@@ -153,6 +170,7 @@ def run() -> int:
     container.register_instance(ProjectController, project_controller)
     container.register_instance(MediaController, media_controller)
     container.register_instance(PlaybackController, playback_controller)
+    container.register_instance(ScriptController, script_controller)
     container.register_instance(SettingsController, settings_controller)
     container.register_instance(ReadinessController, readiness_controller)
 
@@ -160,6 +178,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("projectController", project_controller)
     engine.rootContext().setContextProperty("mediaController", media_controller)
     engine.rootContext().setContextProperty("playbackController", playback_controller)
+    engine.rootContext().setContextProperty("scriptController", script_controller)
     engine.rootContext().setContextProperty("settingsController", settings_controller)
     engine.rootContext().setContextProperty("readinessController", readiness_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
@@ -171,6 +190,7 @@ def run() -> int:
     if container.resolve(SettingsService).current.readiness_check_on_startup:
         QTimer.singleShot(0, readiness_controller.recheck)
 
+    app.aboutToQuit.connect(script_controller.flush)
     app.aboutToQuit.connect(playback_controller.clear)
     app.aboutToQuit.connect(container.resolve(WorkerPool).shutdown)
     logger.info("SP Video Studio started")

@@ -22,6 +22,7 @@ from storage.repositories.project_repository import ProjectRepository
 
 if TYPE_CHECKING:
     from services.media_service import MediaService
+    from services.script_service import ScriptService
 
 
 PROJECT_DIRS = (
@@ -86,13 +87,18 @@ class ProjectService:
         self.logger = logger or logging.getLogger("sp_video_studio.projects")
         self._known_project_roots: set[Path] = {self.project_root.resolve()}
         self._media_service: MediaService | None = None
+        self._script_service: ScriptService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
                 self._known_project_roots.add(Path(existing.project_path).resolve().parent)
 
     def set_media_service(self, media_service: "MediaService") -> None:
-        """Attach Phase 4 media lifecycle integration without coupling earlier tests to it."""
+        """Attach media lifecycle integration without coupling earlier tests to it."""
         self._media_service = media_service
+
+    def set_script_service(self, script_service: "ScriptService") -> None:
+        """Attach script duplication integration while keeping the project service layered."""
+        self._script_service = script_service
 
     def set_project_root(self, project_root: Path) -> None:
         """Change the location used only for newly created projects."""
@@ -231,6 +237,8 @@ class ProjectService:
             self.repository.create(duplicate)
             if self._media_service is not None:
                 self._media_service.duplicate_project_media(source, duplicate)
+            if self._script_service is not None:
+                self._script_service.duplicate_project_script(source.project_id, duplicate.project_id, duplicate.title)
         except Exception as exc:
             try:
                 if self.repository.get_by_id(duplicate.project_id) is not None:
