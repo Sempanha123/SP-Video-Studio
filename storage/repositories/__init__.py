@@ -28,3 +28,5 @@ from .render_output_repository import RenderOutputRepository
 from .export_preset_repository import ExportPresetRepository
 
 from storage.repositories.timeline_repository import TimelineRepository
+
+from .news_repository import NewsRepository

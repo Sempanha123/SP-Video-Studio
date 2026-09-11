@@ -1,19 +1,12 @@
-from dataclasses import dataclass, field
+"""Compatibility exports for the Phase 18 source-grounded News domain."""
+from domain.news_project import NewsProjectMetadata, NewsProjectStatus
+from domain.news_source import NewsSource, NewsSourceSnapshot, NewsSourceStatus, NewsSourceType
+from domain.news_claim import NewsClaim, NewsClaimStatus, NewsEvidence
+from domain.news_brief import NewsBrief, NewsBriefItem
+from domain.news_script_mapping import NewsScriptMapping
 
-
-@dataclass(slots=True)
-class NewsSource:
-    title: str
-    publisher: str
-    url: str
-    publication_date: str | None = None
-    retrieved_date: str | None = None
-    author: str | None = None
-
-
-@dataclass(slots=True)
-class NewsClaim:
-    claim: str
-    supporting_sources: list[str] = field(default_factory=list)
-    confidence: float | None = None
-    review_status: str = "pending"
+__all__ = [
+    "NewsProjectMetadata", "NewsProjectStatus", "NewsSource", "NewsSourceSnapshot",
+    "NewsSourceStatus", "NewsSourceType", "NewsClaim", "NewsClaimStatus", "NewsEvidence",
+    "NewsBrief", "NewsBriefItem", "NewsScriptMapping",
+]

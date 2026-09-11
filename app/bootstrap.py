@@ -61,6 +61,15 @@ from services.export_filename_service import ExportFilenameService
 from services.export_preset_service import ExportPresetService
 from services.export_validation_service import ExportValidationService
 from services.export_service import ExportService
+from services.news_source_fetch_service import NewsSourceFetchService
+from services.news_extraction_service import NewsExtractionService
+from services.news_source_service import NewsSourceService
+from services.news_claim_service import NewsClaimService
+from services.news_brief_service import NewsBriefService
+from services.news_validation_service import NewsValidationService
+from services.news_script_service import NewsScriptService
+from services.news_review_service import NewsReviewService
+from services.news_service import NewsService
 from services.tts_chunking_service import TTSChunkingService
 from services.tts_service import TTSService
 from services.narration_service import NarrationService
@@ -81,6 +90,7 @@ from storage.repositories.render_job_repository import RenderJobRepository
 from storage.repositories.render_output_repository import RenderOutputRepository
 from storage.repositories.export_preset_repository import ExportPresetRepository
 from storage.repositories.timeline_repository import TimelineRepository
+from storage.repositories.news_repository import NewsRepository
 from storage.repositories.voice_repository import VoiceRepository
 from workers.worker_pool import WorkerPool
 
@@ -115,6 +125,7 @@ def build_container() -> DependencyContainer:
     render_output_repository = RenderOutputRepository(database)
     export_preset_repository = ExportPresetRepository(database)
     timeline_repository = TimelineRepository(database)
+    news_repository = NewsRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -263,6 +274,23 @@ def build_container() -> DependencyContainer:
         director_repository, repository, script_repository, transcript_repository, translation_repository,
         scene_repository, media_repository, script_analysis_service, director_provider, director_validation, logger,
     )
+    news_fetch_service = NewsSourceFetchService()
+    news_extraction_service = NewsExtractionService()
+    news_source_service = NewsSourceService(news_repository, repository, news_fetch_service, logger)
+    news_claim_service = NewsClaimService(news_repository, news_extraction_service)
+    news_validation_service = NewsValidationService(news_repository)
+    news_brief_service = NewsBriefService(news_repository)
+    news_script_service = NewsScriptService(
+        news_repository, script_service, news_brief_service, news_validation_service,
+        translation_service=translation_service, scene_service=scene_service, director_service=director_service,
+    )
+    news_review_service = NewsReviewService(news_claim_service)
+    news_service = NewsService(
+        news_repository, repository, news_source_service, news_claim_service, news_brief_service,
+        news_script_service, news_validation_service, logger,
+        voice_service=voice_service, narration_service=narration_service, subtitle_service=subtitle_service,
+    )
+    project_service.set_news_service(news_service)
     director_apply_service = DirectorApplyService(
         director_service, director_repository, director_validation, project_service, scene_service, voice_service, subtitle_preset_service
     )
@@ -300,6 +328,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(RenderOutputRepository, render_output_repository)
     container.register_instance(ExportPresetRepository, export_preset_repository)
     container.register_instance(TimelineRepository, timeline_repository)
+    container.register_instance(NewsRepository, news_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -351,6 +380,15 @@ def build_container() -> DependencyContainer:
     container.register_instance(ExportPresetService, export_preset_service)
     container.register_instance(ExportValidationService, export_validation_service)
     container.register_instance(ExportService, export_service)
+    container.register_instance(NewsSourceFetchService, news_fetch_service)
+    container.register_instance(NewsExtractionService, news_extraction_service)
+    container.register_instance(NewsSourceService, news_source_service)
+    container.register_instance(NewsClaimService, news_claim_service)
+    container.register_instance(NewsValidationService, news_validation_service)
+    container.register_instance(NewsBriefService, news_brief_service)
+    container.register_instance(NewsScriptService, news_script_service)
+    container.register_instance(NewsReviewService, news_review_service)
+    container.register_instance(NewsService, news_service)
     container.register_instance(AIResourceManager, ai_resource_manager)
     container.register_instance(VoiceRegistry, voice_registry)
     container.register_instance(VoiceService, voice_service)
@@ -403,6 +441,7 @@ def run() -> int:
     from ui.controllers.render_controller import RenderController
     from ui.controllers.export_controller import ExportController
     from ui.controllers.voice_controller import VoiceController
+    from ui.controllers.news_controller import NewsController
 
     project_service = container.resolve(ProjectService)
     project_controller = ProjectController(project_service)
@@ -495,6 +534,16 @@ def run() -> int:
         container.resolve(WorkerPool),
         logger,
     )
+    news_controller = NewsController(
+        container.resolve(NewsService),
+        container.resolve(NewsSourceService),
+        container.resolve(NewsClaimService),
+        container.resolve(NewsBriefService),
+        container.resolve(NewsScriptService),
+        container.resolve(NewsValidationService),
+        container.resolve(WorkerPool),
+        logger,
+    )
 
     def flush_for_export() -> bool:
         if not script_controller.flush():
@@ -565,6 +614,9 @@ def run() -> int:
     )
     project_controller.currentProjectChanged.connect(
         lambda: export_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
+    )
+    project_controller.currentProjectChanged.connect(
+        lambda: news_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
     )
     transcription_controller.playbackRequested.connect(
         lambda media_id, start_ms, autoplay: (
@@ -646,6 +698,7 @@ def run() -> int:
     container.register_instance(AIDirectorController, director_controller)
     container.register_instance(RenderController, render_controller)
     container.register_instance(ExportController, export_controller)
+    container.register_instance(NewsController, news_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
@@ -665,6 +718,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("directorController", director_controller)
     engine.rootContext().setContextProperty("renderController", render_controller)
     engine.rootContext().setContextProperty("exportController", export_controller)
+    engine.rootContext().setContextProperty("newsController", news_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():

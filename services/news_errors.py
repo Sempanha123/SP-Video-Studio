@@ -1,0 +1,11 @@
+class NewsError(RuntimeError):
+    user_message = "News Studio could not complete this action."
+class NewsInvalidSource(NewsError): user_message = "Check the source and try again."
+class NewsSourceFetchError(NewsError): user_message = "MMO Video Studio could not access this source."
+class NewsSourceBlocked(NewsSourceFetchError): user_message = "This source did not provide accessible article text."
+class NewsSourceParseError(NewsError): user_message = "MMO Video Studio could not extract readable source content."
+class NewsClaimUnsupported(NewsError): user_message = "This claim needs supporting evidence before approval."
+class NewsClaimConflict(NewsError): user_message = "This claim conflicts with other source evidence and needs review."
+class NewsBriefInvalid(NewsError): user_message = "This News Brief needs review before it can be used."
+class NewsScriptGroundingError(NewsError): user_message = "The News script contains unsupported factual text."
+class NewsSourceSecurityError(NewsInvalidSource): user_message = "Only public HTTP or HTTPS sources can be fetched."

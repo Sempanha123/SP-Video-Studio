@@ -898,3 +898,60 @@ Timeline edits require no special conversion step before export. Reorder, scene 
 A real FFmpeg regression renders a project after Timeline reorder + video source trim + Scene split, validates output duration, decodes the first frame to confirm reordered visual order, and decodes the trimmed section to confirm the selected 2–4 second video source range is used.
 
 Preview scrubbing remains limited by Qt Multimedia seek precision and is not advertised as frame-accurate. Crossfade preview selects the incoming scene during overlap rather than simulating final FFmpeg blending. No waveform generation, audio effects/EQ, speed ramping, keyframes, color grading, multicam, masks, proxy workflow, nested sequences, or unsupported B-roll compositing is introduced in Phase 17. Storyboard remains fully usable without Timeline.
+
+## Source-grounded News Studio
+
+Phase 18 adds a News Studio for projects whose existing `workflow` is `news`. It does **not** create a second project, Script, Voice, Subtitle, Scene, Timeline, render, or export system. News-specific data exists only to preserve source provenance and editorial review; production continues through the shared Phase 6–17 modules.
+
+The News workflow is deliberately source-first:
+
+```text
+Source → Snapshot/Evidence → Claim → Human Review → Brief → Grounded Script
+       → Translation/Voice/Scenes/Subtitles/Timeline → Render/Export
+```
+
+A topic by itself is never treated as factual evidence. Phase 18 has no autonomous web research, search-engine crawling, breaking-news monitor, paywall bypass, cloud LLM news writer, automatic publishing, or News-specific motion-graphics engine.
+
+### News data and persistence
+
+SQLite schema version **15** adds normalized News tables for `news_projects`, `news_sources`, immutable `news_source_snapshots`, `news_claims`, `news_evidence`, `news_briefs`, `news_brief_items`, and `news_script_mappings`. Article/source text is stored in versioned source snapshots so the exact evidence used by an older claim remains inspectable even after a URL/manual source changes. The UI emphasizes metadata, short evidence excerpts, claims, and links rather than article republishing.
+
+News project metadata stores topic, editorial angle, region, language, audience, target duration, platform, status, source fingerprint, and versionable metadata while the generic Project record remains canonical. Source/claim/brief/script provenance survives restart. Project duplication creates new News IDs and remaps snapshots, evidence, brief items, and script mappings into the duplicated project without refetching URLs. Local source documents are copied into `project/sources/`; project deletion removes only the managed copy, never the user's external original.
+
+### Source types and safe fetching
+
+Initial source types are **Web Link**, **Manual Text**, and **Local Text Document**. Local TXT/Markdown/HTML files are copied through managed project storage without moving or modifying the original. Manual source edits create a new snapshot rather than rewriting old evidence history. Fetched snapshots are immutable; poor extraction should be replaced by a new manual source/version rather than silently editing the retrieved evidence.
+
+URL fetching is a single user-requested fetch, not a crawler. `NewsSourceFetchService` allows only HTTP/HTTPS, uses a transparent MMO Video Studio user-agent, checks DNS results, rejects localhost/non-global/private/link-local targets (IPv4 and IPv6), rejects embedded credentials and non-HTTP schemes, validates every redirect destination, limits redirect count and response size (5 MiB by default), applies connection/read timeout handling, restricts content types to public HTML/plain text, and maps common 403/404/410/429/5xx errors to typed user-facing News errors. It never executes page JavaScript or follows page links automatically.
+
+HTML extraction uses a pluggable `SourceExtractor` abstraction. The standard-library article extractor reads title/author/published metadata where available, prefers `<article>`/`<main>` content, and excludes common navigation/header/footer/script/style clutter. Plain-text extraction respects declared charset with UTF-8 fallback and preserves Khmer Unicode. Dynamic JavaScript-only pages, difficult paywalls, and highly unusual layouts may require the user to paste authorized text manually; PDF/DOCX extraction is intentionally not added in this phase.
+
+### Claims, evidence, conflicts, and quotes
+
+`NewsClaim` is a reviewed editorial object, not a confidence score. Claims may be candidate, needs-review, approved, rejected, unsupported, or conflicting. Importance is Primary/Supporting/Background, uncertainty can preserve wording such as reported/estimated/alleged/uncertain, and locking protects approved user text from automated candidate refreshes.
+
+A factual claim normally cannot be approved without at least one `NewsEvidence` link to a specific source snapshot. Evidence keeps short relevant text plus optional source offsets. One claim may have evidence from multiple sources; the number of sources is displayed as provenance information only and is never presented as a truth score. Users can create a claim manually from selected evidence, add more evidence, approve/reject/edit/lock it, merge probable duplicates, and keep analyst notes separate from factual text.
+
+Deterministic extraction helpers can suggest dates, numbers, quoted strings, and conservative textual candidates, but they do not pretend to understand truth. Duplicate detection is advisory only. Number/date disagreement can mark claims **Conflicting**; News Studio never selects a winner automatically. Exact/translated quote metadata stores speaker, original wording, quote kind, and evidence so paraphrases are never silently converted into direct quotations.
+
+### Briefs and grounded Script integration
+
+`NewsBrief` organizes **approved claim IDs** into flexible Lead / What Happened / Key Details / Background / Why It Matters / What Happens Next sections. Brief items reference claims instead of copying unsupported factual prose into an opaque blob. Briefs are draft/review/approved editorial records and become Out of Date when their approved-claim fingerprint changes.
+
+`NewsScriptService` writes into the existing generic Script/ScriptSection system. Its deterministic offline builder supports Straight News, Explainer, Short Update, and Documentary News structures, using approved brief/claim material plus clearly non-factual connective language. `NewsScriptMapping` links factual script text snapshots/ranges back to claim IDs. Grounding validation marks factual-looking unmapped text unsupported/needs review; editing a mapped sentence's meaning invalidates that mapping without changing the underlying approved claim. The grounding view can therefore answer which claims/sources support a script sentence.
+
+Phase 18 remains usable without any cloud model. The `engines/news` provider abstraction accepts structured claim/script operations for future providers, but the included deterministic provider never invents facts and never sends source/article/script content to an external AI service.
+
+### Existing production modules are reused
+
+News translation calls the Phase 11 Translation system and retains News claim provenance metadata on the translated version. News voice selection/narration continue through Phase 9/8; News Studio recommends the existing **News Anchor** category but does not auto-generate narration when a script is created. Subtitles remain Phase 12 tracks/styles. Scene creation calls the Phase 13 `SceneService` and adds only generic `news_role` metadata; Storyboard/Timeline stay the Phase 13/17 editors. AI Director is invoked with `workflow=news` and grounded-source metadata, so it plans structure/pace/voice/subtitle/transitions only and does not create factual claims. Rendering/export remains Phase 15/16.
+
+Sources can be exported as provenance-focused TXT/JSON lists containing title/publisher/date/URL/access information. Full article text is excluded by default. The same source list can be copied for a video description without publishing/uploading anywhere.
+
+### Readiness, privacy, and limits
+
+`NewsValidationService` reports **Not Ready**, **Needs Review**, or **Ready for Production** based on topic/sources, approved/unsupported/conflicting claims, brief/script grounding, and existing production state. It never labels a project "verified truth". Unsupported factual script sentences or unresolved conflicting claims remain visible before production; editing is never hard-locked.
+
+Manual/local News work is fully offline. URL mode sends a direct request only to the user-selected public source and validated redirects. No telemetry or external AI receives source text, claims, scripts, or private notes in Phase 18. News source fetching is intentionally controlled through the existing worker pool rather than launching unbounded concurrent crawling.
+
+The recommended next phase is **Phase 19 — News Visual System and News Graphics**.

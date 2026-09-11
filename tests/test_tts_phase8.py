@@ -91,7 +91,7 @@ def narration_system(tmp_path: Path):
 def test_phase8_database_migration_and_table(tmp_path: Path):
     db = SQLiteDatabase(tmp_path / "app.db")
     db.initialize()
-    assert db.current_version() == 14
+    assert db.current_version() == 15
     with db.connect() as connection:
         tables = {row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         indexes = {row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='index'")}

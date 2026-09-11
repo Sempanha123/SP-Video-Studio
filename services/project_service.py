@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from services.scene_service import SceneService
     from services.ai_director_service import AIDirectorService
     from services.timeline_service import TimelineService
+    from services.news_service import NewsService
 
 
 PROJECT_DIRS = (
@@ -40,6 +41,7 @@ PROJECT_DIRS = (
     "generated",
     "thumbnails",
     "renders",
+    "sources",
     "cache",
 )
 COPYABLE_DIRS = tuple(name for name in PROJECT_DIRS if name not in {"cache", "renders"})
@@ -104,6 +106,7 @@ class ProjectService:
         self._scene_service: SceneService | None = None
         self._director_service: AIDirectorService | None = None
         self._timeline_service: TimelineService | None = None
+        self._news_service: NewsService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
                 self._known_project_roots.add(Path(existing.project_path).resolve().parent)
@@ -139,6 +142,9 @@ class ProjectService:
 
     def set_timeline_service(self, timeline_service: "TimelineService") -> None:
         self._timeline_service = timeline_service
+
+    def set_news_service(self, news_service: "NewsService") -> None:
+        self._news_service = news_service
 
     def set_project_root(self, project_root: Path) -> None:
         """Change the location used only for newly created projects."""
@@ -329,6 +335,11 @@ class ProjectService:
                 )
             if self._timeline_service is not None:
                 self._timeline_service.duplicate_project_timeline(source.project_id, duplicate.project_id)
+            if self._news_service is not None:
+                self._news_service.duplicate_project_news(
+                    source.project_id, duplicate.project_id,
+                    script_map=script_id_map, section_map=script_section_map,
+                )
         except Exception as exc:
             try:
                 if self.repository.get_by_id(duplicate.project_id) is not None:

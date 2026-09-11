@@ -9,6 +9,7 @@ import "../director"
 import "../render"
 import "../export"
 import "../timeline"
+import "../news"
 
 Item {
     id: root
@@ -62,6 +63,8 @@ Item {
             renderController.setCurrentProject(root.current().id || "")
         if (mode === "export" && typeof exportController !== "undefined")
             exportController.setCurrentProject(root.current().id || "")
+        if (mode === "news" && typeof newsController !== "undefined")
+            newsController.setCurrentProject(root.current().id || "")
         root.workspaceMode = mode
     }
 
@@ -111,6 +114,8 @@ Item {
             renderController.setCurrentProject(root.current().id || "")
         if (typeof exportController !== "undefined")
             exportController.setCurrentProject(root.current().id || "")
+        if (typeof newsController !== "undefined")
+            newsController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
@@ -184,6 +189,7 @@ Item {
             StatusBadge { text: root.current().statusName || "Draft"; status: root.current().status || "offline" }
             Text { text: "Last updated " + (root.current().updatedDisplay || "—"); color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
             Item { Layout.fillWidth: true }
+            AppButton { visible: root.current().workflow === "news"; text: "News"; compact: true; variant: root.workspaceMode === "news" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("news") }
             AppButton { text: "Media"; compact: true; variant: root.workspaceMode === "media" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("media") }
             AppButton { text: "Script"; compact: true; variant: root.workspaceMode === "script" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("script") }
             AppButton { text: "Transcription"; compact: true; variant: root.workspaceMode === "transcription" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("transcription") }
@@ -538,6 +544,15 @@ Item {
                     aspectRatio: root.current().aspectRatio || "16:9"
                 }
             }
+        }
+
+        NewsStudio {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.workspaceMode === "news"
+            controller: typeof newsController !== "undefined" ? newsController : null
+            onNavigateRequested: function(mode) { root.setWorkspaceMode(mode) }
+            onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
         }
 
         SceneEditor {
