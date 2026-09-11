@@ -723,11 +723,30 @@ class TranslationService:
         script_map: dict[str, str] | None = None,
         script_section_map: dict[str, str] | None = None,
     ) -> int:
+        count, _, _ = self.duplicate_project_translations_with_map(
+            source_project_id, target_project_id, transcript_map=transcript_map,
+            transcript_segment_map=transcript_segment_map, script_map=script_map,
+            script_section_map=script_section_map,
+        )
+        return count
+
+    def duplicate_project_translations_with_map(
+        self,
+        source_project_id: str,
+        target_project_id: str,
+        *,
+        transcript_map: dict[str, str] | None = None,
+        transcript_segment_map: dict[str, str] | None = None,
+        script_map: dict[str, str] | None = None,
+        script_section_map: dict[str, str] | None = None,
+    ) -> tuple[int, dict[str, str], dict[str, str]]:
         transcript_map = transcript_map or {}
         transcript_segment_map = transcript_segment_map or {}
         script_map = script_map or {}
         script_section_map = script_section_map or {}
         count = 0
+        translation_id_map: dict[str, str] = {}
+        translation_segment_id_map: dict[str, str] = {}
         for source in self.repository.list_for_project(source_project_id):
             if source.source_type_code == TranslationSourceType.TRANSCRIPT.value:
                 target_source_id = transcript_map.get(source.source_id)
@@ -776,13 +795,16 @@ class TranslationService:
                     )
                 )
             self.repository.create(clone, cloned_segments)
+            translation_id_map[source.translation_id] = clone.translation_id
+            for original_segment, cloned_segment in zip(self.repository.segments(source.translation_id), cloned_segments):
+                translation_segment_id_map[original_segment.segment_id] = cloned_segment.segment_id
             try:
                 clone.source_fingerprint = self._fingerprint_units(self._current_units(clone))
                 self.repository.update_translation(clone)
             except Exception:
                 pass
             count += 1
-        return count
+        return count, translation_id_map, translation_segment_id_map
 
     def _current_units(self, translation: Translation) -> list[SourceUnit]:
         if translation.source_type_code == TranslationSourceType.TRANSCRIPT.value:

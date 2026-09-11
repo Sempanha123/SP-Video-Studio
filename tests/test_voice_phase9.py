@@ -46,7 +46,7 @@ def voice_system(tmp_path: Path):
 def test_phase9_database_migration(tmp_path: Path):
     db = SQLiteDatabase(tmp_path / "app.db")
     db.initialize()
-    assert db.current_version() == 8
+    assert db.current_version() == 9
     with db.connect() as connection:
         tables = {row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         project_columns = {row["name"] for row in connection.execute("PRAGMA table_info(projects)")}

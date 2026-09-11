@@ -1,0 +1,112 @@
+{
+  "subtitle_registry_version": 1,
+  "presets": [
+    {
+      "id": "clean",
+      "name": "Clean",
+      "description": "Readable bottom-center subtitles with subtle outline.",
+      "style": {
+        "font_family": "Noto Sans Khmer", "font_size": 48, "font_weight": 600,
+        "text_color": "#FFFFFF", "secondary_text_color": "#E5E7EB",
+        "outline_color": "#000000", "outline_width": 2, "shadow_enabled": true,
+        "shadow_offset": 2, "background_enabled": false, "background_color": "#000000",
+        "background_opacity": 0.55, "alignment": "center", "vertical_position": "bottom",
+        "horizontal_margin": 0.06, "vertical_margin": 0.08, "max_lines": 2,
+        "max_chars_per_line": 42, "line_spacing": 1.0,
+        "highlight_color": "#FDE047", "highlight_text_color": "#111827", "secondary_scale": 0.82
+      }
+    },
+    {
+      "id": "news",
+      "name": "News",
+      "description": "Professional lower-third-safe captions without network branding.",
+      "style": {
+        "font_family": "Noto Sans Khmer", "font_size": 46, "font_weight": 700,
+        "text_color": "#FFFFFF", "secondary_text_color": "#E5E7EB",
+        "outline_color": "#111827", "outline_width": 2, "shadow_enabled": true,
+        "shadow_offset": 2, "background_enabled": true, "background_color": "#111827",
+        "background_opacity": 0.46, "alignment": "center", "vertical_position": "bottom",
+        "horizontal_margin": 0.08, "vertical_margin": 0.12, "max_lines": 2,
+        "max_chars_per_line": 40, "line_spacing": 1.0,
+        "highlight_color": "#93C5FD", "highlight_text_color": "#0F172A", "secondary_scale": 0.82
+      }
+    },
+    {
+      "id": "bold",
+      "name": "Bold",
+      "description": "Large high-contrast social captions for vertical video.",
+      "style": {
+        "font_family": "Noto Sans Khmer", "font_size": 62, "font_weight": 800,
+        "text_color": "#FFFFFF", "secondary_text_color": "#F3F4F6",
+        "outline_color": "#000000", "outline_width": 4, "shadow_enabled": false,
+        "shadow_offset": 0, "background_enabled": false, "background_color": "#000000",
+        "background_opacity": 0.0, "alignment": "center", "vertical_position": "middle",
+        "horizontal_margin": 0.08, "vertical_margin": 0.1, "max_lines": 2,
+        "max_chars_per_line": 30, "line_spacing": 0.95,
+        "highlight_color": "#FACC15", "highlight_text_color": "#111827", "secondary_scale": 0.8
+      }
+    },
+    {
+      "id": "minimal",
+      "name": "Minimal",
+      "description": "Quiet lightweight subtitle style for interviews and documentaries.",
+      "style": {
+        "font_family": "Noto Sans Khmer", "font_size": 42, "font_weight": 500,
+        "text_color": "#FFFFFF", "secondary_text_color": "#D1D5DB",
+        "outline_color": "#111827", "outline_width": 1, "shadow_enabled": true,
+        "shadow_offset": 1, "background_enabled": false, "background_color": "#000000",
+        "background_opacity": 0.0, "alignment": "center", "vertical_position": "bottom",
+        "horizontal_margin": 0.08, "vertical_margin": 0.07, "max_lines": 2,
+        "max_chars_per_line": 46, "line_spacing": 1.05,
+        "highlight_color": "#E5E7EB", "highlight_text_color": "#111827", "secondary_scale": 0.82
+      }
+    },
+    {
+      "id": "creator",
+      "name": "Creator",
+      "description": "Compact modern captions with optional word highlighting.",
+      "style": {
+        "font_family": "Noto Sans Khmer", "font_size": 56, "font_weight": 800,
+        "text_color": "#FFFFFF", "secondary_text_color": "#F3F4F6",
+        "outline_color": "#111827", "outline_width": 3, "shadow_enabled": false,
+        "shadow_offset": 0, "background_enabled": false, "background_color": "#000000",
+        "background_opacity": 0.0, "alignment": "center", "vertical_position": "middle",
+        "horizontal_margin": 0.08, "vertical_margin": 0.12, "max_lines": 2,
+        "max_chars_per_line": 32, "line_spacing": 0.95,
+        "highlight_color": "#60A5FA", "highlight_text_color": "#FFFFFF", "secondary_scale": 0.78,
+        "metadata": {"word_highlight": true}
+      }
+    },
+    {
+      "id": "karaoke",
+      "name": "Karaoke",
+      "description": "Word-highlight subtitle preset for source-language word timings.",
+      "style": {
+        "font_family": "Noto Sans Khmer", "font_size": 52, "font_weight": 700,
+        "text_color": "#FFFFFF", "secondary_text_color": "#D1D5DB",
+        "outline_color": "#000000", "outline_width": 3, "shadow_enabled": true,
+        "shadow_offset": 2, "background_enabled": false, "background_color": "#000000",
+        "background_opacity": 0.0, "alignment": "center", "vertical_position": "bottom",
+        "horizontal_margin": 0.06, "vertical_margin": 0.1, "max_lines": 2,
+        "max_chars_per_line": 38, "line_spacing": 1.0,
+        "highlight_color": "#FDE047", "highlight_text_color": "#111827", "secondary_scale": 0.8,
+        "metadata": {"word_highlight": true}
+      }
+    },
+    {
+      "id": "documentary",
+      "name": "Documentary",
+      "description": "Understated lower-center captions with calm contrast.",
+      "style": {
+        "font_family": "Noto Sans Khmer", "font_size": 44, "font_weight": 500,
+        "text_color": "#FFFFFF", "secondary_text_color": "#E5E7EB",
+        "outline_color": "#111827", "outline_width": 2, "shadow_enabled": true,
+        "shadow_offset": 2, "background_enabled": false, "background_color": "#000000",
+        "background_opacity": 0.0, "alignment": "center", "vertical_position": "bottom",
+        "horizontal_margin": 0.08, "vertical_margin": 0.08, "max_lines": 2,
+        "max_chars_per_line": 44, "line_spacing": 1.05,
+        "highlight_color": "#CBD5E1", "highlight_text_color": "#111827", "secondary_scale": 0.82
+      }
+    }
+  ]
+}

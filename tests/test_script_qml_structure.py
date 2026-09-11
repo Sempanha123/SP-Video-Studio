@@ -27,7 +27,7 @@ def test_workspace_exposes_only_media_and_script_as_functional_modules():
     assert 'text: "Script"' in qml
     assert "ScriptEditor" in qml
     assert "scriptController.flush()" in qml
-    for unfinished in ('text: "Voice"', 'text: "Subtitles"', 'text: "Scenes"', 'text: "Timeline"'):
+    for unfinished in ('text: "Voice"', 'text: "Scenes"', 'text: "Timeline"'):
         assert unfinished not in qml
 
 

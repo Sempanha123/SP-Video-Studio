@@ -35,6 +35,12 @@ from services.transcription_service import TranscriptionService
 from services.translation_chunking_service import TranslationChunkingService
 from services.translation_review_service import TranslationReviewService
 from services.translation_service import TranslationService
+from services.subtitle_generation_service import SubtitleGenerationService
+from services.subtitle_preset_service import SubtitlePresetService
+from services.subtitle_preview_service import SubtitlePreviewService
+from services.subtitle_service import SubtitleService
+from services.subtitle_timing_service import SubtitleTimingService
+from services.subtitle_validation_service import SubtitleValidationService
 from services.tts_chunking_service import TTSChunkingService
 from services.tts_service import TTSService
 from services.narration_service import NarrationService
@@ -48,6 +54,7 @@ from storage.repositories.script_repository import ScriptRepository
 from storage.repositories.settings_repository import SettingsRepository
 from storage.repositories.transcript_repository import TranscriptRepository
 from storage.repositories.translation_repository import TranslationRepository
+from storage.repositories.subtitle_repository import SubtitleRepository
 from storage.repositories.voice_repository import VoiceRepository
 from workers.worker_pool import WorkerPool
 
@@ -75,6 +82,7 @@ def build_container() -> DependencyContainer:
     voice_repository = VoiceRepository(database)
     transcript_repository = TranscriptRepository(database)
     translation_repository = TranslationRepository(database)
+    subtitle_repository = SubtitleRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -188,6 +196,16 @@ def build_container() -> DependencyContainer:
         "translation", translation_service.unload, lambda: translation_service.active_jobs > 0
     )
     project_service.set_translation_service(translation_service)
+    subtitle_generation_service = SubtitleGenerationService(transcript_repository, translation_repository)
+    subtitle_preset_service = SubtitlePresetService(subtitle_repository)
+    subtitle_validation_service = SubtitleValidationService()
+    subtitle_timing_service = SubtitleTimingService()
+    subtitle_preview_service = SubtitlePreviewService(lambda: media_tool_paths()[0])
+    subtitle_service = SubtitleService(
+        subtitle_repository, repository, transcript_repository, translation_repository,
+        subtitle_generation_service, subtitle_preset_service, subtitle_validation_service, subtitle_timing_service, logger,
+    )
+    project_service.set_subtitle_service(subtitle_service)
     worker_pool = WorkerPool(max_workers=2)
 
     container = DependencyContainer()
@@ -202,6 +220,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(VoiceRepository, voice_repository)
     container.register_instance(TranscriptRepository, transcript_repository)
     container.register_instance(TranslationRepository, translation_repository)
+    container.register_instance(SubtitleRepository, subtitle_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -227,6 +246,12 @@ def build_container() -> DependencyContainer:
     container.register_instance(TranslationChunkingService, translation_chunking_service)
     container.register_instance(TranslationReviewService, translation_review_service)
     container.register_instance(TranslationService, translation_service)
+    container.register_instance(SubtitleGenerationService, subtitle_generation_service)
+    container.register_instance(SubtitlePresetService, subtitle_preset_service)
+    container.register_instance(SubtitleValidationService, subtitle_validation_service)
+    container.register_instance(SubtitleTimingService, subtitle_timing_service)
+    container.register_instance(SubtitlePreviewService, subtitle_preview_service)
+    container.register_instance(SubtitleService, subtitle_service)
     container.register_instance(AIResourceManager, ai_resource_manager)
     container.register_instance(VoiceRegistry, voice_registry)
     container.register_instance(VoiceService, voice_service)
@@ -272,6 +297,7 @@ def run() -> int:
     from ui.controllers.tts_controller import TTSController
     from ui.controllers.transcription_controller import TranscriptionController
     from ui.controllers.translation_controller import TranslationController
+    from ui.controllers.subtitle_controller import SubtitleController
     from ui.controllers.voice_controller import VoiceController
 
     project_service = container.resolve(ProjectService)
@@ -333,6 +359,14 @@ def run() -> int:
         container.resolve(WorkerPool),
         logger,
     )
+    subtitle_controller = SubtitleController(
+        container.resolve(SubtitleService),
+        container.resolve(SubtitlePresetService),
+        container.resolve(SubtitlePreviewService),
+        container.resolve(MediaService),
+        container.resolve(WorkerPool),
+        logger,
+    )
 
     def before_project_change() -> bool:
         if not script_controller.flush():
@@ -349,6 +383,8 @@ def run() -> int:
             translation_controller.cancel()
             return False
         if not translation_controller.saveEdits():
+            return False
+        if not subtitle_controller.flush():
             return False
         return True
 
@@ -368,6 +404,9 @@ def run() -> int:
     project_controller.currentProjectChanged.connect(
         lambda: translation_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
     )
+    project_controller.currentProjectChanged.connect(
+        lambda: subtitle_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
+    )
     transcription_controller.playbackRequested.connect(
         lambda media_id, start_ms, autoplay: (
             playback_controller.setMedia(media_id),
@@ -382,6 +421,14 @@ def run() -> int:
             playback_controller.play() if autoplay else None,
         )
     )
+    subtitle_controller.playbackRequested.connect(
+        lambda media_id, start_ms, autoplay: (
+            playback_controller.setMedia(media_id),
+            playback_controller.seek(start_ms),
+            playback_controller.play() if autoplay else None,
+        )
+    )
+    playback_controller.playbackChanged.connect(lambda: subtitle_controller.setPlayhead(playback_controller.position))
     project_controller.currentProjectChanged.connect(lambda: voice_controller.setCurrentProject(str(project_controller.currentProject.get("id", ""))))
     script_controller.selectedSectionChanged.connect(lambda: voice_controller.setCurrentSection(str(script_controller.selectedSection.get("id", ""))))
 
@@ -396,6 +443,7 @@ def run() -> int:
     container.register_instance(VoiceController, voice_controller)
     container.register_instance(TranscriptionController, transcription_controller)
     container.register_instance(TranslationController, translation_controller)
+    container.register_instance(SubtitleController, subtitle_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
@@ -409,6 +457,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("voiceController", voice_controller)
     engine.rootContext().setContextProperty("transcriptionController", transcription_controller)
     engine.rootContext().setContextProperty("translationController", translation_controller)
+    engine.rootContext().setContextProperty("subtitleController", subtitle_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():
@@ -425,6 +474,7 @@ def run() -> int:
     app.aboutToQuit.connect(transcription_controller.saveEdits)
     app.aboutToQuit.connect(translation_controller.cancel)
     app.aboutToQuit.connect(translation_controller.saveEdits)
+    app.aboutToQuit.connect(subtitle_controller.flush)
     app.aboutToQuit.connect(container.resolve(TTSService).unload)
     app.aboutToQuit.connect(container.resolve(TranscriptionService).unload)
     app.aboutToQuit.connect(container.resolve(TranslationService).unload)

@@ -35,6 +35,7 @@ Item {
         if (root.workspaceMode === "script" && typeof scriptController !== "undefined" && !scriptController.flush()) return
         if (root.workspaceMode === "transcription" && typeof transcriptionController !== "undefined" && !transcriptionController.saveEdits()) return
         if (root.workspaceMode === "translation" && typeof translationController !== "undefined" && !translationController.saveEdits()) return
+        if (root.workspaceMode === "subtitles" && typeof subtitleController !== "undefined" && !subtitleController.flush()) return
         if (mode === "script") {
             if (typeof playbackController !== "undefined") playbackController.clear()
             if (typeof scriptController !== "undefined" && !scriptController.load(root.current().id || "")) return
@@ -43,6 +44,8 @@ Item {
             transcriptionController.setMedia(root.selectedMediaId)
         if (mode === "translation" && typeof translationController !== "undefined")
             translationController.setCurrentProject(root.current().id || "")
+        if (mode === "subtitles" && typeof subtitleController !== "undefined")
+            subtitleController.setCurrentProject(root.current().id || "")
         root.workspaceMode = mode
     }
 
@@ -50,6 +53,7 @@ Item {
         if (typeof scriptController !== "undefined" && !scriptController.flush()) return
         if (typeof transcriptionController !== "undefined" && !transcriptionController.saveEdits()) return
         if (typeof translationController !== "undefined" && !translationController.saveEdits()) return
+        if (typeof subtitleController !== "undefined" && !subtitleController.flush()) return
         if (typeof transcriptionController !== "undefined") transcriptionController.cancel()
         if (typeof playbackController !== "undefined") playbackController.clear()
         root.navigateRequested("projects", "")
@@ -81,11 +85,14 @@ Item {
             transcriptionController.setCurrentProject(root.current().id || "")
         if (typeof translationController !== "undefined")
             translationController.setCurrentProject(root.current().id || "")
+        if (typeof subtitleController !== "undefined")
+            subtitleController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
         if (typeof transcriptionController !== "undefined") { transcriptionController.saveEdits(); transcriptionController.cancel() }
         if (typeof translationController !== "undefined") { translationController.saveEdits(); translationController.cancel() }
+        if (typeof subtitleController !== "undefined") subtitleController.flush()
         if (typeof playbackController !== "undefined") playbackController.clear()
     }
 
@@ -105,6 +112,8 @@ Item {
                 transcriptionController.setCurrentProject(root.current().id || "")
             if (typeof translationController !== "undefined")
                 translationController.setCurrentProject(root.current().id || "")
+            if (typeof subtitleController !== "undefined")
+                subtitleController.setCurrentProject(root.current().id || "")
             if (root.workspaceMode === "script" && typeof scriptController !== "undefined")
                 scriptController.load(root.current().id || "")
         }
@@ -147,6 +156,7 @@ Item {
             AppButton { text: "Script"; compact: true; variant: root.workspaceMode === "script" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("script") }
             AppButton { text: "Transcription"; compact: true; variant: root.workspaceMode === "transcription" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("transcription") }
             AppButton { text: "Translation"; compact: true; variant: root.workspaceMode === "translation" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("translation") }
+            AppButton { text: "Subtitles"; compact: true; variant: root.workspaceMode === "subtitles" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("subtitles") }
         }
 
         SplitView {
@@ -456,6 +466,41 @@ Item {
                 SplitView.preferredWidth: root.width * 0.32
                 SplitView.minimumWidth: 320
                 controller: typeof playbackController !== "undefined" ? playbackController : null
+            }
+        }
+
+
+        SplitView {
+            visible: root.workspaceMode === "subtitles"
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            orientation: root.width < 1180 ? Qt.Vertical : Qt.Horizontal
+
+            SubtitleStudio {
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
+                SplitView.preferredWidth: root.width * 0.62
+                SplitView.minimumWidth: 560
+                controller: typeof subtitleController !== "undefined" ? subtitleController : null
+                playbackController: typeof playbackController !== "undefined" ? playbackController : null
+                onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
+            }
+
+            Item {
+                SplitView.fillWidth: true
+                SplitView.fillHeight: true
+                SplitView.preferredWidth: root.width * 0.38
+                SplitView.minimumWidth: 360
+                PreviewPlayer {
+                    anchors.fill: parent
+                    controller: typeof playbackController !== "undefined" ? playbackController : null
+                }
+                SubtitlePreviewOverlay {
+                    anchors.fill: parent
+                    anchors.margins: Theme.spacing.lg
+                    controller: typeof subtitleController !== "undefined" ? subtitleController : null
+                    aspectRatio: root.current().aspectRatio || "16:9"
+                }
             }
         }
 

@@ -7,7 +7,7 @@ def test_workspace_exposes_transcription_without_future_phase_features():
     assert "TranscriptionPanel" in workspace
     assert "transcriptionController.setMedia" in workspace
     assert "transcriptionController.saveEdits" in workspace
-    for future in ('text: "Subtitles"', 'text: "Timeline"'):
+    for future in ('text: "Timeline"',):
         assert future not in workspace
 
 

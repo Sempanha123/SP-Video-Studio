@@ -7,7 +7,7 @@ def test_translation_workspace_and_components_are_wired():
     assert "TranslationPage" in workspace
     assert "translationController.setCurrentProject" in workspace
     assert "translationController.saveEdits" in workspace
-    assert 'text: "Subtitles"' not in workspace
+    assert 'text: "Subtitles"' in workspace
     assert 'text: "Timeline"' not in workspace
 
 

@@ -4,7 +4,7 @@ SP Video Studio is a native Windows desktop video-creation application built wit
 
 ## Current milestone
 
-Phase 0 foundation through Phase 10 speech-to-text + **Phase 11 multilingual translation and human review**.
+Phase 0 foundation through Phase 11 translation + **Phase 12 professional subtitle engine and Subtitle Studio**.
 
 Implemented now:
 
@@ -37,8 +37,9 @@ Implemented now:
 - Shared AI resource coordination so VoxCPM2 and Whisper do not independently consume conflicting GPU resources
 - Provider-based English↔Khmer translation with local Marian/OPUS and manual-review providers
 - Side-by-side Translation Review with machine-output preservation, human edits, review/lock protection, source synchronization, and UTF-8 export
+- Professional Subtitle Studio with transcript/translation/bilingual/manual tracks, editable millisecond timing, source-safe synchronization, live overlay preview, reusable styles/presets, word highlighting, SRT/VTT/ASS import/export, and short FFmpeg/libass burn-in previews
 
-Not implemented yet: final subtitle generation/styling/export, speaker diarization, dubbing, scenes, timeline editing, News/Story generation, final rendering/export, or batch processing.
+Not implemented yet: speaker diarization, dubbing, scenes, timeline editing, News/Story generation, final production video rendering/export, or batch processing.
 
 ## Requirements
 
@@ -633,3 +634,44 @@ pytest -m translation tests/test_translation_integration.py
 A non-empty generated result is only an integration check. English→Khmer and Khmer→English publication quality still requires human review, especially for names, numbers, quotes, and domain terminology.
 
 Phase 11 does **not** implement dubbing, translated TTS, final subtitle files/styling, scenes, timeline editing, News research, or rendering.
+
+
+## Professional subtitle engine and Subtitle Studio
+
+Phase 12 stores subtitles as editable project data rather than as an SRT/VTT/ASS text blob. SQLite schema version **9** adds `subtitle_tracks`, `subtitle_cues`, `subtitle_words`, `subtitle_styles`, and global `subtitle_user_presets`. Tracks can originate from a Phase 10 transcript, a reviewed Phase 11 translation, an aligned bilingual transcript+translation pair, an imported subtitle file, or a new manual track.
+
+A `SubtitleCue` keeps integer-millisecond start/end timing, primary and optional secondary text, source mapping/hash metadata, edit/lock state, and optional `SubtitleWord` rows. Transcript-generated tracks preserve real Whisper word timestamps. Translated tracks deliberately do **not** invent target-language word timing; word highlighting is available only when the displayed language has genuine word timing. Subtitle edits are independent from their transcript/translation source and are never pushed back automatically.
+
+### Source synchronization and project lifecycle
+
+Source links are stable IDs plus SHA-256-derived cue hashes. **Sync Source** preserves manually shortened/rephrased subtitle text, marks changed source cues instead of overwriting them, adds new source cues, and keeps deleted/missing-source tracks editable/exportable. Bilingual alignment uses the translation row's `source_segment_id`, not row position.
+
+Project duplication creates new track/style/cue/word IDs and remaps duplicated transcript/translation source IDs, including bilingual transcript metadata. Project deletion removes project-owned subtitle rows through the normal database lifecycle but leaves global user subtitle presets untouched. Track deletion never deletes its transcript, translation, or media source.
+
+### Styling, presets, and preview
+
+Built-in versioned presets live in `resources/subtitles/presets.json`: **Clean, News, Bold, Minimal, Creator, Karaoke, Documentary**. Applying a preset copies its effective values into a project-owned `SubtitleStyle`, so later preset updates do not unexpectedly restyle existing projects. Users can save/delete their own global presets; built-ins are protected.
+
+Styles use domain values for font, reference-resolution font size, weight, colors, outline, shadow, optional background, alignment, normalized margins/vertical position, line limits, highlight colors, and bilingual secondary scale. The preferred default family is **Noto Sans Khmer** when available, with normal system/font fallback behavior. The QML preview uses the existing Phase 5 player plus a lightweight overlay and binary-search/current-index timing updates; it does not query SQLite on every playback frame.
+
+The optional **Render Preview** action writes a temporary ASS file under the project cache and runs FFmpeg/libass in the existing worker pool to produce only a short burn-in test clip. It is not the final video renderer. Subtitle/filter paths are escaped centrally for Windows drive colons, spaces, brackets, quotes, and Unicode/Khmer paths.
+
+### Timing and validation
+
+The timing service supports add/delete, split at a reviewed time/text boundary, merge adjacent cues, chronological order normalization, shift-all/selected timing, and safe negative-time rejection. Validation distinguishes hard errors from quality warnings. Hard errors include invalid/negative timing. Warnings cover overlaps, very short/long cues, excessive line count, safe-margin concerns, and language-aware reading speed; Khmer uses character-based heuristics instead of English whitespace word assumptions.
+
+Playback cue lookup and word lookup are binary-search based. A 1,000-cue regression test verifies that large project tracks can be loaded, validated, searched through the model, and resolved by playhead without database polling per frame.
+
+### Subtitle import/export
+
+Subtitle project data is format-neutral. Dedicated exporters produce:
+
+- **SRT** with UTF-8 and `HH:MM:SS,mmm` timing.
+- **WebVTT** with its own `WEBVTT` structure and period millisecond timing.
+- **ASS** with generated Script Info, style and event sections, proper ASS color conversion/alpha handling, escaping, alignment, and bilingual line output.
+
+SRT and VTT imports preserve multiline Unicode text/timing. Basic ASS event import is supported; arbitrary third-party ASS override-tag/style round-trip is intentionally not claimed. Importing external subtitle files creates independent editable tracks with a selected app preset.
+
+English and Khmer export/import are UTF-8. During Phase 12 validation, FFmpeg 7.1.5 + libass successfully rendered a short Khmer ASS preview using the installed **Noto Sans Khmer** font with visible Khmer glyphs and no missing-box rendering in the inspected frame.
+
+Phase 12 does **not** add scenes, a timeline, dubbing, final production video rendering, News/Story workflows, or batch generation. The next phase is **Phase 13 — Scene Engine and Scene Editor**.

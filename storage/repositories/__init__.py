@@ -15,3 +15,5 @@ from .voice_repository import VoiceRepository
 from .transcript_repository import TranscriptRepository
 
 from storage.repositories.translation_repository import TranslationRepository
+
+from .subtitle_repository import SubtitleRepository
