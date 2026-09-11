@@ -1,0 +1,147 @@
+{
+  "id": "builtin-news-short",
+  "name": "News Short",
+  "templateType": "short",
+  "category": "News",
+  "description": "Vertical News Short with headline hook and grounded News visual recommendation.",
+  "workflow": "shorts",
+  "version": "1.0",
+  "schemaVersion": 1,
+  "builtin": true,
+  "authorLabel": "MMO Video Studio",
+  "previewImage": "",
+  "tags": [
+    "shorts",
+    "news",
+    "vertical"
+  ],
+  "supportedAspectRatios": [
+    "9:16"
+  ],
+  "supportedLanguages": [
+    "*"
+  ],
+  "requiredFeatures": [
+    "shorts",
+    "subtitles",
+    "layered_video",
+    "timeline"
+  ],
+  "components": [
+    {
+      "localId": "project_settings",
+      "type": "project_settings",
+      "data": {
+        "workflow": "shorts",
+        "aspectRatio": "9:16",
+        "fps": 30,
+        "languageMode": "project"
+      }
+    },
+    {
+      "localId": "short_style",
+      "type": "short_style",
+      "data": {
+        "style": "creator",
+        "aspectRatio": "9:16",
+        "safeArea": "vertical_social"
+      }
+    },
+    {
+      "localId": "scene_structure",
+      "type": "scene_structure",
+      "data": {
+        "scenes": [
+          {
+            "localId": "scene_short",
+            "name": "Short",
+            "durationMs": 30000,
+            "primaryMediaPlaceholder": "main_video",
+            "fitMode": "fill",
+            "overlays": [
+              {
+                "localId": "hook_overlay",
+                "type": "headline",
+                "text": "{{hook}}",
+                "x": 0.08,
+                "y": 0.12,
+                "width": 0.84,
+                "height": 0.16
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "localId": "timeline_tracks",
+      "type": "timeline_tracks",
+      "data": {
+        "tracks": [
+          "video",
+          "broll",
+          "overlay",
+          "subtitle",
+          "voice",
+          "music"
+        ]
+      }
+    },
+    {
+      "localId": "subtitle_style",
+      "type": "subtitle_style",
+      "data": {
+        "presetId": "creator"
+      }
+    },
+    {
+      "localId": "export",
+      "type": "export_recommendation",
+      "data": {
+        "presetId": "tiktok"
+      }
+    },
+    {
+      "localId": "news_theme",
+      "type": "news_visual_theme",
+      "data": {
+        "themeRef": "modern_news",
+        "claimsIncluded": false
+      }
+    }
+  ],
+  "placeholders": [
+    {
+      "id": "main_video",
+      "label": "Main Video",
+      "type": "video",
+      "required": false,
+      "languageMode": "project",
+      "acceptedMediaTypes": [
+        "video"
+      ]
+    },
+    {
+      "id": "hook",
+      "label": "Hook",
+      "type": "text",
+      "required": false,
+      "languageMode": "project"
+    },
+    {
+      "id": "voiceover",
+      "label": "Voiceover Voice",
+      "type": "voice",
+      "required": false,
+      "languageMode": "project",
+      "role": "narrator",
+      "voiceCategory": "Creator"
+    }
+  ],
+  "assets": [],
+  "metadata": {
+    "recommended": true,
+    "structureOnly": true,
+    "privateContentIncluded": false
+  }
+}

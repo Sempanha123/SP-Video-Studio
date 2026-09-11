@@ -1,0 +1,134 @@
+{
+  "id": "builtin-clean-news",
+  "name": "Clean News",
+  "templateType": "news",
+  "category": "News",
+  "description": "Clean source-grounded news structure with restrained titles and captions.",
+  "workflow": "news",
+  "version": "1.0",
+  "schemaVersion": 1,
+  "builtin": true,
+  "authorLabel": "MMO Video Studio",
+  "previewImage": "",
+  "tags": [
+    "news",
+    "clean",
+    "captions"
+  ],
+  "supportedAspectRatios": [
+    "16:9",
+    "9:16"
+  ],
+  "supportedLanguages": [
+    "*"
+  ],
+  "requiredFeatures": [
+    "news",
+    "subtitles",
+    "timeline"
+  ],
+  "components": [
+    {
+      "localId": "project_settings",
+      "type": "project_settings",
+      "data": {
+        "workflow": "news",
+        "aspectRatio": "16:9",
+        "fps": 30,
+        "languageMode": "project"
+      }
+    },
+    {
+      "localId": "news_theme",
+      "type": "news_visual_theme",
+      "data": {
+        "themeRef": "clean_news",
+        "headlineStyle": "clean",
+        "lowerThirdStyle": "clean",
+        "claimContentIncluded": false
+      }
+    },
+    {
+      "localId": "scene_structure",
+      "type": "scene_structure",
+      "data": {
+        "scenes": [
+          {
+            "localId": "scene_intro",
+            "name": "News Intro",
+            "durationMs": 5000,
+            "backgroundColor": "#10131A",
+            "overlays": [
+              {
+                "localId": "overlay_headline",
+                "type": "headline",
+                "text": "{{headline}}",
+                "x": 0.08,
+                "y": 0.08,
+                "width": 0.84,
+                "height": 0.18
+              },
+              {
+                "localId": "overlay_source",
+                "type": "label",
+                "text": "{{source_label}}",
+                "x": 0.08,
+                "y": 0.82,
+                "width": 0.5,
+                "height": 0.08
+              }
+            ],
+            "transitionOut": {
+              "type": "cut",
+              "durationMs": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "localId": "subtitle_style",
+      "type": "subtitle_style",
+      "data": {
+        "presetId": "clean"
+      }
+    },
+    {
+      "localId": "transition",
+      "type": "transition_style",
+      "data": {
+        "type": "cut",
+        "durationMs": 0
+      }
+    },
+    {
+      "localId": "export",
+      "type": "export_recommendation",
+      "data": {
+        "presetId": "youtube"
+      }
+    }
+  ],
+  "placeholders": [
+    {
+      "id": "headline",
+      "label": "Headline",
+      "type": "text",
+      "required": false,
+      "languageMode": "project"
+    },
+    {
+      "id": "source_label",
+      "label": "Source Attribution",
+      "type": "text",
+      "required": false,
+      "languageMode": "project"
+    }
+  ],
+  "assets": [],
+  "metadata": {
+    "recommended": true,
+    "structureOnly": true,
+    "privateContentIncluded": false
+  }
+}

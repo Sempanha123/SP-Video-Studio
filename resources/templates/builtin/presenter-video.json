@@ -1,0 +1,144 @@
+{
+  "id": "builtin-presenter-video",
+  "name": "Presenter Video",
+  "templateType": "project",
+  "category": "General Video",
+  "description": "Presenter layout with background and foreground presenter placeholders.",
+  "workflow": "video",
+  "version": "1.0",
+  "schemaVersion": 1,
+  "builtin": true,
+  "authorLabel": "MMO Video Studio",
+  "previewImage": "",
+  "tags": [
+    "presenter",
+    "layered-video"
+  ],
+  "supportedAspectRatios": [
+    "16:9",
+    "9:16"
+  ],
+  "supportedLanguages": [
+    "*"
+  ],
+  "requiredFeatures": [
+    "layered_video",
+    "multi_speaker",
+    "subtitles"
+  ],
+  "components": [
+    {
+      "localId": "project_settings",
+      "type": "project_settings",
+      "data": {
+        "workflow": "video",
+        "fps": 30,
+        "languageMode": "project"
+      }
+    },
+    {
+      "localId": "speaker_structure",
+      "type": "speaker_structure",
+      "data": {
+        "speakers": [
+          {
+            "localId": "speaker_presenter",
+            "name": "Presenter",
+            "role": "host",
+            "language": "{{project_language}}",
+            "voicePlaceholder": "presenter_voice"
+          }
+        ]
+      }
+    },
+    {
+      "localId": "scene_structure",
+      "type": "scene_structure",
+      "data": {
+        "scenes": [
+          {
+            "localId": "scene_presenter",
+            "name": "Presenter",
+            "durationMs": 15000,
+            "primaryMediaPlaceholder": "background_video",
+            "layers": [
+              {
+                "localId": "presenter_layer",
+                "mediaPlaceholder": "presenter_video",
+                "role": "presenter",
+                "speakerLocalId": "speaker_presenter",
+                "x": 0.58,
+                "y": 0.08,
+                "width": 0.38,
+                "height": 0.86,
+                "fitMode": "contain"
+              }
+            ],
+            "overlays": [
+              {
+                "localId": "presenter_lower",
+                "type": "lower_third",
+                "text": "{{presenter_name}}",
+                "x": 0.07,
+                "y": 0.78,
+                "width": 0.48,
+                "height": 0.14
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "localId": "subtitle_style",
+      "type": "subtitle_style",
+      "data": {
+        "presetId": "clean"
+      }
+    }
+  ],
+  "placeholders": [
+    {
+      "id": "background_video",
+      "label": "Background Video",
+      "type": "video",
+      "required": true,
+      "languageMode": "project",
+      "acceptedMediaTypes": [
+        "video"
+      ]
+    },
+    {
+      "id": "presenter_video",
+      "label": "Presenter Video",
+      "type": "video",
+      "required": true,
+      "languageMode": "project",
+      "acceptedMediaTypes": [
+        "video"
+      ]
+    },
+    {
+      "id": "presenter_voice",
+      "label": "Presenter Voice",
+      "type": "voice",
+      "required": false,
+      "languageMode": "project",
+      "role": "host",
+      "voiceCategory": "Presenter"
+    },
+    {
+      "id": "presenter_name",
+      "label": "Presenter Name",
+      "type": "text",
+      "required": false,
+      "languageMode": "project"
+    }
+  ],
+  "assets": [],
+  "metadata": {
+    "recommended": true,
+    "structureOnly": true,
+    "privateContentIncluded": false
+  }
+}

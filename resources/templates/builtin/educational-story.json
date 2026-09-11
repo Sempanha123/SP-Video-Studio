@@ -1,0 +1,102 @@
+{
+  "id": "builtin-educational-story",
+  "name": "Educational Story",
+  "templateType": "story",
+  "category": "Educational",
+  "description": "Educational structure with clear progression and clean captions.",
+  "workflow": "story",
+  "version": "1.0",
+  "schemaVersion": 1,
+  "builtin": true,
+  "authorLabel": "MMO Video Studio",
+  "previewImage": "",
+  "tags": [
+    "story",
+    "educational",
+    "structure"
+  ],
+  "supportedAspectRatios": [
+    "16:9",
+    "9:16"
+  ],
+  "supportedLanguages": [
+    "*"
+  ],
+  "requiredFeatures": [
+    "story",
+    "subtitles"
+  ],
+  "components": [
+    {
+      "localId": "project_settings",
+      "type": "project_settings",
+      "data": {
+        "workflow": "story",
+        "fps": 30,
+        "languageMode": "project"
+      }
+    },
+    {
+      "localId": "story_structure",
+      "type": "story_structure",
+      "data": {
+        "beats": [
+          {
+            "localId": "beat_1",
+            "type": "hook",
+            "title": "Hook",
+            "text": ""
+          },
+          {
+            "localId": "beat_2",
+            "type": "context",
+            "title": "Context",
+            "text": ""
+          },
+          {
+            "localId": "beat_3",
+            "type": "lesson",
+            "title": "Lesson",
+            "text": ""
+          },
+          {
+            "localId": "beat_4",
+            "type": "example",
+            "title": "Example",
+            "text": ""
+          },
+          {
+            "localId": "beat_5",
+            "type": "summary",
+            "title": "Summary",
+            "text": ""
+          }
+        ],
+        "contentIncluded": false,
+        "presetId": "educational"
+      }
+    },
+    {
+      "localId": "subtitle_style",
+      "type": "subtitle_style",
+      "data": {
+        "presetId": "clean"
+      }
+    },
+    {
+      "localId": "transition",
+      "type": "transition_style",
+      "data": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    }
+  ],
+  "placeholders": [],
+  "assets": [],
+  "metadata": {
+    "recommended": true,
+    "structureOnly": true,
+    "privateContentIncluded": false
+  }
+}

@@ -24,6 +24,7 @@ from .m017_create_story_studio import migrate as create_story_studio
 from .m018_create_dubbing import migrate as create_dubbing
 from .m019_create_universal_video_studio import migrate as create_universal_video_studio
 from .m020_create_shorts import migrate as create_shorts
+from .m021_create_templates import migrate as create_templates
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,4 +55,5 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(18, "create_dubbing", create_dubbing),
     Migration(19, "create_universal_video_studio", create_universal_video_studio),
     Migration(20, "create_shorts", create_shorts),
+    Migration(21, "create_templates", create_templates),
 )

@@ -1,0 +1,69 @@
+{
+  "id": "builtin-minimal-vertical-video",
+  "name": "Minimal Vertical Video",
+  "templateType": "project",
+  "category": "Minimal",
+  "description": "Minimal 9:16 manual video foundation.",
+  "workflow": "video",
+  "version": "1.0",
+  "schemaVersion": 1,
+  "builtin": true,
+  "authorLabel": "MMO Video Studio",
+  "previewImage": "",
+  "tags": [
+    "video",
+    "minimal",
+    "vertical"
+  ],
+  "supportedAspectRatios": [
+    "9:16"
+  ],
+  "supportedLanguages": [
+    "*"
+  ],
+  "requiredFeatures": [
+    "timeline",
+    "subtitles"
+  ],
+  "components": [
+    {
+      "localId": "project_settings",
+      "type": "project_settings",
+      "data": {
+        "workflow": "video",
+        "aspectRatio": "9:16",
+        "fps": 30,
+        "languageMode": "project"
+      }
+    },
+    {
+      "localId": "subtitle_style",
+      "type": "subtitle_style",
+      "data": {
+        "presetId": "clean"
+      }
+    },
+    {
+      "localId": "transition",
+      "type": "transition_style",
+      "data": {
+        "type": "cut",
+        "durationMs": 0
+      }
+    },
+    {
+      "localId": "export",
+      "type": "export_recommendation",
+      "data": {
+        "presetId": "generic_vertical"
+      }
+    }
+  ],
+  "placeholders": [],
+  "assets": [],
+  "metadata": {
+    "recommended": true,
+    "structureOnly": true,
+    "privateContentIncluded": false
+  }
+}

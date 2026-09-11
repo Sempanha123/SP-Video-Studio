@@ -1,0 +1,190 @@
+{
+  "id": "builtin-interview-news",
+  "name": "Interview News",
+  "templateType": "interview",
+  "category": "Interview",
+  "description": "Two-speaker interview layout with split screen, voice placeholders, lower thirds and subtitles.",
+  "workflow": "news",
+  "version": "1.0",
+  "schemaVersion": 1,
+  "builtin": true,
+  "authorLabel": "MMO Video Studio",
+  "previewImage": "",
+  "tags": [
+    "interview",
+    "split-screen",
+    "multi-speaker"
+  ],
+  "supportedAspectRatios": [
+    "16:9",
+    "9:16"
+  ],
+  "supportedLanguages": [
+    "*"
+  ],
+  "requiredFeatures": [
+    "news",
+    "layered_video",
+    "multi_speaker",
+    "subtitles"
+  ],
+  "components": [
+    {
+      "localId": "project_settings",
+      "type": "project_settings",
+      "data": {
+        "workflow": "news",
+        "fps": 30,
+        "languageMode": "project"
+      }
+    },
+    {
+      "localId": "speaker_structure",
+      "type": "speaker_structure",
+      "data": {
+        "speakers": [
+          {
+            "localId": "speaker_interviewer",
+            "name": "Interviewer",
+            "role": "interviewer",
+            "language": "{{project_language}}",
+            "voicePlaceholder": "interviewer_voice"
+          },
+          {
+            "localId": "speaker_guest",
+            "name": "Guest",
+            "role": "interview_guest",
+            "language": "{{project_language}}",
+            "voicePlaceholder": "guest_voice"
+          }
+        ]
+      }
+    },
+    {
+      "localId": "scene_structure",
+      "type": "scene_structure",
+      "data": {
+        "scenes": [
+          {
+            "localId": "scene_interview",
+            "name": "Interview",
+            "durationMs": 30000,
+            "layers": [
+              {
+                "localId": "layer_interviewer",
+                "mediaPlaceholder": "interviewer_video",
+                "role": "host",
+                "speakerLocalId": "speaker_interviewer",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 0.5,
+                "height": 1.0,
+                "fitMode": "fill",
+                "useAudio": true
+              },
+              {
+                "localId": "layer_guest",
+                "mediaPlaceholder": "guest_video",
+                "role": "interview_guest",
+                "speakerLocalId": "speaker_guest",
+                "x": 0.5,
+                "y": 0.0,
+                "width": 0.5,
+                "height": 1.0,
+                "fitMode": "fill",
+                "useAudio": true
+              }
+            ],
+            "overlays": [
+              {
+                "localId": "lower_interviewer",
+                "type": "lower_third",
+                "text": "{{interviewer_name}}",
+                "x": 0.03,
+                "y": 0.8,
+                "width": 0.42,
+                "height": 0.13
+              },
+              {
+                "localId": "lower_guest",
+                "type": "lower_third",
+                "text": "{{guest_name}}",
+                "x": 0.55,
+                "y": 0.8,
+                "width": 0.42,
+                "height": 0.13
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "localId": "subtitle_style",
+      "type": "subtitle_style",
+      "data": {
+        "presetId": "clean"
+      }
+    }
+  ],
+  "placeholders": [
+    {
+      "id": "interviewer_video",
+      "label": "Interviewer Video",
+      "type": "video",
+      "required": true,
+      "languageMode": "project",
+      "acceptedMediaTypes": [
+        "video"
+      ]
+    },
+    {
+      "id": "guest_video",
+      "label": "Guest Video",
+      "type": "video",
+      "required": true,
+      "languageMode": "project",
+      "acceptedMediaTypes": [
+        "video"
+      ]
+    },
+    {
+      "id": "interviewer_voice",
+      "label": "Interviewer Voice",
+      "type": "voice",
+      "required": false,
+      "languageMode": "project",
+      "role": "interviewer",
+      "voiceCategory": "Conversational"
+    },
+    {
+      "id": "guest_voice",
+      "label": "Guest Voice",
+      "type": "voice",
+      "required": false,
+      "languageMode": "project",
+      "role": "interview_guest",
+      "voiceCategory": "Conversational"
+    },
+    {
+      "id": "interviewer_name",
+      "label": "Interviewer Name",
+      "type": "text",
+      "required": false,
+      "languageMode": "project"
+    },
+    {
+      "id": "guest_name",
+      "label": "Guest Name",
+      "type": "text",
+      "required": false,
+      "languageMode": "project"
+    }
+  ],
+  "assets": [],
+  "metadata": {
+    "recommended": true,
+    "structureOnly": true,
+    "privateContentIncluded": false
+  }
+}

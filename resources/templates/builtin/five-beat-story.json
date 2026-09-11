@@ -1,0 +1,102 @@
+{
+  "id": "builtin-five-beat-story",
+  "name": "5-Beat Story",
+  "templateType": "story",
+  "category": "Story",
+  "description": "Reusable Hook → Setup → Development → Climax → Resolution structure.",
+  "workflow": "story",
+  "version": "1.0",
+  "schemaVersion": 1,
+  "builtin": true,
+  "authorLabel": "MMO Video Studio",
+  "previewImage": "",
+  "tags": [
+    "story",
+    "story",
+    "structure"
+  ],
+  "supportedAspectRatios": [
+    "16:9",
+    "9:16"
+  ],
+  "supportedLanguages": [
+    "*"
+  ],
+  "requiredFeatures": [
+    "story",
+    "subtitles"
+  ],
+  "components": [
+    {
+      "localId": "project_settings",
+      "type": "project_settings",
+      "data": {
+        "workflow": "story",
+        "fps": 30,
+        "languageMode": "project"
+      }
+    },
+    {
+      "localId": "story_structure",
+      "type": "story_structure",
+      "data": {
+        "beats": [
+          {
+            "localId": "beat_1",
+            "type": "hook",
+            "title": "Hook",
+            "text": ""
+          },
+          {
+            "localId": "beat_2",
+            "type": "setup",
+            "title": "Setup",
+            "text": ""
+          },
+          {
+            "localId": "beat_3",
+            "type": "development",
+            "title": "Development",
+            "text": ""
+          },
+          {
+            "localId": "beat_4",
+            "type": "climax",
+            "title": "Climax",
+            "text": ""
+          },
+          {
+            "localId": "beat_5",
+            "type": "resolution",
+            "title": "Resolution",
+            "text": ""
+          }
+        ],
+        "contentIncluded": false,
+        "presetId": "5_beat_story"
+      }
+    },
+    {
+      "localId": "subtitle_style",
+      "type": "subtitle_style",
+      "data": {
+        "presetId": "clean"
+      }
+    },
+    {
+      "localId": "transition",
+      "type": "transition_style",
+      "data": {
+        "type": "fade",
+        "durationMs": 300
+      }
+    }
+  ],
+  "placeholders": [],
+  "assets": [],
+  "metadata": {
+    "recommended": true,
+    "structureOnly": true,
+    "privateContentIncluded": false
+  }
+}
