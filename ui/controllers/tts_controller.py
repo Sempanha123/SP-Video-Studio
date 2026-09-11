@@ -232,6 +232,20 @@ class TTSController(QObject):
         future.add_done_callback(self._unload_done)
 
     @Slot(str, result=bool)
+    def setActiveGenerated(self, generated_audio_id: str) -> bool:
+        if not self._project_id or not generated_audio_id or self._busy:
+            return False
+        try:
+            self.narration.set_active_generated(self._project_id, generated_audio_id)
+            self.refresh()
+            self.operationSucceeded.emit("Active narration updated.")
+            return True
+        except Exception as exc:
+            self.logger.exception("Could not activate generated narration")
+            self.operationFailed.emit(_friendly_error(exc))
+            return False
+
+    @Slot(str, result=bool)
     def deleteGenerated(self, generated_audio_id: str) -> bool:
         if not self._project_id or not generated_audio_id or self._busy:
             return False

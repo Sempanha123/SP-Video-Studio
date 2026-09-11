@@ -43,6 +43,10 @@ class AppPaths:
         return self.root / "exports"
 
     @property
+    def voices(self) -> Path:
+        return self.root / "voices"
+
+    @property
     def database(self) -> Path:
         return self.data / "app.db"
 
@@ -60,6 +64,7 @@ class AppPaths:
             self.settings,
             self.downloads,
             self.exports,
+            self.voices,
             self.data,
         ):
             directory.mkdir(parents=True, exist_ok=True)

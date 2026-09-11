@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from services.media_service import MediaService
     from services.script_service import ScriptService
     from services.narration_service import NarrationService
+    from services.voice_service import VoiceService
 
 
 PROJECT_DIRS = (
@@ -90,6 +91,7 @@ class ProjectService:
         self._media_service: MediaService | None = None
         self._script_service: ScriptService | None = None
         self._narration_service: NarrationService | None = None
+        self._voice_service: VoiceService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
                 self._known_project_roots.add(Path(existing.project_path).resolve().parent)
@@ -104,6 +106,9 @@ class ProjectService:
 
     def set_narration_service(self, narration_service: "NarrationService") -> None:
         self._narration_service = narration_service
+
+    def set_voice_service(self, voice_service: "VoiceService") -> None:
+        self._voice_service = voice_service
 
     def set_project_root(self, project_root: Path) -> None:
         """Change the location used only for newly created projects."""
@@ -244,6 +249,8 @@ class ProjectService:
                 self._media_service.duplicate_project_media(source, duplicate)
             if self._script_service is not None:
                 self._script_service.duplicate_project_script(source.project_id, duplicate.project_id, duplicate.title)
+            if self._voice_service is not None:
+                self._voice_service.duplicate_project_assignments(source.project_id, duplicate.project_id)
             if self._narration_service is not None:
                 self._narration_service.duplicate_project_audio(source.project_id, duplicate.project_id)
         except Exception as exc:

@@ -384,6 +384,8 @@ Item {
             controller: typeof scriptController !== "undefined" ? scriptController : null
             ttsController: typeof ttsController !== "undefined" ? ttsController : null
             playbackController: typeof playbackController !== "undefined" ? playbackController : null
+            voiceController: typeof voiceController !== "undefined" ? voiceController : null
+            onNavigateRequested: function(page, workflow) { root.navigateRequested(page, workflow) }
             onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
         }
     }

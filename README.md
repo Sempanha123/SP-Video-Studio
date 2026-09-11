@@ -444,7 +444,7 @@ Supported Phase 8 request modes are:
 - **Reference** — uses a user-authorized reference recording copied into project-managed `audio/references/` before use
 - **Continuation** — represented in the engine request model for prompt-audio + prompt-text workflows; the compact Phase 8 UI intentionally keeps this advanced mode out of the normal panel
 
-CFG, inference steps and optional seed are centralized in the adapter. The UI exposes only a small Advanced section; Phase 9 will build the full Voice Studio. Reference-voice use requires explicit permission confirmation and the application does not include public-figure presets.
+CFG, inference steps and optional seed are centralized in the adapter. The Script page keeps a compact narration panel; Phase 9 adds the reusable Voice Studio on top of the same TTS pipeline. Reference-voice use requires explicit permission confirmation and the application does not include public-figure presets.
 
 ### Narration pipeline
 
@@ -474,3 +474,20 @@ pytest -m voxcpm tests/test_voxcpm_integration.py
 ```
 
 A successful file-generation integration test is not a substitute for listening checks. English/Khmer voice quality and reference/design behavior should be listened to on the target machine before release.
+
+
+## Voice Studio
+
+Phase 9 turns the Voices placeholder into a reusable local Voice Studio without creating another TTS engine. Built-in voice presets are versioned configuration data, while Designed Voices, Reference Voices, favorites, recent usage, and project/section assignments are persisted through `VoiceService` and `VoiceRepository`.
+
+Built-in presets are fictional app configurations rather than identities of real people. The starter catalog includes five English presets (James, Maya, Oliver, Sophie, Leo) and four Khmer presets (Sokha, Dara, Sreypov, Ratha), with News, Story, Documentary, Professional, Friendly, Educational, Energetic, Calm, Conversational, and Dramatic style categories. Browsing supports local search, category/language/engine filters, favorites, recently used sorting, and deterministic project-language/workflow recommendations.
+
+User voices live globally under the application-managed `voices/` folder. Designed voices persist their VoxCPM2 design prompt and friendly defaults. Reference voices require explicit permission confirmation and copy the validated recording into managed local storage; Phase 9 never uploads reference recordings. Replacing a reference validates/copies the new recording before retiring the old managed copy.
+
+SQLite schema version 6 adds `voice_profiles` and `voice_preferences`, plus `projects.default_voice_id` and `script_sections.voice_override_id`. Voice resolution is deterministic: a section override wins, otherwise the project default is used, otherwise generation asks the user to choose a voice. Project duplication preserves global voice IDs; deleting a project never deletes global voices. Deleting an assigned user voice is blocked unless the user explicitly chooses assignment cleanup, while previously generated WAV files remain untouched.
+
+The Voice Studio uses the existing Phase 8 `TTSController`, `TTSService`, and `NarrationService` for preview, section narration, and full narration. Friendly Pace/Energy/Tone controls are translated into VoxCPM2 design wording instead of inventing unsupported model parameters; CFG, inference steps, seed, and device remain secondary Advanced controls. Generated previews reuse the Phase 5 playback controller and a session cache keyed by voice ID, text, settings, and model identity. Recent narration takes can be played, promoted to Active, or removed without destroying earlier successful takes automatically.
+
+The Script workspace shows the current project voice and selected-section override. Section narration resolves the override first; full narration uses the project voice. The Voice Studio remains browsable when VoxCPM2 is not installed and links to Models instead of crashing or hiding the catalog.
+
+Phase 9 does **not** add Whisper, transcription, translation, subtitles, scenes, timeline editing, News automation, final rendering, or batch voice generation.

@@ -10,6 +10,7 @@ AppCard {
     property var controller
     property var scriptController
     property var playbackController
+    property var voiceController
     property string selectedSectionId: scriptController ? (scriptController.selectedSection.id || "") : ""
     property string modeCode: ["default", "designed", "reference"][modeBox.currentIndex]
     property string deviceCode: ["auto", "cpu", "cuda"][deviceBox.currentIndex]
@@ -26,6 +27,49 @@ AppCard {
     function stepValue() {
         var value = Number(stepsField.text)
         return isNaN(value) ? 10 : Math.round(value)
+    }
+
+    function assignedConfig(sectionId) {
+        if (!root.voiceController || !root.voiceController.currentProjectId)
+            return ({})
+        return root.voiceController.resolvedConfig(root.voiceController.currentProjectId, sectionId || "", root.deviceCode)
+    }
+
+    function applyReference(config) {
+        if (!root.controller) return
+        root.controller.setReferencePath(config.referenceAudioPath || "")
+    }
+
+    function generateAssignedSection() {
+        if (!root.controller || !root.selectedSectionId) return
+        if (root.scriptController && !root.scriptController.save()) return
+        var config = root.assignedConfig(root.selectedSectionId)
+        if (!config.mode) {
+            root.toastRequested("Choose a project or section voice in Voice Studio first.", "warning")
+            return
+        }
+        root.applyReference(config)
+        root.controller.generateSection(
+            root.selectedSectionId, config.mode, config.description || "", config.device || root.deviceCode,
+            config.cfgValue || 2.0, config.inferenceTimesteps || 10,
+            config.seed === null || config.seed === undefined ? "" : String(config.seed),
+            config.consentConfirmed || config.mode !== "reference")
+    }
+
+    function generateAssignedFull() {
+        if (!root.controller) return
+        if (root.scriptController && !root.scriptController.save()) return
+        var config = root.assignedConfig("")
+        if (!config.mode) {
+            root.toastRequested("Choose a project voice in Voice Studio first.", "warning")
+            return
+        }
+        root.applyReference(config)
+        root.controller.generateFull(
+            config.mode, config.description || "", config.device || root.deviceCode,
+            config.cfgValue || 2.0, config.inferenceTimesteps || 10,
+            config.seed === null || config.seed === undefined ? "" : String(config.seed),
+            config.consentConfirmed || config.mode !== "reference")
     }
 
     Connections {
@@ -85,10 +129,30 @@ AppCard {
             Layout.fillWidth: true
             visible: root.expanded
             wrapMode: Text.WordWrap
-            text: "Generate project narration with the installed VoxCPM2 model. Voice Studio controls arrive in the next phase."
+            text: root.voiceController && root.voiceController.projectVoice.name
+                  ? ("Project voice: " + root.voiceController.projectVoice.name + ". Section overrides are used for section generation.")
+                  : "Choose a reusable voice in Voice Studio before generating narration. Manual engine controls remain available below."
             color: Theme.colors.textMuted
             font.family: Theme.type.family
             font.pixelSize: Theme.type.caption
+        }
+
+        RowLayout {
+            Layout.fillWidth: true
+            visible: root.expanded
+            spacing: Theme.spacing.sm
+            StatusBadge {
+                text: root.voiceController && root.voiceController.projectVoice.name ? root.voiceController.projectVoice.name : "No project voice"
+                status: root.voiceController && root.voiceController.projectVoice.name ? "ready" : "neutral"
+            }
+            Text {
+                Layout.fillWidth: true
+                text: root.voiceController && root.voiceController.sectionVoice.name ? ("Section override: " + root.voiceController.sectionVoice.name) : "Selected section uses project voice"
+                color: Theme.colors.textMuted
+                font.family: Theme.type.family
+                font.pixelSize: Theme.type.caption
+                elide: Text.ElideRight
+            }
         }
 
         RowLayout {
@@ -98,7 +162,7 @@ AppCard {
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 4
-                Text { text: "Voice mode"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
+                Text { text: "Manual voice mode"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
                 AppComboBox { id: modeBox; Layout.fillWidth: true; model: ["Default", "Designed", "Reference"] }
             }
             ColumnLayout {
@@ -196,19 +260,13 @@ AppCard {
             SecondaryButton {
                 text: "Generate Section Voice"
                 enabled: root.controller && !root.controller.busy && root.selectedSectionId !== ""
-                onClicked: {
-                    if (root.scriptController && !root.scriptController.save()) return
-                    root.controller.generateSection(root.selectedSectionId, root.modeCode, descriptionField.text, root.deviceCode, root.cfgValue(), root.stepValue(), seedField.text, consentSwitch.checked)
-                }
+                onClicked: root.generateAssignedSection()
             }
             AppButton {
                 text: "Generate Full Narration"
                 iconName: "mic"
                 enabled: root.controller && !root.controller.busy
-                onClicked: {
-                    if (root.scriptController && !root.scriptController.save()) return
-                    root.controller.generateFull(root.modeCode, descriptionField.text, root.deviceCode, root.cfgValue(), root.stepValue(), seedField.text, consentSwitch.checked)
-                }
+                onClicked: root.generateAssignedFull()
             }
             SecondaryButton {
                 text: "Cancel"

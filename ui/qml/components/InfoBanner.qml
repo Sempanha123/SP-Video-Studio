@@ -5,7 +5,12 @@ import "../theme"
 Rectangle {
     id: root
     property string text: ""
+    property string title: ""
+    property string description: ""
+    property string actionText: ""
     property string variant: "info"
+    signal actionClicked()
+
     implicitHeight: content.implicitHeight + Theme.spacing.md * 2
     radius: Theme.radius.medium
     color: variant === "warning" ? Theme.colors.warningSoft : Theme.colors.infoSoft
@@ -22,13 +27,33 @@ Rectangle {
             Layout.alignment: Qt.AlignTop
             Layout.topMargin: 5
         }
-        Text {
-            text: root.text
-            color: Theme.colors.textSecondary
-            font.family: Theme.type.family
-            font.pixelSize: Theme.type.bodySmall
-            wrapMode: Text.WordWrap
+        ColumnLayout {
             Layout.fillWidth: true
+            spacing: 2
+            Text {
+                visible: root.title !== ""
+                text: root.title
+                color: Theme.colors.textPrimary
+                font.family: Theme.type.family
+                font.pixelSize: Theme.type.bodySmall
+                font.weight: Theme.type.semibold
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+            }
+            Text {
+                text: root.description !== "" ? root.description : root.text
+                color: Theme.colors.textSecondary
+                font.family: Theme.type.family
+                font.pixelSize: Theme.type.bodySmall
+                wrapMode: Text.WordWrap
+                Layout.fillWidth: true
+            }
+        }
+        SecondaryButton {
+            visible: root.actionText !== ""
+            text: root.actionText
+            compact: true
+            onClicked: root.actionClicked()
         }
     }
 }

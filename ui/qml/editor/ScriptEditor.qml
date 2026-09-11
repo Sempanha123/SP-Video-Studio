@@ -10,11 +10,13 @@ Item {
     property var controller
     property var ttsController
     property var playbackController
+    property var voiceController
     property bool syncingText: false
     property string pendingDeleteId: ""
     property string pendingDeleteTitle: ""
     property int pendingDeleteMetric: 0
     signal toastRequested(string message, string variant)
+    signal navigateRequested(string page, string workflow)
 
     function syncEditor() {
         if (!controller) return
@@ -30,7 +32,11 @@ Item {
     Connections {
         target: root.controller
         ignoreUnknownSignals: true
-        function onSelectedSectionChanged() { root.syncEditor() }
+        function onSelectedSectionChanged() {
+            root.syncEditor()
+            if (root.voiceController)
+                root.voiceController.setCurrentSection(root.controller.selectedSection.id || "")
+        }
         function onOperationSucceeded(message) { root.toastRequested(message, "success") }
         function onOperationFailed(message) { root.toastRequested(message, "error") }
     }
@@ -211,11 +217,41 @@ Item {
                         languageName: root.controller ? (root.controller.script.languageName || "English") : "English"
                         saveState: root.controller ? root.controller.saveState : "Saved"
                     }
+
+                    AppCard {
+                        Layout.fillWidth: true
+                        ColumnLayout {
+                            anchors.fill: parent
+                            anchors.margins: Theme.spacing.md
+                            spacing: Theme.spacing.xs
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Narration voice"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; font.weight: Theme.type.semibold }
+                                Item { Layout.fillWidth: true }
+                                SecondaryButton { text: "Change"; compact: true; onClicked: root.navigateRequested("voices", "") }
+                            }
+                            RowLayout {
+                                Layout.fillWidth: true
+                                Text { text: "Project"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
+                                Text { Layout.fillWidth: true; text: root.voiceController && root.voiceController.projectVoice.name ? root.voiceController.projectVoice.name : "Not selected"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; elide: Text.ElideRight }
+                                Text { text: "Section"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
+                                Text { text: root.voiceController && root.voiceController.sectionVoice.name ? root.voiceController.sectionVoice.name : "Use project voice"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; elide: Text.ElideRight }
+                                SecondaryButton {
+                                    visible: root.voiceController && !!root.voiceController.sectionVoice.id
+                                    text: "Use Project"
+                                    compact: true
+                                    onClicked: root.voiceController.clearSectionOverride()
+                                }
+                            }
+                        }
+                    }
+
                     TTSPanel {
                         Layout.fillWidth: true
                         controller: root.ttsController
                         scriptController: root.controller
                         playbackController: root.playbackController
+                        voiceController: root.voiceController
                         onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
                     }
                 }

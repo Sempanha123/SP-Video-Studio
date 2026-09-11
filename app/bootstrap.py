@@ -14,6 +14,7 @@ from engines.model_registry import ModelRegistry
 from engines.model_sources import HuggingFaceSource
 from engines.tts.manager import TTSEngineManager
 from engines.tts.voxcpm2_engine import VoxCPM2Engine
+from engines.voice_registry import VoiceRegistry
 from services.media_service import MediaService
 from services.model_compatibility_service import ModelCompatibilityService
 from services.model_download_service import ModelDownloadService
@@ -28,6 +29,7 @@ from services.system_readiness_service import SystemReadinessService
 from services.tts_chunking_service import TTSChunkingService
 from services.tts_service import TTSService
 from services.narration_service import NarrationService
+from services.voice_service import VoiceService
 from storage.database import SQLiteDatabase
 from storage.repositories.generated_audio_repository import GeneratedAudioRepository
 from storage.repositories.media_repository import MediaRepository
@@ -35,6 +37,7 @@ from storage.repositories.model_repository import ModelRepository
 from storage.repositories.project_repository import ProjectRepository
 from storage.repositories.script_repository import ScriptRepository
 from storage.repositories.settings_repository import SettingsRepository
+from storage.repositories.voice_repository import VoiceRepository
 from workers.worker_pool import WorkerPool
 
 
@@ -58,6 +61,7 @@ def build_container() -> DependencyContainer:
     script_repository = ScriptRepository(database)
     model_repository = ModelRepository(database)
     generated_audio_repository = GeneratedAudioRepository(database)
+    voice_repository = VoiceRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -130,6 +134,9 @@ def build_container() -> DependencyContainer:
         logger,
     )
     project_service.set_narration_service(narration_service)
+    voice_registry = VoiceRegistry()
+    voice_service = VoiceService(voice_registry, voice_repository, paths.voices, tts_service.validate_reference, logger)
+    project_service.set_voice_service(voice_service)
     worker_pool = WorkerPool(max_workers=2)
 
     container = DependencyContainer()
@@ -141,6 +148,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(ScriptRepository, script_repository)
     container.register_instance(ModelRepository, model_repository)
     container.register_instance(GeneratedAudioRepository, generated_audio_repository)
+    container.register_instance(VoiceRepository, voice_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -157,6 +165,10 @@ def build_container() -> DependencyContainer:
     container.register_instance(TTSService, tts_service)
     container.register_instance(TTSChunkingService, tts_chunking_service)
     container.register_instance(NarrationService, narration_service)
+    container.register_instance(VoiceRegistry, voice_registry)
+    container.register_instance(VoiceService, voice_service)
+    container.register_instance(VoiceRegistry, voice_registry)
+    container.register_instance(VoiceService, voice_service)
     container.register_instance(SettingsRepository, settings_repository)
     container.register_instance(SettingsService, settings_service)
     container.register_instance(FFmpegLocator, ffmpeg_locator)
@@ -197,6 +209,7 @@ def run() -> int:
     from ui.controllers.script_controller import ScriptController
     from ui.controllers.settings_controller import SettingsController
     from ui.controllers.tts_controller import TTSController
+    from ui.controllers.voice_controller import VoiceController
 
     project_service = container.resolve(ProjectService)
     project_controller = ProjectController(project_service)
@@ -241,6 +254,12 @@ def run() -> int:
         container.resolve(WorkerPool),
         logger,
     )
+    voice_controller = VoiceController(
+        container.resolve(VoiceService),
+        project_service,
+        container.resolve(ModelService),
+        logger,
+    )
 
     def before_project_change() -> bool:
         if not script_controller.flush():
@@ -256,6 +275,10 @@ def run() -> int:
     tts_controller.modelStateChanged.connect(model_controller.refresh)
     tts_controller.generatedAudioAboutToRemove.connect(playback_controller.externalAudioRemoving)
     tts_controller.modelStateChanged.connect(readiness_controller.recheck)
+    tts_controller.previewReady.connect(lambda path, _name, duration: voice_controller.previewGenerated(path, duration))
+    model_controller.modelStateChanged.connect(voice_controller.refresh)
+    project_controller.currentProjectChanged.connect(lambda: voice_controller.setCurrentProject(str(project_controller.currentProject.get("id", ""))))
+    script_controller.selectedSectionChanged.connect(lambda: voice_controller.setCurrentSection(str(script_controller.selectedSection.get("id", ""))))
 
     container.register_instance(ProjectController, project_controller)
     container.register_instance(MediaController, media_controller)
@@ -265,6 +288,7 @@ def run() -> int:
     container.register_instance(ReadinessController, readiness_controller)
     container.register_instance(ModelController, model_controller)
     container.register_instance(TTSController, tts_controller)
+    container.register_instance(VoiceController, voice_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
@@ -275,6 +299,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("readinessController", readiness_controller)
     engine.rootContext().setContextProperty("modelController", model_controller)
     engine.rootContext().setContextProperty("ttsController", tts_controller)
+    engine.rootContext().setContextProperty("voiceController", voice_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():

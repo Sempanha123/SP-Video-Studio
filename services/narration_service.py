@@ -150,6 +150,14 @@ class NarrationService:
     def active(self, project_id: str) -> GeneratedAudio | None:
         return self.repository.active_for_project(project_id)
 
+    def set_active_generated(self, project_id: str, generated_audio_id: str) -> GeneratedAudio:
+        item = self.get_generated(project_id, generated_audio_id)
+        if not Path(item.file_path).is_file():
+            raise TTSInvalidRequest("Generated narration file could not be found.")
+        self.repository.set_active(project_id, generated_audio_id)
+        item.active = True
+        return item
+
     def get_generated(self, project_id: str, generated_audio_id: str) -> GeneratedAudio:
         self._project(project_id)
         item = self.repository.get(generated_audio_id)

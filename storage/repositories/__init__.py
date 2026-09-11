@@ -9,3 +9,5 @@ from .script_repository import ScriptRepository
 from .model_repository import ModelRepository
 
 from storage.repositories.generated_audio_repository import GeneratedAudioRepository
+
+from .voice_repository import VoiceRepository

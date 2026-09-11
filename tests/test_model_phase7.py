@@ -98,7 +98,7 @@ def test_registry_loads_official_phase7_entries_and_unique_ids():
 def test_model_installation_serialization_and_repository(tmp_path: Path):
     db = SQLiteDatabase(tmp_path / "app.db")
     db.initialize()
-    assert db.current_version() == 5
+    assert db.current_version() == 6
     repo = ModelRepository(db)
     item = ModelInstallation(
         model_id="demo",
