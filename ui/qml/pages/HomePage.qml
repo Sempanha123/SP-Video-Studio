@@ -20,6 +20,16 @@ Item {
     function recentModel() {
         return typeof projectController !== "undefined" ? projectController.recentProjects : []
     }
+    function readiness() {
+        return typeof readinessController !== "undefined" ? readinessController.readiness : ({})
+    }
+    function primaryDisk() {
+        var disks = root.readiness().disks || []
+        for (var i = 0; i < disks.length; ++i) {
+            if (disks[i].name === "Projects") return disks[i]
+        }
+        return disks.length > 0 ? disks[0] : ({ freeDisplay: "Unknown", status: "unknown" })
+    }
     function openRecent(projectId) {
         if (typeof projectController !== "undefined" && projectController.openProject(projectId))
             root.navigateRequested("workspace", "")
@@ -113,13 +123,32 @@ Item {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 278
                     ColumnLayout {
-                        anchors.fill: parent; anchors.margins: Theme.spacing.lg; spacing: Theme.spacing.md
-                        SectionHeader { title: "System Readiness"; Layout.fillWidth: true }
-                        RowLayout { Layout.fillWidth: true; Text { text: "Project database"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.body; Layout.fillWidth: true }; StatusBadge { text: "Ready"; status: "ready" } }
-                        RowLayout { Layout.fillWidth: true; Text { text: "Project storage"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.body; Layout.fillWidth: true }; StatusBadge { text: "Ready"; status: "ready" } }
-                        RowLayout { Layout.fillWidth: true; Text { text: "AI models"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.body; Layout.fillWidth: true }; StatusBadge { text: "Not Installed"; status: "not-installed" } }
-                        RowLayout { Layout.fillWidth: true; Text { text: "Media engine"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.body; Layout.fillWidth: true }; StatusBadge { text: "Later phase"; status: "offline" } }
+                        anchors.fill: parent
+                        anchors.margins: Theme.spacing.lg
+                        spacing: Theme.spacing.sm
+                        RowLayout {
+                            Layout.fillWidth: true
+                            SectionHeader { title: "System Readiness"; Layout.fillWidth: true }
+                            StatusBadge {
+                                text: readinessController.checking ? "Checking" : (root.readiness().overallDisplay || "Not checked")
+                                status: readinessController.checking ? "checking" : (root.readiness().overallStatus || "unknown")
+                            }
+                        }
+                        RowLayout { Layout.fillWidth: true; Text { text: "GPU"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; Layout.fillWidth: true }; Text { text: root.readiness().gpuName || "Detection unavailable"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; elide: Text.ElideRight; Layout.maximumWidth: 190 } }
+                        RowLayout { Layout.fillWidth: true; Text { text: "CUDA"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; Layout.fillWidth: true }; StatusBadge { text: root.readiness().cudaStatusDisplay || "Unknown"; status: root.readiness().cudaStatus || "unknown" } }
+                        RowLayout { Layout.fillWidth: true; Text { text: "FFmpeg"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; Layout.fillWidth: true }; StatusBadge { text: root.readiness().ffmpegAvailable ? "Ready" : "Missing"; status: root.readiness().ffmpegAvailable ? "ready" : "setup-required" } }
+                        RowLayout { Layout.fillWidth: true; Text { text: "Disk"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; Layout.fillWidth: true }; Text { text: root.primaryDisk().freeDisplay + " free"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall } }
+                        RowLayout { Layout.fillWidth: true; Text { text: "AI models"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; Layout.fillWidth: true }; StatusBadge {
+                            text: (root.readiness().voxcpmStatus === "installed" && root.readiness().whisperStatus === "installed") ? "Installed" : ((root.readiness().voxcpmStatus === "installed" || root.readiness().whisperStatus === "installed") ? "Partial" : "Not Installed")
+                            status: (root.readiness().voxcpmStatus === "installed" && root.readiness().whisperStatus === "installed") ? "installed" : "not-installed"
+                        } }
                         Item { Layout.fillHeight: true }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            SecondaryButton { text: "View Details"; compact: true; onClicked: root.navigateRequested("settings", "Performance") }
+                            Item { Layout.fillWidth: true }
+                            SecondaryButton { text: "Recheck"; compact: true; enabled: !readinessController.checking; onClicked: readinessController.recheck() }
+                        }
                     }
                 }
             }

@@ -16,6 +16,7 @@ ApplicationWindow {
 
     property string currentPage: "home"
     property string selectedWorkflow: "news"
+    property string settingsSection: "General"
     property string missingProjectId: ""
 
     function pageTitle(key) {
@@ -36,9 +37,17 @@ ApplicationWindow {
         }
         return Qt.resolvedUrl(sources[key] || sources.home)
     }
-    function navigate(page, workflow) {
+    function navigate(page, context) {
         currentPage = page
-        if (workflow) selectedWorkflow = workflow
+        if (page === "settings") {
+            if (context) settingsSection = context
+        } else if (context) {
+            selectedWorkflow = context
+        }
+    }
+
+    function readinessState() {
+        return typeof readinessController !== "undefined" ? readinessController.readiness : ({})
     }
 
     Rectangle {
@@ -90,7 +99,7 @@ ApplicationWindow {
                     SidebarItem { Layout.fillWidth: true; text: "Models"; iconName: "models"; selected: window.currentPage === "models"; onClicked: window.navigate("models", "") }
                     Item { Layout.fillHeight: true }
                     Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: Theme.colors.border; Layout.bottomMargin: Theme.spacing.sm }
-                    SidebarItem { Layout.fillWidth: true; text: "Settings"; iconName: "settings"; selected: window.currentPage === "settings"; onClicked: window.navigate("settings", "") }
+                    SidebarItem { Layout.fillWidth: true; text: "Settings"; iconName: "settings"; selected: window.currentPage === "settings"; onClicked: window.navigate("settings", "General") }
                 }
             }
 
@@ -110,13 +119,12 @@ ApplicationWindow {
                         anchors.rightMargin: Theme.spacing.xl
                         spacing: Theme.spacing.md
                         Text { text: window.pageTitle(window.currentPage); color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.title; font.weight: Theme.type.semibold; Layout.fillWidth: true }
-                        RowLayout {
-                            spacing: Theme.spacing.sm
-                            Rectangle { width: 8; height: 8; radius: 4; color: Theme.colors.success }
-                            Text { text: "System ready"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
+                        StatusBadge {
+                            text: (typeof readinessController !== "undefined" && readinessController.checking) ? "Checking system" : (window.readinessState().overallDisplay || "Not checked")
+                            status: (typeof readinessController !== "undefined" && readinessController.checking) ? "checking" : (window.readinessState().overallStatus || "unknown")
                         }
                         IconButton { iconName: "bell"; tooltip: "Notifications"; onClicked: toast.show("No notifications yet.", "info", 2200) }
-                        IconButton { iconName: "settings"; tooltip: "Settings"; onClicked: window.navigate("settings", "") }
+                        IconButton { iconName: "settings"; tooltip: "Settings"; onClicked: window.navigate("settings", "General") }
                     }
                 }
 
@@ -132,6 +140,8 @@ ApplicationWindow {
                         onLoaded: {
                             if (window.currentPage === "create")
                                 item.selectedWorkflow = window.selectedWorkflow
+                            if (window.currentPage === "settings")
+                                item.section = window.settingsSection
                         }
                         Behavior on opacity { NumberAnimation { duration: Theme.animation.normal } }
                     }
@@ -144,6 +154,25 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    Component.onCompleted: {
+        if (typeof settingsController !== "undefined")
+            Theme.setMode(settingsController.theme)
+    }
+
+    Connections {
+        target: typeof settingsController !== "undefined" ? settingsController : null
+        ignoreUnknownSignals: true
+        function onSettingsChanged() { Theme.setMode(settingsController.theme) }
+        function onOperationSucceeded(message) { toast.show(message, "success", 2600) }
+        function onOperationFailed(message) { toast.show(message, "error", 4200) }
+    }
+
+    Connections {
+        target: typeof readinessController !== "undefined" ? readinessController : null
+        ignoreUnknownSignals: true
+        function onOperationFailed(message) { toast.show(message, "error", 4200) }
     }
 
     Connections {

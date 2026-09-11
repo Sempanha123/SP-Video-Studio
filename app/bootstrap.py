@@ -7,9 +7,14 @@ from .config import AppConfig
 from .container import DependencyContainer
 from .logging_setup import configure_logging
 from .paths import AppPaths
+from media.ffmpeg_locator import FFmpegLocator
 from services.project_service import ProjectService
+from services.settings_service import SettingsService
+from services.system_readiness_service import SystemReadinessService
 from storage.database import SQLiteDatabase
 from storage.repositories.project_repository import ProjectRepository
+from storage.repositories.settings_repository import SettingsRepository
+from workers.worker_pool import WorkerPool
 
 
 def build_container() -> DependencyContainer:
@@ -18,11 +23,26 @@ def build_container() -> DependencyContainer:
     config = AppConfig()
     logger = configure_logging(paths.logs, config.log_level)
 
+    settings_repository = SettingsRepository(paths.settings / "settings.json")
+    settings_service = SettingsService(settings_repository, paths, logger)
+    config.theme = settings_service.current.theme
+    config.locale = settings_service.current.language
+    config.log_level = "DEBUG" if settings_service.current.debug_logging else "INFO"
+    config.project_root = Path(settings_service.current.default_projects_folder)
+
     database = SQLiteDatabase(paths.database, logger)
     database.initialize()
     repository = ProjectRepository(database)
-    project_root = config.project_root or paths.default_projects_root
-    project_service = ProjectService(repository, project_root, logger)
+    project_service = ProjectService(repository, config.project_root, logger)
+
+    ffmpeg_locator = FFmpegLocator()
+    readiness_service = SystemReadinessService(
+        paths,
+        settings_provider=lambda: settings_service.current,
+        ffmpeg_locator=ffmpeg_locator,
+        logger=logger,
+    )
+    worker_pool = WorkerPool(max_workers=2)
 
     container = DependencyContainer()
     container.register_instance(AppPaths, paths)
@@ -30,13 +50,18 @@ def build_container() -> DependencyContainer:
     container.register_instance(SQLiteDatabase, database)
     container.register_instance(ProjectRepository, repository)
     container.register_instance(ProjectService, project_service)
+    container.register_instance(SettingsRepository, settings_repository)
+    container.register_instance(SettingsService, settings_service)
+    container.register_instance(FFmpegLocator, ffmpeg_locator)
+    container.register_instance(SystemReadinessService, readiness_service)
+    container.register_instance(WorkerPool, worker_pool)
     container.register_instance("logger", logger)
     return container
 
 
 def run() -> int:
     try:
-        from PySide6.QtCore import QCoreApplication, QUrl
+        from PySide6.QtCore import QCoreApplication, QTimer, QUrl
         from PySide6.QtGui import QGuiApplication
         from PySide6.QtQml import QQmlApplicationEngine
     except ImportError as exc:  # pragma: no cover - user environment problem
@@ -47,7 +72,7 @@ def run() -> int:
     try:
         container = build_container()
     except Exception as exc:  # pragma: no cover - startup environment failure
-        print("SP Video Studio could not initialize its local database.", file=sys.stderr)
+        print("SP Video Studio could not initialize its local application data.", file=sys.stderr)
         print(str(exc), file=sys.stderr)
         return 1
 
@@ -58,17 +83,43 @@ def run() -> int:
     app = QGuiApplication(sys.argv)
 
     from ui.controllers.project_controller import ProjectController
+    from ui.controllers.readiness_controller import ReadinessController
+    from ui.controllers.settings_controller import SettingsController
 
-    project_controller = ProjectController(container.resolve(ProjectService))
+    project_service = container.resolve(ProjectService)
+    project_controller = ProjectController(project_service)
+    settings_controller = SettingsController(
+        container.resolve(SettingsService),
+        container.resolve(AppPaths),
+        project_service,
+        container.resolve(FFmpegLocator),
+        container.resolve(WorkerPool),
+        logger,
+    )
+    readiness_controller = ReadinessController(
+        container.resolve(SystemReadinessService),
+        container.resolve(WorkerPool),
+        logger,
+    )
+    settings_controller.readinessRelevantChanged.connect(readiness_controller.recheck)
+
     container.register_instance(ProjectController, project_controller)
+    container.register_instance(SettingsController, settings_controller)
+    container.register_instance(ReadinessController, readiness_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
+    engine.rootContext().setContextProperty("settingsController", settings_controller)
+    engine.rootContext().setContextProperty("readinessController", readiness_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():
         logger.error("Failed to load QML application shell from %s", qml_file)
         return 1
 
+    if container.resolve(SettingsService).current.readiness_check_on_startup:
+        QTimer.singleShot(0, readiness_controller.recheck)
+
+    app.aboutToQuit.connect(container.resolve(WorkerPool).shutdown)
     logger.info("SP Video Studio started")
     return app.exec()

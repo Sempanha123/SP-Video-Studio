@@ -188,3 +188,39 @@ def test_create_cleans_partial_folder_when_database_insert_fails(project_system,
     with pytest.raises(Exception):
         service.create_project("Rollback Me", "news", "en", "9:16", 30)
     assert list(root.iterdir()) == []
+
+
+def test_existing_project_can_be_deleted_after_default_root_changes(tmp_path: Path):
+    database = SQLiteDatabase(tmp_path / "runtime" / "app.db")
+    database.initialize()
+    repository = ProjectRepository(database)
+    service = ProjectService(repository, tmp_path / "old-project-root")
+    project = service.create_project("Old Root Project", "news", "en", "9:16", 30)
+    old_path = Path(project.project_path)
+    new_root = tmp_path / "new-project-root"
+    new_root.mkdir()
+
+    service.set_project_root(new_root)
+    service.delete_project(project.project_id)
+
+    assert not old_path.exists()
+    assert repository.get_by_id(project.project_id) is None
+
+
+def test_existing_project_old_root_remains_deletable_after_restart(tmp_path: Path):
+    database = SQLiteDatabase(tmp_path / "runtime" / "app.db")
+    database.initialize()
+    repository = ProjectRepository(database)
+    old_root = tmp_path / "old-root"
+    first_service = ProjectService(repository, old_root)
+    project = first_service.create_project("Persistent Old Root", "video", "en", "16:9", 30)
+    old_path = Path(project.project_path)
+
+    restarted_database = SQLiteDatabase(tmp_path / "runtime" / "app.db")
+    restarted_database.initialize()
+    restarted_repository = ProjectRepository(restarted_database)
+    restarted_service = ProjectService(restarted_repository, tmp_path / "new-root")
+    restarted_service.delete_project(project.project_id)
+
+    assert not old_path.exists()
+    assert restarted_repository.get_by_id(project.project_id) is None

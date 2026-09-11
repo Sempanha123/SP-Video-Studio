@@ -80,6 +80,15 @@ class ProjectService:
         self.repository = repository
         self.project_root = Path(project_root).expanduser()
         self.logger = logger or logging.getLogger("sp_video_studio.projects")
+        self._known_project_roots: set[Path] = {self.project_root.resolve()}
+        for existing in self.repository.list_all():
+            if existing.project_path:
+                self._known_project_roots.add(Path(existing.project_path).resolve().parent)
+
+    def set_project_root(self, project_root: Path) -> None:
+        """Change the location used only for newly created projects."""
+        self.project_root = Path(project_root).expanduser()
+        self._known_project_roots.add(self.project_root.resolve())
 
     def ensure_project_root(self) -> None:
         try:
@@ -225,9 +234,9 @@ class ProjectService:
         if not project_path.exists():
             raise ProjectFilesMissingError()
         self.validate_project_folder(project_path, expected_id=project.project_id)
-        self._assert_safe_project_path(project_path)
+        self._assert_safe_project_path(project_path, project.project_id)
 
-        staging = self.project_root.resolve() / f".deleting-{project.project_id}-{uuid4().hex[:8]}"
+        staging = project_path.resolve().parent / f".deleting-{project.project_id}-{uuid4().hex[:8]}"
         try:
             project_path.rename(staging)
         except OSError as exc:
@@ -317,13 +326,17 @@ class ProjectService:
             raise ProjectNotFoundError()
         return project
 
-    def _assert_safe_project_path(self, path: Path) -> None:
-        try:
-            path.resolve().relative_to(self.project_root.resolve())
-        except ValueError as exc:
-            raise InvalidProjectError("Refusing to delete a folder outside the project root.") from exc
-        if path.resolve() == self.project_root.resolve():
-            raise InvalidProjectError("Refusing to delete the project root itself.")
+    def _assert_safe_project_path(self, path: Path, expected_id: str | None = None) -> None:
+        resolved = path.resolve()
+        for known_root in self._known_project_roots:
+            if resolved == known_root:
+                raise InvalidProjectError("Refusing to delete a project root itself.")
+            try:
+                resolved.relative_to(known_root)
+                return
+            except ValueError:
+                continue
+        raise InvalidProjectError("Refusing to delete an unrecognized project folder.")
 
     def _cleanup_partial_project(self, path: Path, expected_id: str) -> None:
         if not path.exists():

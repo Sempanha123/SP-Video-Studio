@@ -32,3 +32,16 @@ def test_phase2_project_ui_is_wired():
     assert "projectController.createProject" in create
     assert "projectController.openProject" in projects
     assert "projectController.deleteProject" in projects
+
+
+def test_phase3_settings_and_readiness_ui_is_wired():
+    settings = (QML_ROOT / "pages" / "SettingsPage.qml").read_text(encoding="utf-8")
+    home = (QML_ROOT / "pages" / "HomePage.qml").read_text(encoding="utf-8")
+    main = (QML_ROOT / "Main.qml").read_text(encoding="utf-8")
+    for component in ["SettingsSection.qml", "SettingsRow.qml", "PathSelector.qml", "RadioCard.qml", "InfoBanner.qml", "ReadinessItem.qml"]:
+        assert (QML_ROOT / "components" / component).exists()
+    assert "settingsController.setTheme" in settings
+    assert "readinessController.recheck" in settings
+    assert "FFmpeg Discovery" in settings
+    assert "System Readiness" in home
+    assert "settingsController.theme" in main

@@ -39,6 +39,10 @@ class AppPaths:
         return self.root / "data"
 
     @property
+    def exports(self) -> Path:
+        return self.root / "exports"
+
+    @property
     def database(self) -> Path:
         return self.data / "app.db"
 
@@ -55,6 +59,7 @@ class AppPaths:
             self.logs,
             self.settings,
             self.downloads,
+            self.exports,
             self.data,
         ):
             directory.mkdir(parents=True, exist_ok=True)
