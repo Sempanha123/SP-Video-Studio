@@ -10,6 +10,7 @@ import "../render"
 import "../export"
 import "../timeline"
 import "../news"
+import "../story"
 
 Item {
     id: root
@@ -67,6 +68,8 @@ Item {
             newsController.setCurrentProject(root.current().id || "")
             if (typeof newsVisualController !== "undefined") newsVisualController.setCurrentProject(root.current().id || "")
         }
+        if (mode === "story" && typeof storyController !== "undefined")
+            storyController.setCurrentProject(root.current().id || "")
         root.workspaceMode = mode
     }
 
@@ -120,6 +123,8 @@ Item {
             newsController.setCurrentProject(root.current().id || "")
         if (typeof newsVisualController !== "undefined")
             newsVisualController.setCurrentProject(root.current().id || "")
+        if (typeof storyController !== "undefined")
+            storyController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
@@ -155,6 +160,8 @@ Item {
                 renderController.setCurrentProject(root.current().id || "")
             if (typeof exportController !== "undefined")
                 exportController.setCurrentProject(root.current().id || "")
+            if (typeof storyController !== "undefined")
+                storyController.setCurrentProject(root.current().id || "")
             if (root.workspaceMode === "script" && typeof scriptController !== "undefined")
                 scriptController.load(root.current().id || "")
         }
@@ -194,6 +201,7 @@ Item {
             Text { text: "Last updated " + (root.current().updatedDisplay || "—"); color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
             Item { Layout.fillWidth: true }
             AppButton { visible: root.current().workflow === "news"; text: "News"; compact: true; variant: root.workspaceMode === "news" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("news") }
+            AppButton { visible: root.current().workflow === "story"; text: "Story"; compact: true; variant: root.workspaceMode === "story" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("story") }
             AppButton { text: "Media"; compact: true; variant: root.workspaceMode === "media" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("media") }
             AppButton { text: "Script"; compact: true; variant: root.workspaceMode === "script" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("script") }
             AppButton { text: "Transcription"; compact: true; variant: root.workspaceMode === "transcription" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("transcription") }
@@ -548,6 +556,18 @@ Item {
                     aspectRatio: root.current().aspectRatio || "16:9"
                 }
             }
+        }
+
+        StoryStudio {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.workspaceMode === "story"
+            controller: typeof storyController !== "undefined" ? storyController : null
+            onNavigateRequested: function(mode) {
+                if (mode === "voices") root.navigateRequested("voices", "")
+                else root.setWorkspaceMode(mode)
+            }
+            onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
         }
 
         NewsStudio {

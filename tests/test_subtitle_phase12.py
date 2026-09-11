@@ -55,7 +55,7 @@ def make_system(tmp_path: Path):
 
 
 def test_phase12_schema_migration(tmp_path: Path):
-    sys=make_system(tmp_path); assert sys.db.current_version() == 16
+    sys=make_system(tmp_path); assert sys.db.current_version() == 17
     with sys.db.connect() as c: tables={r['name'] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {'subtitle_tracks','subtitle_cues','subtitle_words','subtitle_styles','subtitle_user_presets'} <= tables
 

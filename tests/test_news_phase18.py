@@ -58,7 +58,7 @@ def add_supported_claim(sys, text='Company announced 100 units on September 10.'
 
 def test_news_schema_v15_and_tables(tmp_path):
     s=make_system(tmp_path)
-    assert s.db.current_version()==16
+    assert s.db.current_version()==17
     with s.db.connect() as c:
         names={r['name'] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'news_%'")}
     assert {'news_projects','news_sources','news_source_snapshots','news_claims','news_evidence','news_briefs','news_brief_items','news_script_mappings'} <= names
@@ -472,6 +472,6 @@ def test_phase17_schema_v14_upgrades_to_news_schema_v15(tmp_path):
     db = SQLiteDatabase(path)
     assert db.current_version() == 14
     db.initialize()
-    assert db.current_version() == 16
+    assert db.current_version() == 17
     with db.connect() as c:
         assert c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='news_sources'").fetchone()

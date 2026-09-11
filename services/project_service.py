@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from services.timeline_service import TimelineService
     from services.news_service import NewsService
     from services.news_visual_service import NewsVisualService
+    from services.story_service import StoryService
 
 
 PROJECT_DIRS = (
@@ -109,6 +110,7 @@ class ProjectService:
         self._timeline_service: TimelineService | None = None
         self._news_service: NewsService | None = None
         self._news_visual_service: NewsVisualService | None = None
+        self._story_service: StoryService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
                 self._known_project_roots.add(Path(existing.project_path).resolve().parent)
@@ -150,6 +152,9 @@ class ProjectService:
 
     def set_news_visual_service(self, news_visual_service: "NewsVisualService") -> None:
         self._news_visual_service = news_visual_service
+
+    def set_story_service(self, story_service: "StoryService") -> None:
+        self._story_service = story_service
 
     def set_project_root(self, project_root: Path) -> None:
         """Change the location used only for newly created projects."""
@@ -350,6 +355,10 @@ class ProjectService:
                 self._news_visual_service.duplicate_project_visuals(
                     source.project_id, duplicate.project_id, scene_map=scene_id_map,
                     claim_map=news_maps.get("claim", {}), source_map=news_maps.get("source", {}), media_map=media_id_map,
+                )
+            if self._story_service is not None:
+                self._story_service.duplicate_project_story(
+                    source.project_id, duplicate.project_id, section_map=script_section_map, scene_map=scene_id_map
                 )
         except Exception as exc:
             try:

@@ -152,7 +152,7 @@ def make_system(tmp_path: Path, *, engine=None, installed=None):
 
 def test_phase11_migration_and_model_registry(tmp_path: Path):
     sys = make_system(tmp_path)
-    assert sys.db.current_version() == 16
+    assert sys.db.current_version() == 17
     with sys.db.connect() as connection:
         tables = {row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"translations", "translation_segments"} <= tables

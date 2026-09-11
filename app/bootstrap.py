@@ -75,6 +75,12 @@ from services.news_layout_service import NewsLayoutService
 from services.news_graphic_service import NewsGraphicService
 from services.news_visual_validation_service import NewsVisualValidationService
 from services.news_visual_service import NewsVisualService
+from services.story_planner import DeterministicStoryPlanner
+from services.story_service import StoryService
+from services.story_outline_service import StoryOutlineService
+from services.story_script_service import StoryScriptService
+from services.story_apply_service import StoryApplyService
+from services.story_validation_service import StoryValidationService
 from services.tts_chunking_service import TTSChunkingService
 from services.tts_service import TTSService
 from services.narration_service import NarrationService
@@ -97,6 +103,7 @@ from storage.repositories.export_preset_repository import ExportPresetRepository
 from storage.repositories.timeline_repository import TimelineRepository
 from storage.repositories.news_repository import NewsRepository
 from storage.repositories.news_visual_repository import NewsVisualRepository
+from storage.repositories.story_repository import StoryRepository
 from storage.repositories.voice_repository import VoiceRepository
 from workers.worker_pool import WorkerPool
 
@@ -133,6 +140,7 @@ def build_container() -> DependencyContainer:
     timeline_repository = TimelineRepository(database)
     news_repository = NewsRepository(database)
     news_visual_repository = NewsVisualRepository(database)
+    story_repository = StoryRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -304,6 +312,13 @@ def build_container() -> DependencyContainer:
     )
     project_service.set_news_service(news_service)
     project_service.set_news_visual_service(news_visual_service)
+    story_planner = DeterministicStoryPlanner()
+    story_service = StoryService(story_repository, repository, voice_service, logger)
+    story_outline_service = StoryOutlineService(story_repository, story_service, story_planner, logger)
+    story_script_service = StoryScriptService(story_repository, script_service, voice_service, logger)
+    story_apply_service = StoryApplyService(story_repository, scene_service, script_service, director_service, logger)
+    story_validation_service = StoryValidationService(story_repository, script_repository, scene_repository, subtitle_repository, generated_audio_repository, script_analysis_service)
+    project_service.set_story_service(story_service)
     director_apply_service = DirectorApplyService(
         director_service, director_repository, director_validation, project_service, scene_service, voice_service, subtitle_preset_service
     )
@@ -343,6 +358,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(TimelineRepository, timeline_repository)
     container.register_instance(NewsRepository, news_repository)
     container.register_instance(NewsVisualRepository, news_visual_repository)
+    container.register_instance(StoryRepository, story_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -408,6 +424,12 @@ def build_container() -> DependencyContainer:
     container.register_instance(NewsGraphicService, news_graphic_service)
     container.register_instance(NewsVisualValidationService, news_visual_validation_service)
     container.register_instance(NewsVisualService, news_visual_service)
+    container.register_instance(DeterministicStoryPlanner, story_planner)
+    container.register_instance(StoryService, story_service)
+    container.register_instance(StoryOutlineService, story_outline_service)
+    container.register_instance(StoryScriptService, story_script_service)
+    container.register_instance(StoryApplyService, story_apply_service)
+    container.register_instance(StoryValidationService, story_validation_service)
     container.register_instance(AIResourceManager, ai_resource_manager)
     container.register_instance(VoiceRegistry, voice_registry)
     container.register_instance(VoiceService, voice_service)
@@ -462,6 +484,7 @@ def run() -> int:
     from ui.controllers.voice_controller import VoiceController
     from ui.controllers.news_controller import NewsController
     from ui.controllers.news_visual_controller import NewsVisualController
+    from ui.controllers.story_controller import StoryController
 
     project_service = container.resolve(ProjectService)
     project_controller = ProjectController(project_service)
@@ -565,6 +588,10 @@ def run() -> int:
         logger,
     )
     news_visual_controller = NewsVisualController(container.resolve(NewsVisualService), logger)
+    story_controller = StoryController(
+        container.resolve(StoryService), container.resolve(StoryOutlineService), container.resolve(StoryScriptService),
+        container.resolve(StoryApplyService), container.resolve(StoryValidationService), logger,
+    )
 
     def flush_for_export() -> bool:
         if not script_controller.flush():
@@ -641,6 +668,9 @@ def run() -> int:
     )
     project_controller.currentProjectChanged.connect(
         lambda: news_visual_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
+    )
+    project_controller.currentProjectChanged.connect(
+        lambda: story_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
     )
     transcription_controller.playbackRequested.connect(
         lambda media_id, start_ms, autoplay: (
@@ -726,6 +756,7 @@ def run() -> int:
     container.register_instance(ExportController, export_controller)
     container.register_instance(NewsController, news_controller)
     container.register_instance(NewsVisualController, news_visual_controller)
+    container.register_instance(StoryController, story_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
@@ -747,6 +778,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("exportController", export_controller)
     engine.rootContext().setContextProperty("newsController", news_controller)
     engine.rootContext().setContextProperty("newsVisualController", news_visual_controller)
+    engine.rootContext().setContextProperty("storyController", story_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():

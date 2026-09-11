@@ -60,7 +60,7 @@ def supported_claim(s,text='Company announced Product X on September 10.',*,clai
 
 
 def test_schema_v16_news_visual_tables(tmp_path):
-    s=make_system(tmp_path);assert s.db.current_version()==16
+    s=make_system(tmp_path);assert s.db.current_version()==17
     with s.db.connect() as c:names={r['name'] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {'news_visual_themes','news_scene_layouts','news_visual_elements'}<=names
 
@@ -250,7 +250,7 @@ def test_phase18_schema_v15_upgrades_to_news_visual_schema_v16(tmp_path, monkeyp
     monkeypatch.setattr(database_module,'MIGRATIONS',[m for m in original if m.version<=15])
     old=SQLiteDatabase(path); old.initialize(); assert old.current_version()==15
     monkeypatch.setattr(database_module,'MIGRATIONS',original)
-    old.initialize(); assert old.current_version()==16
+    old.initialize(); assert old.current_version()==17
     with old.connect() as c:
         tables={r['name'] for r in c.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {'news_visual_themes','news_scene_layouts','news_visual_elements'}<=tables

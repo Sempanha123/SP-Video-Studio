@@ -992,3 +992,41 @@ The Phase 18 News readiness summary is extended with visual ready/warning/error 
 Phase 19 deliberately does not add maps, charts, broadcaster-specific branding, keyframe motion graphics, external template marketplaces, autonomous research, publishing, or a second renderer. Rounded corners are preview-only in this phase because the production generic shape renderer currently uses FFmpeg `drawbox`; exported card geometry/colors/opacity/timing/text remain canonical.
 
 The recommended next phase is **Phase 20 — Story Studio**.
+
+## Story Studio (Phase 20)
+
+Phase 20 adds an offline-first **Story Studio** for narrative planning while preserving the existing production architecture. A normal project with `workflow=story` remains the owner; Story-specific records add planning metadata, outlines, beats, characters, and provenance mappings only. Script, Voice, narration, Scenes, Subtitles, Timeline, AI Director, rendering, and export continue to use their existing shared systems.
+
+### Story architecture and deterministic planning
+
+SQLite schema version **17** adds normalized `story_projects`, `story_outlines`, `story_beats`, `story_characters`, and `story_mappings` tables. The original idea is stored separately from the outline, so regenerating or editing structure never rewrites the user's source idea. Story setup records language, type, tone, audience, target duration, pace, optional narrator, notes, and a stable planning fingerprint. Changing planning inputs marks an existing outline **Out of Date** instead of deleting it.
+
+`DeterministicStoryPlanner` works fully offline and ships reusable structure profiles for 5-Beat Story, Explainer, Documentary, Motivational, Mystery Short, and Educational stories. Supported Story types include Short Story, Documentary Story, Educational Story, Motivational Story, Mystery, Drama, Adventure, Biography-style, Explainer Story, and Custom. Beat count scales with target duration and pace; weighted duration planning keeps hooks concise and gives development/context beats more room. **Fit to Target Duration** adjusts only unlocked beats and preserves their relative weighting rather than assigning every beat the same duration.
+
+Story beats have stable IDs and store type, title, description, target duration, emotion, visual direction, optional chapter label, character/voice references, notes, lock state, and user-modified state. Users can add, edit, reorder, duplicate, delete, lock, and normalize beats. Add/edit/reorder/duplicate/delete operations use the existing command stack where practical, so Story structural edits participate in Undo/Redo without storing media payloads. Refreshing deterministic structure preserves locked or user-modified beats and now upserts retained beat IDs so existing production mappings remain intact.
+
+### Characters, Voice, and narration
+
+`StoryCharacter` is lightweight production metadata for Narrator, Main Character, Supporting Character, Expert, Host, or Other roles; it is not a roleplay/simulation system. Characters can reference existing Voice Studio profiles, and Story setup can store a narrator voice. Story Studio never generates or clones voices. The Story Voice shortcut opens the existing Voice Studio; an existing project-level Voice assignment is recognized as the Story narrator when the Story workspace reloads. Section voice overrides remain handled by the shared Voice/Narration pipeline.
+
+### Beat → Script → Scene provenance
+
+Story scripts are ordinary Phase 6 `Script` / `ScriptSection` records. `StoryScriptService` maps one beat to one initial Script section and stores stable `storyBeatId`, source hash, character, and voice metadata. Manual script editing remains first-class. If a beat later changes, the linked Script section is marked **Source Changed** and the user's current section text is preserved; new beats can be added during sync without silently rewriting old sections.
+
+Scenes are ordinary Phase 13 Scenes. `StoryApplyService` can create an initial Scene per Story beat with `storyBeatId`, story role, emotion, visual direction, source hash, and target duration in generic scene metadata. It does not create `StoryScene` classes or Story-only renderer data. Beat → Scene mappings support future one-to-many expansion while keeping current Storyboard and Timeline canonical. Scene duration edits made later in Storyboard/Timeline do not silently rewrite StoryBeat target duration.
+
+### Shared production integration
+
+Translation continues through Phase 11; Story's translation context exposes the existing script and stable section→beat relationships so translated content can retain Story provenance rather than creating a second Story model per language. Subtitles continue through Subtitle Studio and remain optional for Story readiness. AI Director receives `workflow=story` plus the current Story Script (or idea when no script exists) and may recommend pacing/voice/subtitle/transition structure without modifying Story records automatically. Timeline derives Story-created scenes from the same canonical Scene rows, and rendering/export use the Phase 15/16 pipeline unchanged.
+
+`StoryValidationService` reports **Not Ready**, **Needs Review**, or **Ready for Production** using setup, outline approval/freshness, Script availability/duration, narrator selection, narration state, Scene count, and optional subtitle state. It uses the existing `ScriptAnalysisService`, including Khmer character-based duration heuristics rather than English whitespace word counting.
+
+### Duplication, persistence, privacy, and limits
+
+Project duplication generates new Story outline/beat/character/mapping IDs and remaps Story references to the duplicated Script sections and Scenes. Retained Story mappings never point back to original project-owned Script/Scene IDs. Project deletion removes project-owned Story records through database cascades but never deletes global Voice profiles, models, or presets.
+
+All Story text is Unicode-safe; English, Khmer, and mixed text persist through SQLite without transliteration. Phase 20 is fully offline for planning and does **not** send ideas, scripts, characters, or notes to external services. `StoryWritingProvider` is only a structured future-provider interface (`generate_outline`, `expand_beat`, `generate_script_section`); no cloud implementation is shipped in this phase.
+
+Phase 20 deliberately does not add AI image/video generation, cloud story writing, automatic music, lip sync, advanced character animation, novel-length authoring, branching stories, or a Story-specific renderer.
+
+The recommended next phase is **Phase 21 — Translate & Dub**.
