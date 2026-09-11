@@ -355,3 +355,63 @@ Script language is stored as a stable code (`en` or `km`). Changing the language
 UTF-8 `.txt` import supports BOM and Khmer/Unicode text. Users can add imported text as a new section or replace the current structure with one **Imported Script** section. TXT export writes enabled section titles and content in UTF-8. **Copy Full Script** copies the enabled combined narration text.
 
 Phase 6 does **not** include AI script generation, News research, VoxCPM2, Whisper, translation, subtitles, scene generation, timeline editing, or rendering.
+
+## AI model manager
+
+Phase 7 adds a local model-management layer without loading or running any AI model. The catalog is centralized in `engines/model_registry.py`; static model definitions are kept separate from runtime installation state in SQLite.
+
+Database schema version 4 adds:
+
+```text
+model_installations
+```
+
+The initial catalog is:
+
+- `voxcpm2` → `openbmb/VoxCPM2` — Apache-2.0 — current public repository size approximately 4.96 GB
+- `whisper-small` → `Systran/faster-whisper-small` — MIT — approximately 486 MB
+- `whisper-medium` → `Systran/faster-whisper-medium` — MIT — approximately 1.53 GB
+- `whisper-large-v3` → `Systran/faster-whisper-large-v3` — MIT — approximately 3.09 GB
+
+Source metadata was verified against the public model repositories on 2026-09-11. Model downloads resolve a concrete Hugging Face repository revision returned by the source API rather than mixing files from a changing `main` snapshot.
+
+### Installation pipeline
+
+Model files live under the application-managed Models folder, never inside the source repository or project folders. Downloads are staged under `models/.downloads/` and only move into the final model directory after validation.
+
+```text
+registry
+  ↓
+ModelService
+  ├── ModelCompatibilityService
+  ├── ModelDownloadService
+  │     └── HuggingFaceSource (public HTTP snapshot files + Range resume)
+  ├── ModelVerificationService
+  └── ModelRepository → SQLite
+```
+
+The download pipeline supports background progress, cancellation, retry/backoff, resumable `.part` files where HTTP Range is supported, interrupted-download recovery, atomic final-directory replacement, and one active model download at a time. Partial data is never reported as Installed.
+
+Each completed installation receives `model_manifest.json` containing model identity, source identifier/revision, installed version, file list, sizes, available official SHA-256 values, installation time, and manifest schema version. Verification checks the managed directory, manifest identity, required files, non-empty files, expected sizes, and hashes when the source publishes them. A failed verification becomes **Repair Required** rather than a false Installed state.
+
+Repair currently performs a safe staged reinstallation. This is deliberate: source-specific partial repair can be added later without weakening installation safety.
+
+### Safe removal and discovery
+
+Removal is restricted to the registry-defined path under the managed model root. Arbitrary paths from database metadata are never recursively deleted. Drive roots, the model root itself, project folders, scripts, media, and generated outputs are outside model deletion targets.
+
+Refresh reconciles the registry, SQLite installation metadata, model manifests, final model directories, and interrupted download folders. A valid managed installation can be rediscovered after metadata loss. Existing unmanifested files are treated as **Repair Required** instead of trusted automatically.
+
+### Compatibility and readiness
+
+Compatibility is guidance, not an inference engine. The Model Manager compares model RAM/VRAM/CPU/CUDA guidance with Phase 3 `SystemReadiness`. Whisper Small / Medium / Large V3 recommendations adapt to detected hardware. VoxCPM2 follows the currently published CUDA/VRAM guidance. Installation is blocked only for insufficient disk space; performance warnings remain advisory.
+
+`SystemReadinessService` now reads real Model Manager family state:
+
+- Installed
+- Repair Required
+- Not Installed
+
+Home and Settings update after install, verify, repair, or removal without requiring an application restart. Settings → Storage also shows measured managed model storage.
+
+Phase 7 does **not** load VoxCPM2, run faster-whisper, synthesize speech, transcribe media, clone voices, translate, create subtitles, or render video.

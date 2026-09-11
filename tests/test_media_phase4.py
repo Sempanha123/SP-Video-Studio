@@ -111,7 +111,7 @@ def test_media_model_serialization_round_trip(media_system):
 def test_media_migration_schema_and_foreign_key(tmp_path: Path):
     database = SQLiteDatabase(tmp_path / "app.db")
     database.initialize()
-    assert database.current_version() == 3
+    assert database.current_version() == 4
     with database.connect() as connection:
         columns = {row["name"] for row in connection.execute("PRAGMA table_info(media_assets)")}
         foreign_keys = connection.execute("PRAGMA foreign_key_list(media_assets)").fetchall()

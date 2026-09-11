@@ -5,3 +5,5 @@ from .settings_repository import SettingsRepository
 __all__ = ["MediaRepository", "ProjectRepository", "SettingsRepository"]
 
 from .script_repository import ScriptRepository
+
+from .model_repository import ModelRepository

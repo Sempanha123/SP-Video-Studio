@@ -29,11 +29,13 @@ class SystemReadinessService:
         settings_provider: Callable[[], AppSettings],
         ffmpeg_locator: FFmpegLocator | None = None,
         logger: logging.Logger | None = None,
+        model_status_provider: Callable[[str], str] | None = None,
     ) -> None:
         self.paths = paths
         self.settings_provider = settings_provider
         self.ffmpeg_locator = ffmpeg_locator or FFmpegLocator()
         self.logger = logger or logging.getLogger("sp_video_studio.readiness")
+        self.model_status_provider = model_status_provider
 
     def detect(self) -> SystemReadiness:
         result = SystemReadiness()
@@ -205,6 +207,13 @@ class SystemReadinessService:
         result.ffprobe_version = ffprobe.version
 
     def _detect_models(self, result: SystemReadiness) -> None:
+        if self.model_status_provider is not None:
+            try:
+                result.voxcpm_status = self.model_status_provider("voxcpm2")
+                result.whisper_status = self.model_status_provider("faster-whisper")
+                return
+            except Exception:
+                self.logger.exception("Model Manager readiness query failed")
         result.voxcpm_status = self._model_status(("voxcpm2", "VoxCPM2"))
         result.whisper_status = self._model_status(("faster-whisper", "whisper"))
 

@@ -10,7 +10,13 @@ from .paths import AppPaths
 from media.ffmpeg_locator import FFmpegLocator
 from media.probe import FFprobeService
 from media.thumbnails import ThumbnailService
+from engines.model_registry import ModelRegistry
+from engines.model_sources import HuggingFaceSource
 from services.media_service import MediaService
+from services.model_compatibility_service import ModelCompatibilityService
+from services.model_download_service import ModelDownloadService
+from services.model_service import ModelService
+from services.model_verification_service import ModelVerificationService
 from services.playback_service import PlaybackService
 from services.script_analysis_service import ScriptAnalysisService
 from services.script_service import ScriptService
@@ -19,6 +25,7 @@ from services.settings_service import SettingsService
 from services.system_readiness_service import SystemReadinessService
 from storage.database import SQLiteDatabase
 from storage.repositories.media_repository import MediaRepository
+from storage.repositories.model_repository import ModelRepository
 from storage.repositories.project_repository import ProjectRepository
 from storage.repositories.script_repository import ScriptRepository
 from storage.repositories.settings_repository import SettingsRepository
@@ -43,6 +50,7 @@ def build_container() -> DependencyContainer:
     repository = ProjectRepository(database)
     media_repository = MediaRepository(database)
     script_repository = ScriptRepository(database)
+    model_repository = ModelRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -72,11 +80,31 @@ def build_container() -> DependencyContainer:
     project_service.set_script_service(script_service)
     playback_service = PlaybackService()
 
+    model_registry = ModelRegistry()
+    model_verification_service = ModelVerificationService(logger)
+    model_download_service = ModelDownloadService(
+        paths.models,
+        HuggingFaceSource(),
+        model_verification_service,
+        logger,
+    )
+    model_compatibility_service = ModelCompatibilityService()
+    model_service = ModelService(
+        model_registry,
+        model_repository,
+        model_download_service,
+        model_verification_service,
+        model_compatibility_service,
+        paths.models,
+        logger,
+    )
+
     readiness_service = SystemReadinessService(
         paths,
         settings_provider=lambda: settings_service.current,
         ffmpeg_locator=ffmpeg_locator,
         logger=logger,
+        model_status_provider=model_service.family_status,
     )
     worker_pool = WorkerPool(max_workers=2)
 
@@ -87,6 +115,7 @@ def build_container() -> DependencyContainer:
     container.register_instance(ProjectRepository, repository)
     container.register_instance(MediaRepository, media_repository)
     container.register_instance(ScriptRepository, script_repository)
+    container.register_instance(ModelRepository, model_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -94,6 +123,11 @@ def build_container() -> DependencyContainer:
     container.register_instance(ScriptAnalysisService, script_analysis_service)
     container.register_instance(ScriptService, script_service)
     container.register_instance(PlaybackService, playback_service)
+    container.register_instance(ModelRegistry, model_registry)
+    container.register_instance(ModelVerificationService, model_verification_service)
+    container.register_instance(ModelDownloadService, model_download_service)
+    container.register_instance(ModelCompatibilityService, model_compatibility_service)
+    container.register_instance(ModelService, model_service)
     container.register_instance(SettingsRepository, settings_repository)
     container.register_instance(SettingsService, settings_service)
     container.register_instance(FFmpegLocator, ffmpeg_locator)
@@ -127,6 +161,7 @@ def run() -> int:
     app = QGuiApplication(sys.argv)
 
     from ui.controllers.media_controller import MediaController
+    from ui.controllers.model_controller import ModelController
     from ui.controllers.project_controller import ProjectController
     from ui.controllers.playback_controller import PlaybackController
     from ui.controllers.readiness_controller import ReadinessController
@@ -165,7 +200,14 @@ def run() -> int:
         container.resolve(WorkerPool),
         logger,
     )
+    model_controller = ModelController(
+        container.resolve(ModelService),
+        container.resolve(SystemReadinessService),
+        container.resolve(WorkerPool),
+        logger,
+    )
     settings_controller.readinessRelevantChanged.connect(readiness_controller.recheck)
+    model_controller.modelStateChanged.connect(readiness_controller.recheck)
 
     container.register_instance(ProjectController, project_controller)
     container.register_instance(MediaController, media_controller)
@@ -173,6 +215,7 @@ def run() -> int:
     container.register_instance(ScriptController, script_controller)
     container.register_instance(SettingsController, settings_controller)
     container.register_instance(ReadinessController, readiness_controller)
+    container.register_instance(ModelController, model_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
@@ -181,16 +224,19 @@ def run() -> int:
     engine.rootContext().setContextProperty("scriptController", script_controller)
     engine.rootContext().setContextProperty("settingsController", settings_controller)
     engine.rootContext().setContextProperty("readinessController", readiness_controller)
+    engine.rootContext().setContextProperty("modelController", model_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():
         logger.error("Failed to load QML application shell from %s", qml_file)
         return 1
 
+    QTimer.singleShot(0, model_controller.refresh)
     if container.resolve(SettingsService).current.readiness_check_on_startup:
         QTimer.singleShot(0, readiness_controller.recheck)
 
     app.aboutToQuit.connect(script_controller.flush)
+    app.aboutToQuit.connect(lambda: model_controller.cancelDownload(model_controller.activeModelId) if model_controller.activeModelId else None)
     app.aboutToQuit.connect(playback_controller.clear)
     app.aboutToQuit.connect(container.resolve(WorkerPool).shutdown)
     logger.info("SP Video Studio started")

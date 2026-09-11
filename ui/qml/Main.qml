@@ -120,6 +120,11 @@ ApplicationWindow {
                         spacing: Theme.spacing.md
                         Text { text: window.pageTitle(window.currentPage); color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.title; font.weight: Theme.type.semibold; Layout.fillWidth: true }
                         StatusBadge {
+                            visible: typeof modelController !== "undefined" && modelController.activeModelId.length > 0
+                            text: "1 Model Download"
+                            status: "downloading"
+                        }
+                        StatusBadge {
                             text: (typeof readinessController !== "undefined" && readinessController.checking) ? "Checking system" : (window.readinessState().overallDisplay || "Not checked")
                             status: (typeof readinessController !== "undefined" && readinessController.checking) ? "checking" : (window.readinessState().overallStatus || "unknown")
                         }
@@ -173,6 +178,13 @@ ApplicationWindow {
         target: typeof readinessController !== "undefined" ? readinessController : null
         ignoreUnknownSignals: true
         function onOperationFailed(message) { toast.show(message, "error", 4200) }
+    }
+
+    Connections {
+        target: typeof modelController !== "undefined" ? modelController : null
+        ignoreUnknownSignals: true
+        function onOperationSucceeded(message) { toast.show(message, "success", 3000) }
+        function onOperationFailed(message) { toast.show(message, "error", 4800) }
     }
 
     Connections {

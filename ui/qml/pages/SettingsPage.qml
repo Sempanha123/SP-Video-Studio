@@ -343,6 +343,11 @@ Item {
                     Layout.fillWidth: true
                     title: "Storage Locations"
                     description: "Critical application folders are system-managed. The Projects location can be changed from Projects settings."
+                    SettingsRow {
+                        title: "AI Model Storage"
+                        description: "Measured managed model files. Refreshed after install, repair or removal."
+                        StatusBadge { text: typeof modelController !== "undefined" ? modelController.totalModelStorage : "0 B"; status: "ready" }
+                    }
                     Repeater {
                         model: ["Application Data", "Projects", "Cache", "Models", "Temporary", "Logs", "Exports"]
                         delegate: SettingsRow {
