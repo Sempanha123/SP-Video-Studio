@@ -6,6 +6,7 @@ import "../theme"
 import "../components"
 import "../editor"
 import "../director"
+import "../render"
 
 Item {
     id: root
@@ -51,6 +52,8 @@ Item {
             sceneController.setCurrentProject(root.current().id || "")
         if (mode === "director" && typeof directorController !== "undefined")
             directorController.setCurrentProject(root.current().id || "")
+        if (mode === "render" && typeof renderController !== "undefined")
+            renderController.setCurrentProject(root.current().id || "")
         root.workspaceMode = mode
     }
 
@@ -96,6 +99,8 @@ Item {
             sceneController.setCurrentProject(root.current().id || "")
         if (typeof directorController !== "undefined")
             directorController.setCurrentProject(root.current().id || "")
+        if (typeof renderController !== "undefined")
+            renderController.setCurrentProject(root.current().id || "")
     }
     Component.onDestruction: {
         if (typeof scriptController !== "undefined") scriptController.flush()
@@ -127,6 +132,8 @@ Item {
                 sceneController.setCurrentProject(root.current().id || "")
             if (typeof directorController !== "undefined")
                 directorController.setCurrentProject(root.current().id || "")
+            if (typeof renderController !== "undefined")
+                renderController.setCurrentProject(root.current().id || "")
             if (root.workspaceMode === "script" && typeof scriptController !== "undefined")
                 scriptController.load(root.current().id || "")
         }
@@ -172,6 +179,7 @@ Item {
             AppButton { text: "Subtitles"; compact: true; variant: root.workspaceMode === "subtitles" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("subtitles") }
             AppButton { text: "Scenes"; compact: true; variant: root.workspaceMode === "scenes" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("scenes") }
             AppButton { text: "Director"; compact: true; variant: root.workspaceMode === "director" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("director") }
+            AppButton { text: "Render"; compact: true; variant: root.workspaceMode === "render" ? "secondary" : "ghost"; onClicked: root.setWorkspaceMode("render") }
         }
 
         SplitView {
@@ -535,6 +543,16 @@ Item {
             visible: root.workspaceMode === "director"
             controller: typeof directorController !== "undefined" ? directorController : null
             projectLanguage: root.current().language || "en"
+            onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
+        }
+
+        RenderDialog {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            visible: root.workspaceMode === "render"
+            controller: typeof renderController !== "undefined" ? renderController : null
+            aspectRatio: root.current().aspectRatio || "16:9"
+            projectFps: root.current().fps || 30
             onToastRequested: function(message, variant) { root.toastRequested(message, variant) }
         }
 

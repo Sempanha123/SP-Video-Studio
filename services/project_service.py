@@ -41,7 +41,7 @@ PROJECT_DIRS = (
     "renders",
     "cache",
 )
-COPYABLE_DIRS = tuple(name for name in PROJECT_DIRS if name != "cache")
+COPYABLE_DIRS = tuple(name for name in PROJECT_DIRS if name not in {"cache", "renders"})
 
 
 class ProjectError(RuntimeError):

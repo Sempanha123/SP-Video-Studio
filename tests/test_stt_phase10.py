@@ -147,7 +147,7 @@ def request(asset: MediaAsset, *, language="auto", model_id="whisper-small", **k
 def test_phase10_database_migration_tables(tmp_path: Path):
     db = SQLiteDatabase(tmp_path / "app.db")
     db.initialize()
-    assert db.current_version() == 11
+    assert db.current_version() == 12
     with db.connect() as connection:
         tables = {row["name"] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert {"transcripts", "transcript_segments", "transcript_words"} <= tables

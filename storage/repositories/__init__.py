@@ -21,3 +21,6 @@ from .subtitle_repository import SubtitleRepository
 from .scene_repository import SceneRepository
 
 from .director_plan_repository import DirectorPlanRepository
+
+from .render_job_repository import RenderJobRepository
+from .render_output_repository import RenderOutputRepository

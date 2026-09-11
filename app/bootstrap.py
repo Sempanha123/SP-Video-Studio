@@ -50,6 +50,8 @@ from services.director_rule_engine import DirectorRuleEngine
 from services.director_validation_service import DirectorValidationService
 from services.ai_director_service import AIDirectorService
 from services.director_apply_service import DirectorApplyService
+from services.render_service import RenderService
+from services.render_validation_service import RenderValidationService
 from services.tts_chunking_service import TTSChunkingService
 from services.tts_service import TTSService
 from services.narration_service import NarrationService
@@ -66,6 +68,8 @@ from storage.repositories.translation_repository import TranslationRepository
 from storage.repositories.subtitle_repository import SubtitleRepository
 from storage.repositories.scene_repository import SceneRepository
 from storage.repositories.director_plan_repository import DirectorPlanRepository
+from storage.repositories.render_job_repository import RenderJobRepository
+from storage.repositories.render_output_repository import RenderOutputRepository
 from storage.repositories.voice_repository import VoiceRepository
 from workers.worker_pool import WorkerPool
 
@@ -96,6 +100,8 @@ def build_container() -> DependencyContainer:
     subtitle_repository = SubtitleRepository(database)
     scene_repository = SceneRepository(database)
     director_repository = DirectorPlanRepository(database)
+    render_job_repository = RenderJobRepository(database)
+    render_output_repository = RenderOutputRepository(database)
     project_service = ProjectService(repository, config.project_root, logger)
 
     ffmpeg_locator = FFmpegLocator()
@@ -241,6 +247,11 @@ def build_container() -> DependencyContainer:
         director_service, director_repository, director_validation, project_service, scene_service, voice_service, subtitle_preset_service
     )
     project_service.set_director_service(director_service)
+    render_validation_service = RenderValidationService()
+    render_service = RenderService(
+        repository, scene_service, subtitle_service, render_job_repository, render_output_repository,
+        lambda: media_tool_paths()[0], lambda: media_tool_paths()[1], thumbnail_service, render_validation_service, logger,
+    )
     worker_pool = WorkerPool(max_workers=2)
 
     container = DependencyContainer()
@@ -258,6 +269,8 @@ def build_container() -> DependencyContainer:
     container.register_instance(SubtitleRepository, subtitle_repository)
     container.register_instance(SceneRepository, scene_repository)
     container.register_instance(DirectorPlanRepository, director_repository)
+    container.register_instance(RenderJobRepository, render_job_repository)
+    container.register_instance(RenderOutputRepository, render_output_repository)
     container.register_instance(ProjectService, project_service)
     container.register_instance(FFprobeService, ffprobe_service)
     container.register_instance(ThumbnailService, thumbnail_service)
@@ -298,6 +311,8 @@ def build_container() -> DependencyContainer:
     container.register_instance(DirectorValidationService, director_validation)
     container.register_instance(AIDirectorService, director_service)
     container.register_instance(DirectorApplyService, director_apply_service)
+    container.register_instance(RenderValidationService, render_validation_service)
+    container.register_instance(RenderService, render_service)
     container.register_instance(AIResourceManager, ai_resource_manager)
     container.register_instance(VoiceRegistry, voice_registry)
     container.register_instance(VoiceService, voice_service)
@@ -346,6 +361,7 @@ def run() -> int:
     from ui.controllers.subtitle_controller import SubtitleController
     from ui.controllers.scene_controller import SceneController
     from ui.controllers.ai_director_controller import AIDirectorController
+    from ui.controllers.render_controller import RenderController
     from ui.controllers.voice_controller import VoiceController
 
     project_service = container.resolve(ProjectService)
@@ -428,8 +444,16 @@ def run() -> int:
         container.resolve(VoiceService),
         logger,
     )
+    render_controller = RenderController(
+        container.resolve(RenderService),
+        container.resolve(WorkerPool),
+        logger,
+    )
 
     def before_project_change() -> bool:
+        if render_controller.busy:
+            render_controller.operationFailed.emit("Finish or cancel the active render before changing projects.")
+            return False
         if not script_controller.flush():
             return False
         if tts_controller.busy:
@@ -471,6 +495,9 @@ def run() -> int:
     project_controller.currentProjectChanged.connect(
         lambda: scene_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
     )
+    project_controller.currentProjectChanged.connect(
+        lambda: render_controller.setCurrentProject(str(project_controller.currentProject.get("id", "")))
+    )
     transcription_controller.playbackRequested.connect(
         lambda media_id, start_ms, autoplay: (
             playback_controller.setMedia(media_id),
@@ -505,6 +532,12 @@ def run() -> int:
             playback_controller.play(),
         )
     )
+    render_controller.playRequested.connect(
+        lambda path, name, duration_ms: (
+            playback_controller.setExternalVideo(path, name, duration_ms),
+            playback_controller.play(),
+        )
+    )
     playback_controller.playbackChanged.connect(lambda: subtitle_controller.setPlayhead(playback_controller.position))
     project_controller.currentProjectChanged.connect(lambda: voice_controller.setCurrentProject(str(project_controller.currentProject.get("id", ""))))
     script_controller.selectedSectionChanged.connect(lambda: voice_controller.setCurrentSection(str(script_controller.selectedSection.get("id", ""))))
@@ -523,6 +556,7 @@ def run() -> int:
     container.register_instance(SubtitleController, subtitle_controller)
     container.register_instance(SceneController, scene_controller)
     container.register_instance(AIDirectorController, director_controller)
+    container.register_instance(RenderController, render_controller)
 
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("projectController", project_controller)
@@ -539,6 +573,7 @@ def run() -> int:
     engine.rootContext().setContextProperty("subtitleController", subtitle_controller)
     engine.rootContext().setContextProperty("sceneController", scene_controller)
     engine.rootContext().setContextProperty("directorController", director_controller)
+    engine.rootContext().setContextProperty("renderController", render_controller)
     qml_file = Path(__file__).resolve().parents[1] / "ui" / "qml" / "Main.qml"
     engine.load(QUrl.fromLocalFile(str(qml_file)))
     if not engine.rootObjects():
@@ -556,6 +591,7 @@ def run() -> int:
     app.aboutToQuit.connect(translation_controller.cancel)
     app.aboutToQuit.connect(translation_controller.saveEdits)
     app.aboutToQuit.connect(subtitle_controller.flush)
+    app.aboutToQuit.connect(render_controller.cancel)
     app.aboutToQuit.connect(container.resolve(TTSService).unload)
     app.aboutToQuit.connect(container.resolve(TranscriptionService).unload)
     app.aboutToQuit.connect(container.resolve(TranslationService).unload)

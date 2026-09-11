@@ -21,10 +21,10 @@ def ass_alignment(style: SubtitleStyle) -> int:
     return vertical+horizontal
 
 
-def build_ass_style(style: SubtitleStyle, *, canvas_height: int = 1080) -> str:
+def build_ass_style(style: SubtitleStyle, *, canvas_width: int = 1920, canvas_height: int = 1080) -> str:
     scale=canvas_height/1080.0
     font_size=max(8, round(style.font_size*scale))
-    margin_lr=max(0,round(style.horizontal_margin*1920))
+    margin_lr=max(0,round(style.horizontal_margin*canvas_width))
     margin_v=max(0,round(style.vertical_margin*canvas_height))
     border=3 if style.background_enabled else 1
     back=ass_color(style.background_color + f"{round(style.background_opacity*255):02X}" if len(style.background_color)==7 else style.background_color)

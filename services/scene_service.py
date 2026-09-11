@@ -296,13 +296,28 @@ class SceneService:
 
     def build_scene_render_spec(self, project_id: str, scene_id: str) -> dict[str,object]:
         project=self._project(project_id); scene,layers,overlays=self.get(project_id,scene_id); media_path=""; narration_path=""; subtitle={}
+        asset=None
         if scene.primary_media_id:
             asset=self.media_repository.get_by_id(scene.primary_media_id); media_path=asset.project_path if asset and asset.project_id==project_id else ""
+        narration=None
         if scene.narration_audio_id:
-            audio=self.audio_repository.get(scene.narration_audio_id); narration_path=audio.file_path if audio and audio.project_id==project_id else ""
+            narration=self.audio_repository.get(scene.narration_audio_id); narration_path=narration.file_path if narration and narration.project_id==project_id else ""
         if scene.subtitle_track_id:
             track=self.subtitle_repository.get_track(scene.subtitle_track_id); subtitle=track.to_dict() if track and track.project_id==project_id else {}
-        return self.preview.build_scene_spec(scene,layers,overlays,media_path=media_path,narration_path=narration_path,subtitle_track=subtitle,aspect_ratio=project.aspect_ratio)
+        spec=self.preview.build_scene_spec(scene,layers,overlays,media_path=media_path,narration_path=narration_path,subtitle_track=subtitle,aspect_ratio=project.aspect_ratio)
+        visual=spec["visual"]
+        if asset is not None and asset.project_id==project_id:
+            visual.update({"mediaType":asset.type,"width":asset.width or 0,"height":asset.height or 0,"durationMs":asset.duration_ms or 0,"hasAudio":bool(asset.audio_codec),"audioCodec":asset.audio_codec or "","rotation":int((asset.metadata_json or {}).get("rotation",0) or 0) if isinstance(asset.metadata_json,dict) else 0})
+        spec["audio"]["narrationDurationMs"] = narration.duration_ms if narration is not None and narration.project_id==project_id else 0
+        enriched=[]
+        for overlay in spec.get("overlays",[]):
+            item=dict(overlay); asset_id=str(item.get("assetId","") or "")
+            if asset_id:
+                overlay_asset=self.media_repository.get_by_id(asset_id)
+                if overlay_asset is not None and overlay_asset.project_id==project_id: item["assetPath"]=overlay_asset.project_path
+            enriched.append(item)
+        spec["overlays"]=enriched
+        return spec
 
     def build_project_scene_sequence(self, project_id: str) -> dict[str,object]:
         specs=[self.build_scene_render_spec(project_id,s.id) for s in self.repository.list_enabled(project_id)]; return self.preview.build_sequence(specs)

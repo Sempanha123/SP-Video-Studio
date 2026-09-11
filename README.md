@@ -770,3 +770,54 @@ Project duplication creates independent Director plan/recommendation/scene-plan 
 The Phase 14 Director is entirely local/deterministic and can operate with network access disabled. No project text is uploaded anywhere. The UI labels this as **Local Director / Offline Planning** rather than presenting it as an online generative chatbot.
 
 The recommended next phase is **Phase 15 — FFmpeg Rendering Engine**.
+
+## Production FFmpeg rendering engine
+
+Phase 15 adds a renderer that consumes the renderer-neutral scene specifications created by the Phase 13 Scene Engine. The UI never constructs FFmpeg commands. The production flow is:
+
+```text
+Project → SceneService render specs → RenderPlan snapshot → staged FFmpeg renderer
+        → output validation → persistent RenderOutput history
+```
+
+SQLite schema version **12** adds `render_jobs` and `render_outputs`. A render job records settings, progress/state, expected and actual duration, the immutable render-plan snapshot, FFmpeg version, actual encoder, failure details, and timing metadata. Successful outputs are separate immutable history records; subsequent project edits or renders do not rewrite an old successful video.
+
+### FFmpeg runtime and encoders
+
+Phase 15 was tested with **FFmpeg/FFprobe 7.1.5-0+deb13u1**. Runtime capability discovery parses the actual `ffmpeg -encoders` / `ffmpeg -filters` output once per configured FFmpeg path. The tested build exposes `libx264`, `h264_nvenc`, `h264_qsv`, AAC, libass, HarfBuzz and FriBidi; AMF is not compiled into this build. Encoder presence is not treated as proof that hardware is usable: NVENC/QSV are also probed with a tiny real encode. In the current Linux validation environment neither hardware encoder passed that runtime probe, so **libx264 is the verified mandatory fallback**. Auto mode may use a hardware encoder only after its runtime probe succeeds.
+
+Basic quality choices are mapped inside encoder adapters rather than QML: Fast/Balanced/High Quality map to codec-appropriate x264/NVENC/QSV/AMF options. Phase 15 outputs MP4 with H.264, `yuv420p`, AAC, 48 kHz stereo, and `+faststart` by default.
+
+### Render snapshot and staged composition
+
+Each render takes a stable `RenderPlan` snapshot before FFmpeg starts. Users may keep editing while a worker renders, but the active render continues from its original scene IDs, asset paths/metadata, durations, overlays, transitions, subtitles and settings. Render specs are schema-versioned and record the renderer/FFmpeg version for diagnostics.
+
+Scene composition uses project-managed assets without modifying originals. Image scenes use centralized Fit/Fill/Stretch scale/crop/pad filters. Video scenes use accurate requested source starts/ranges, output FPS normalization and FFmpeg's normal rotation handling. Background-only scenes use a generated color source. Every scene is normalized to the target canvas and a consistent 48 kHz stereo audio stream.
+
+For maintainability and transition reliability, Phase 15 uses **lossless FFV1 + PCM in a NUT intermediate container** per scene. NUT preserves the constant-frame-rate metadata required by FFmpeg 7 `xfade`; no H.264 generation loss is introduced between scene composition and the final encode. Cut-only sequences use stream-copy concat. Crossfade/Slide use `xfade` plus `acrossfade`, with transition overlap subtracted from the expected project duration. Fade is represented as restrained scene fade-out/fade-in semantics. The final stage performs only the production H.264/AAC encode.
+
+### Overlays, Khmer, subtitles, and audio
+
+Scene logos are normal FFmpeg alpha overlays using normalized Phase 13 coordinates, scale, opacity and timing. Text/headline/lower-third overlays are written to temporary ASS and rendered through libass instead of character-by-character `drawtext`; this keeps complex Unicode shaping consistent. The validated default font is **Noto Sans Khmer** when available. An actual Phase 15 output frame containing `ព័ត៌មានថ្មីថ្ងៃនេះ` was visually inspected with shaped Khmer glyphs and no missing boxes.
+
+Project subtitle tracks are burned from the Phase 12 domain through a render-resolution ASS file. English + Khmer bilingual output was also rendered and visually inspected with both lines present and Unicode intact. Windows drive colons, spaces, brackets and Khmer/Unicode subtitle paths use the centralized FFmpeg filter-path escaping helper rather than shell quoting.
+
+Scene audio can include source-video audio and generated narration with their Phase 13 normalized volume settings. Inputs are resampled/formatted to 48 kHz stereo, then mixed with `amix` plus a conservative limiter. Scenes without audio receive a matching silence stream so scene concatenation remains deterministic. Narration longer than a scene is a blocking pre-render validation error; the renderer never silently truncates it.
+
+### Validation, progress, cancellation, and history
+
+Pre-render validation checks FFmpeg availability, enabled scenes, durations, missing visual/logo/narration assets, unresolved video ranges, low-resolution media warnings, libass availability when required, subtitle availability/staleness, aspect-ratio mismatch warnings, actual encoder readiness, output location and conservative temporary disk-space requirements. A doomed render does not start.
+
+FFmpeg progress uses `-progress pipe:1` machine-readable output. The parser handles both current `out_time_us` and the historic microsecond-valued `out_time_ms` key, including temporary `N/A` values. Overall UI progress is deterministic across scene rendering, scene combination and final encoding. Rendering runs through the existing worker pool and only one production render runs at a time.
+
+Cancellation first terminates the active FFmpeg process and escalates to kill after a timeout when necessary; partial `.part.mp4` output and guarded job temp directories are removed. A real `-re` 20-second synthetic FFmpeg run was cancelled during Phase 15 validation and its process exited cleanly. Application shutdown also asks the RenderController to cancel the active render.
+
+After final encoding, FFprobe verifies a non-empty readable video stream, expected dimensions/FPS, duration within tolerance and the expected audio stream before the job becomes Completed. A thumbnail is created with the existing thumbnail service. Render history persists across restart and completed files can be played through the single Phase 5 playback stack or revealed in their folder.
+
+### Project lifecycle and performance check
+
+Project renders live under `project/renders/`; render intermediates live under the guarded `project/cache/render/<job-id>/` directory. Managed-output deletion refuses paths outside the project render folder. Project deletion follows normal project-owned cleanup. **Project duplication deliberately does not copy `renders/` or render cache/history**, avoiding potentially huge derived artifacts; it creates a clean empty render folder for the duplicate.
+
+The normal automated suite uses tiny fixtures. A separate Phase 15 performance smoke rendered a real **60-second 1920×1080 / 30 fps** sequence of six alternating image/video scenes using software `libx264` Fast quality. On this validation host it completed in **24.73 seconds (~2.43× realtime)**, produced a 59.967-second validated video, and the Python process reported roughly 102 MiB peak RSS. This is a functional smoke on simple synthetic content, not a hardware performance guarantee.
+
+Phase 15 intentionally does **not** add the advanced timeline, News/Story/Shorts automation, dubbing workflow, Batch Factory, publishing, cloud rendering, or the polished Phase 16 export experience.

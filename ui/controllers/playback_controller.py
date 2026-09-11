@@ -198,6 +198,23 @@ class PlaybackController(QObject):
         self.selectedMediaChanged.emit(); self.errorChanged.emit(); self.playbackChanged.emit()
         return True
 
+    @Slot(str, str, int, result=bool)
+    def setExternalVideo(self, path: str, name: str = "Rendered video", duration_ms: int = 0) -> bool:
+        candidate = Path(path)
+        if not candidate.is_file():
+            self.operationFailed.emit("Rendered video could not be found.")
+            return False
+        self.releaseRequested.emit()
+        selection = PlaybackSelection(
+            media_id=f"render:{candidate.name}", project_id=self._project_id, media_type="video",
+            name=name or candidate.name, path=str(candidate), duration_ms=max(0, int(duration_ms)),
+        )
+        self.playback.select(selection)
+        self._source_url = self.local_path_to_url(candidate)
+        self._selected = {"id": selection.media_id, "name": selection.name, "type": "video", "sourceUrl": self._source_url, "projectPath": str(candidate), "duration": format_duration(duration_ms), "durationMs": duration_ms, "resolution": "", "fps": "", "sampleRate": "", "channels": "", "status": "ready"}
+        self.selectedMediaChanged.emit(); self.errorChanged.emit(); self.playbackChanged.emit()
+        return True
+
     @Slot(str)
     def externalAudioRemoving(self, path: str) -> None:
         selected_path = str(self._selected.get("projectPath", "")) if self._selected else ""
