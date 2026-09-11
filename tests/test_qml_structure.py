@@ -45,3 +45,19 @@ def test_phase3_settings_and_readiness_ui_is_wired():
     assert "FFmpeg Discovery" in settings
     assert "System Readiness" in home
     assert "settingsController.theme" in main
+
+
+def test_phase4_media_library_ui_is_wired():
+    workspace = (QML_ROOT / "pages" / "ProjectWorkspacePage.qml").read_text(encoding="utf-8")
+    main = (QML_ROOT / "Main.qml").read_text(encoding="utf-8")
+    assets = (QML_ROOT / "pages" / "AssetsPage.qml").read_text(encoding="utf-8")
+    for component in ["MediaCard.qml", "MediaListRow.qml", "MediaDetailsDialog.qml"]:
+        assert (QML_ROOT / "components" / component).exists()
+    assert "FileDialog" in workspace
+    assert "DropArea" in workspace
+    assert "mediaController.importUrls" in workspace
+    assert "mediaController.setSearchText" in workspace
+    assert "mediaController.setTypeFilter" in workspace
+    assert "mediaController.removeMedia" in workspace
+    assert "mediaController" in main
+    assert "Open Project Media" in assets

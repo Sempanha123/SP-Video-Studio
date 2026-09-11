@@ -4,6 +4,7 @@ import logging
 import re
 import shutil
 from pathlib import Path
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from domain.project import (
@@ -18,6 +19,9 @@ from domain.project import (
 )
 from storage.json_writer import atomic_write_json, read_json
 from storage.repositories.project_repository import ProjectRepository
+
+if TYPE_CHECKING:
+    from services.media_service import MediaService
 
 
 PROJECT_DIRS = (
@@ -81,9 +85,14 @@ class ProjectService:
         self.project_root = Path(project_root).expanduser()
         self.logger = logger or logging.getLogger("sp_video_studio.projects")
         self._known_project_roots: set[Path] = {self.project_root.resolve()}
+        self._media_service: MediaService | None = None
         for existing in self.repository.list_all():
             if existing.project_path:
                 self._known_project_roots.add(Path(existing.project_path).resolve().parent)
+
+    def set_media_service(self, media_service: "MediaService") -> None:
+        """Attach Phase 4 media lifecycle integration without coupling earlier tests to it."""
+        self._media_service = media_service
 
     def set_project_root(self, project_root: Path) -> None:
         """Change the location used only for newly created projects."""
@@ -220,7 +229,14 @@ class ProjectService:
                     shutil.copytree(src, dst, dirs_exist_ok=True)
             self._write_metadata(duplicate)
             self.repository.create(duplicate)
+            if self._media_service is not None:
+                self._media_service.duplicate_project_media(source, duplicate)
         except Exception as exc:
+            try:
+                if self.repository.get_by_id(duplicate.project_id) is not None:
+                    self.repository.delete(duplicate.project_id)
+            except Exception:
+                self.logger.exception("Could not roll back duplicate project database row")
             self._cleanup_partial_project(destination, duplicate.project_id)
             self.logger.exception("Project duplication failed: %s", source.project_id)
             raise ProjectStorageError("SP Video Studio could not duplicate this project.") from exc

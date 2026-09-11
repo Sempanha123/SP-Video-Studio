@@ -176,6 +176,13 @@ ApplicationWindow {
     }
 
     Connections {
+        target: typeof mediaController !== "undefined" ? mediaController : null
+        ignoreUnknownSignals: true
+        function onOperationSucceeded(message) { toast.show(message, "success", 3000) }
+        function onOperationFailed(message) { toast.show(message, "error", 4500) }
+    }
+
+    Connections {
         target: typeof projectController !== "undefined" ? projectController : null
         ignoreUnknownSignals: true
         function onOperationSucceeded(message) { toast.show(message, "success", 2600) }

@@ -9,7 +9,7 @@ def test_database_initialization_applies_migrations(tmp_path: Path):
     db = SQLiteDatabase(tmp_path / "data" / "app.db")
     db.initialize()
     assert db.path.is_file()
-    assert db.current_version() == 1
+    assert db.current_version() == 2
 
     with db.connect() as connection:
         tables = {
@@ -20,9 +20,11 @@ def test_database_initialization_applies_migrations(tmp_path: Path):
             row["name"]
             for row in connection.execute("SELECT name FROM sqlite_master WHERE type='index'")
         }
-    assert {"schema_migrations", "projects"} <= tables
+    assert {"schema_migrations", "projects", "media_assets"} <= tables
     assert "idx_projects_updated_at" in indexes
     assert "idx_projects_last_opened_at" in indexes
+    assert "idx_media_assets_project_imported" in indexes
+    assert "idx_media_assets_project_type" in indexes
 
 
 def test_database_initialization_is_idempotent(tmp_path: Path):
@@ -31,7 +33,7 @@ def test_database_initialization_is_idempotent(tmp_path: Path):
     db.initialize()
     with db.connect() as connection:
         rows = connection.execute("SELECT version FROM schema_migrations").fetchall()
-    assert [row["version"] for row in rows] == [1]
+    assert [row["version"] for row in rows] == [1, 2]
 
 
 def test_failed_migration_rolls_back_schema_changes(tmp_path: Path, monkeypatch):
