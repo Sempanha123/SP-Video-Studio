@@ -20,12 +20,17 @@ class RenderPlan:
     subtitle_track_id: str=""
     renderer_version: str="phase15-1"
     ffmpeg_version: str=""
+    primary_audio_override: str=""
     plan_id: str=field(default_factory=lambda:str(uuid4()))
     metadata: dict[str,Any]=field(default_factory=dict)
     schema_version: int=RENDER_SPEC_SCHEMA_VERSION
 
     @property
     def id(self)->str: return self.plan_id
+
+    @property
+    def resolved_primary_audio_override(self)->str:
+        return self.primary_audio_override or str(self.settings.metadata.get("primaryAudioOverride","") or "")
 
     def validate(self)->None:
         self.settings.validate()
@@ -37,7 +42,7 @@ class RenderPlan:
             if int(item.get("durationMs",0) or 0)<=0: raise ValueError("Every render scene requires a positive duration.")
 
     def snapshot(self)->dict[str,Any]:
-        return {"schemaVersion":self.schema_version,"rendererVersion":self.renderer_version,"projectId":self.project_id,"outputPath":self.output_path,"settings":self.settings.to_dict(),"expectedDurationMs":self.expected_duration_ms,"subtitleTrackId":self.subtitle_track_id,"ffmpegVersion":self.ffmpeg_version,"scenes":self.scenes,"metadata":dict(self.metadata)}
+        return {"schemaVersion":self.schema_version,"rendererVersion":self.renderer_version,"projectId":self.project_id,"outputPath":self.output_path,"settings":self.settings.to_dict(),"expectedDurationMs":self.expected_duration_ms,"subtitleTrackId":self.subtitle_track_id,"primaryAudioOverride":self.resolved_primary_audio_override,"ffmpegVersion":self.ffmpeg_version,"scenes":self.scenes,"metadata":dict(self.metadata)}
 
 
 def expected_sequence_duration_ms(scenes:list[dict[str,Any]])->int:

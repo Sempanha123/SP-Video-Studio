@@ -58,6 +58,9 @@ class FFmpegRenderer:
             self.transition_renderer.combine(scene_files,plan.scenes,combined,expected_duration_ms=plan.expected_duration_ms,fps=plan.settings.fps,cancellation=cancellation,progress_callback=combine_progress)
             encoder=self.encoders.resolve(plan.settings.encoder,allow_fallback=plan.settings.allow_hardware_fallback)
             final_args=["-i",str(combined)]
+            audio_override=plan.resolved_primary_audio_override
+            if plan.settings.include_audio and audio_override:
+                final_args += ["-i",audio_override]
             vf=[]
             if plan.subtitle_track_id and self.subtitle_renderer:
                 ass=self.subtitle_renderer.prepare_ass(plan.project_id,plan.subtitle_track_id,temp/"project-subtitles.ass",width=plan.settings.width,height=plan.settings.height)
@@ -65,7 +68,10 @@ class FFmpegRenderer:
             vf.append("format="+plan.settings.pixel_format)
             final_args += ["-vf",",".join(vf),"-map","0:v:0","-c:v",encoder,*self.encoders.quality_args(encoder,plan.settings.quality_code),"-pix_fmt",plan.settings.pixel_format,"-r",str(plan.settings.fps)]
             if plan.settings.include_audio:
-                final_args += ["-map","0:a:0","-c:a",plan.settings.audio_codec,"-b:a",plan.settings.audio_bitrate,"-ar","48000","-ac","2"]
+                final_args += ["-map","1:a:0" if audio_override else "0:a:0","-c:a",plan.settings.audio_codec,"-b:a",plan.settings.audio_bitrate,"-ar","48000","-ac","2"]
+                if audio_override:
+                    final_args += ["-af",f"apad,atrim=duration={plan.expected_duration_ms/1000.0:.6f}","-t",f"{plan.expected_duration_ms/1000.0:.6f}"]
+                    graph.add("primary_audio_override","audio_override",inputs=[audio_override],destination="encode")
             else:
                 final_args += ["-an"]
             final_args += ["-movflags","+faststart",str(partial)]

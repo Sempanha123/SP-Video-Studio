@@ -1,0 +1,11 @@
+class DubbingError(RuntimeError): pass
+class DubSourceMissing(DubbingError): pass
+class DubTranscriptMissing(DubbingError): pass
+class DubTranslationMissing(DubbingError): pass
+class DubVoiceMissing(DubbingError): pass
+class DubGenerationError(DubbingError): pass
+class DubTimingError(DubbingError): pass
+class DubOverlapError(DubbingError): pass
+class DubAudioMixError(DubbingError): pass
+class DubOutputInvalid(DubbingError): pass
+class DubCancelled(DubbingError): pass

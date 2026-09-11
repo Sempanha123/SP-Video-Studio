@@ -2,20 +2,30 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Dialogs
+import SPVideoStudio.Phase21 1.0
 import "../theme"
 import "../components"
+import "../dubbing"
 
 Item {
     id: root
     property var controller: null
     property var playbackController: null
     property string sourceMediaId: ""
+    property bool dubMode: false
     signal navigateRequested(string page, string workflow)
     signal toastRequested(string message, string variant)
+
+    function openDubStudio() {
+        if (!root.controller) return
+        Dubbing.setCurrentProject(root.controller.currentProjectId || "")
+        root.dubMode = true
+    }
 
     ColumnLayout {
         anchors.fill: parent
         spacing: Theme.spacing.md
+        visible: !root.dubMode
 
         RowLayout {
             Layout.fillWidth: true
@@ -23,6 +33,7 @@ Item {
                 Text { text: "Translation"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.titleLarge; font.weight: Theme.type.semibold }
                 Text { text: "Translate, review and protect human edits without changing the original transcript or script."; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall }
             }
+            SecondaryButton { text: "Translate & Dub"; compact: true; onClicked: root.openDubStudio() }
             AppButton { text: "New Translation"; compact: true; onClicked: setupDialog.open() }
         }
 
@@ -124,6 +135,17 @@ Item {
         }
     }
 
+    TranslateDubStudio {
+        anchors.fill: parent
+        visible: root.dubMode
+        controller: Dubbing
+        onNavigateRequested: function(mode) {
+            if (mode === "translation") { root.dubMode = false; return }
+            if (mode === "voice") { root.navigateRequested("voices", ""); return }
+            root.toastRequested("Use the project workspace tabs to open " + mode + ".", "info")
+        }
+    }
+
     TranslationSetupDialog { id: setupDialog; controller: root.controller }
 
     FileDialog {
@@ -152,5 +174,23 @@ Item {
         ignoreUnknownSignals: true
         function onOperationSucceeded(message) { root.toastRequested(message, "success") }
         function onOperationFailed(message) { root.toastRequested(message, "error") }
+        function onContextChanged() { if (root.dubMode && root.controller) Dubbing.setCurrentProject(root.controller.currentProjectId || "") }
+    }
+
+    Connections {
+        target: Dubbing
+        function onOperationSucceeded(message) { root.toastRequested(message, "success") }
+        function onOperationFailed(message) { root.toastRequested(message, "error") }
+        function onPreviewRequested(mode) {
+            if (!root.playbackController) return
+            var paths=Dubbing.previewPaths || ({})
+            if (mode === "original") {
+                if (paths.sourceMediaId) { root.playbackController.setMedia(paths.sourceMediaId); root.playbackController.play() }
+                return
+            }
+            var path=mode === "dub" ? (paths.dub || "") : (paths.mixed || "")
+            if (path) { root.playbackController.setExternalAudio(path, mode === "dub" ? "Dub Only" : "Dubbed Mix", Number(paths.durationMs || 0)); root.playbackController.play() }
+            else root.toastRequested("Rebuild the dubbed audio mix first.", "warning")
+        }
     }
 }
