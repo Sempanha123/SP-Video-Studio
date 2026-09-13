@@ -3,9 +3,11 @@ import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import SPVideoStudio.Phase27 1.0
 import SPVideoStudio.Commands 1.0
+import SPVideoStudio.Onboarding 1.0
 import "theme"
 import "components"
 import "shortcuts"
+import "onboarding"
 ApplicationWindow {
     id: window
     width: 1360; height: 860; minimumWidth: 1080; minimumHeight: 700; visible: false
@@ -24,6 +26,10 @@ ApplicationWindow {
         if(typeof settingsController!=="undefined")
             Theme.setAccessibility(settingsController.reduceMotionEffective, settingsController.interfaceTextSize, settingsController.strongerFocusIndicator)
     }
+    function applyOnboardingPreview(){
+        Theme.setMode(Onboarding.theme)
+        Theme.setAccessibility(Onboarding.reduceMotionMode === "on", Onboarding.interfaceTextSize, typeof settingsController!=="undefined" ? settingsController.strongerFocusIndicator : false)
+    }
     function updateCommandContext(){
         Commands.setProjectOpen(window.hasOpenProject)
         if(!window.hasOpenProject) Commands.setContext("global")
@@ -38,6 +44,8 @@ ApplicationWindow {
             if(commandPalette.opened) { commandPalette.close(); return true }
             if(shortcutSettings.opened) { shortcutSettings.close(); return true }
             if(shortcutHelp.opened) { shortcutHelp.close(); return true }
+            if(quickGuide.opened) { quickGuide.close(); return true }
+            if(setupWizard.opened) { setupWizard.close(); return true }
             if(missingProjectDialog.opened) { missingProjectDialog.close(); return true }
         }
         if(pageLoader.item && typeof pageLoader.item.handleCommand === "function") return pageLoader.item.handleCommand(commandId)
@@ -50,6 +58,21 @@ ApplicationWindow {
     KeyboardShortcutHelp {
         id: shortcutHelp; parent: Overlay.overlay
         onCustomizeRequested: { close(); shortcutSettings.open() }
+    }
+    QuickGuide { id: quickGuide; parent: Overlay.overlay }
+    SetupWizard {
+        id: setupWizard
+        onProjectCreateRequested: function(title,workflow,language,aspectRatio,fps) {
+            if(typeof projectController === "undefined") return
+            var projectId = projectController.createProject(title,workflow,language,aspectRatio,fps)
+            if(projectId && projectId.length>0) {
+                Onboarding.recordFirstProject(projectId)
+                setupWizard.close()
+                window.selectedWorkflow=workflow
+                window.navigate("workspace",workflow)
+            }
+        }
+        onNavigateRequested: function(page,context){ setupWizard.close(); window.navigate(page,context) }
     }
 
     Rectangle { anchors.fill:parent; color:Theme.colors.background
@@ -71,6 +94,8 @@ ApplicationWindow {
                     }
                     Item{Layout.fillHeight:true}
                     Rectangle{Layout.fillWidth:true;Layout.preferredHeight:1;color:Theme.colors.border}
+                    SidebarItem {Layout.fillWidth:true;text:window.compactNav?"":"Getting Started";accessibleName:"Getting Started";iconName:"spark";ToolTip.visible:hovered&&window.compactNav;ToolTip.text:"Getting Started";onClicked:{Onboarding.runAgain();setupWizard.open()}}
+                    SidebarItem {Layout.fillWidth:true;text:window.compactNav?"":"Quick Guide";accessibleName:"Quick Guide";iconName:"spark";ToolTip.visible:hovered&&window.compactNav;ToolTip.text:"Quick Guide";onClicked:quickGuide.open()}
                     SidebarItem {Layout.fillWidth:true;text:window.compactNav?"":"Settings";accessibleName:"Settings";iconName:"settings";selected:window.currentPage==="settings";ToolTip.visible:hovered&&window.compactNav;ToolTip.text:"Settings";onClicked:window.navigate("settings","General")}
                 }
             }
@@ -86,6 +111,7 @@ ApplicationWindow {
                         SaveStateBadge { visible:window.currentPage==="workspace"; state:Recovery.saveState }
                         StatusBadge { visible:typeof modelController!=="undefined"&&modelController.activeModelId.length>0;text:"Model download";status:"downloading" }
                         StatusBadge { visible:window.width>1260;text:(typeof readinessController!=="undefined"&&readinessController.checking)?"Checking system":(window.readinessState().overallDisplay||"System ready");status:(typeof readinessController!=="undefined"&&readinessController.checking)?"checking":(window.readinessState().overallStatus||"ready") }
+                        IconButton { iconName:"spark"; tooltip:"Getting Started"; onClicked:{Onboarding.runAgain();setupWizard.open()} }
                         IconButton { visible:window.currentPage==="settings"; iconName:"settings"; tooltip:"Keyboard Shortcuts · " + Commands.shortcutFor("app.shortcuts"); onClicked:shortcutSettings.open() }
                         IconButton {iconName:"settings";tooltip:"Settings · " + Commands.shortcutFor("app.settings");onClicked:window.navigate("settings","General")}
                     }
@@ -95,21 +121,22 @@ ApplicationWindow {
                         onLoaded:{if(window.currentPage==="create")item.selectedWorkflow=window.selectedWorkflow;if(window.currentPage==="settings")item.section=window.settingsSection;window.updateCommandContext()}
                         Behavior on opacity{NumberAnimation{duration:Theme.animation.normal}}
                     }
-                    Connections {target:pageLoader.item;ignoreUnknownSignals:true;function onNavigateRequested(page,workflow){window.navigate(page,workflow)}function onToastRequested(message,variant){toast.show(message,variant,3000)}}
+                    Connections {target:pageLoader.item;ignoreUnknownSignals:true;function onNavigateRequested(page,workflow){window.navigate(page,workflow)}function onToastRequested(message,variant){toast.show(message,variant,3000)}function onGettingStartedRequested(){Onboarding.runAgain();setupWizard.open()}function onQuickGuideRequested(){quickGuide.open()}}
                 }
             }
         }
     }
-    Component.onCompleted:{if(typeof settingsController!=="undefined"){Theme.setMode(settingsController.theme);applyAccessibilitySettings()} if(typeof projectController!=="undefined")Recovery.setCurrentProject(projectController.currentProject.id||""); updateCommandContext(); window.visible=true}
+    Component.onCompleted:{if(typeof settingsController!=="undefined"){Theme.setMode(settingsController.theme);applyAccessibilitySettings()} if(typeof projectController!=="undefined")Recovery.setCurrentProject(projectController.currentProject.id||""); updateCommandContext(); window.visible=true; if(Onboarding.shouldShow) setupWizard.open()}
     onActiveChanged: Commands.setWindowActive(active)
     onHasOpenProjectChanged: updateCommandContext()
     Connections{target:Commands;function onPaletteRequested(){commandPalette.open()}function onShortcutsRequested(){shortcutHelp.open()}function onCommandTriggered(commandId){if(!window.dispatchGlobalCommand(commandId)&&commandId.indexOf("app.")===0)toast.show("That command is not available here.","info",2200)}function onOperationFailed(message){toast.show(message,"error",3600)}}
     Connections{target:typeof settingsController!=="undefined"?settingsController:null;ignoreUnknownSignals:true;function onSettingsChanged(){Theme.setMode(settingsController.theme);window.applyAccessibilitySettings()}function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}}
+    Connections{target:Onboarding;function onChanged(){window.applyOnboardingPreview()}function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}function onCloseRequested(){setupWizard.close()}function onOpenModelsRequested(){setupWizard.close();window.navigate("models","")}function onOpenTemplatesRequested(){setupWizard.close();window.navigate("templates","")}function onOpenSettingsRequested(section){setupWizard.close();window.navigate("settings",section)}}
     Connections{target:typeof projectController!=="undefined"?projectController:null;ignoreUnknownSignals:true;function onCurrentProjectChanged(){Recovery.setCurrentProject(projectController.currentProject.id||"");window.updateCommandContext()}function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}function onMissingProjectDetected(projectId){window.missingProjectId=projectId;missingProjectDialog.open()}}
     Connections{target:Recovery;function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}}
     AppDialog {id:missingProjectDialog;width:Math.min(470,window.width-48);parent:Overlay.overlay;x:(parent.width-width)/2;y:(parent.height-height)/2;header:null;footer:null;closePolicy:Popup.CloseOnEscape
         onOpened: Commands.setModalOpen(true)
-        onClosed: Commands.setModalOpen(commandPalette.opened || shortcutSettings.opened || shortcutHelp.opened)
+        onClosed: Commands.setModalOpen(commandPalette.opened || shortcutSettings.opened || shortcutHelp.opened || quickGuide.opened || setupWizard.opened)
         contentItem:ColumnLayout{spacing:Theme.spacing.lg;Text{text:"Project files could not be found";color:Theme.colors.textPrimary;font.family:Theme.type.family;font.pixelSize:Theme.type.sectionTitle;font.weight:Theme.type.semibold}Text{Layout.fillWidth:true;text:"The project is still in your library, but its folder is missing. Keep the entry or remove only the library record.";wrapMode:Text.WordWrap;color:Theme.colors.textSecondary;font.family:Theme.type.family;font.pixelSize:Theme.type.bodySmall}RowLayout{Layout.fillWidth:true;Item{Layout.fillWidth:true}AppButton{text:"Keep Entry";variant:"secondary";onClicked:missingProjectDialog.close()}AppButton{text:"Remove from Library";variant:"danger";onClicked:{if(typeof projectController!=="undefined"&&projectController.removeFromLibrary(window.missingProjectId))missingProjectDialog.close()}}}}
     }
     Toast{id:toast;anchors.horizontalCenter:parent.horizontalCenter;anchors.bottom:parent.bottom;anchors.bottomMargin:Theme.spacing.xl}

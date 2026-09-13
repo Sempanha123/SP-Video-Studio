@@ -38,3 +38,11 @@ Phase 34 refines the existing Phase 28 desktop UI instead of redesigning it. Sha
 Timeline, Speech/TTS, Subtitle, Audio Mixer, Assets, Templates, Batch, News, Story, Dub, Shorts, Export, Recovery, Storage and Settings receive targeted accessibility semantics and clearer empty/error/progress states. Khmer, Thai and Vietnamese typography is explicitly covered by Phase 34 contract tests. No formal WCAG or complete screen-reader certification is claimed without a real Windows accessibility audit.
 
 See `docs/PHASE34_ACCESSIBILITY_FINAL_UX.md` for architecture, focus/navigation rules, contrast/status semantics, reduced motion, text/DPI behavior, multilingual typography, feature-specific accessibility and known limitations.
+
+## Phase 35 — Onboarding + First-Run Experience
+
+Phase 35 adds a short, optional first-run experience without changing the existing editor or requiring AI. Explicit onboarding state/version is persisted separately from normal preferences, while language, theme, accessibility, project-folder and performance choices continue through the existing Settings, Language Registry, System Readiness, Model Manager and Phase 31 performance services. Existing configured installations migrate to completed onboarding instead of being forced through a new-user wizard.
+
+The setup flow covers content language, appearance, projects folder, system readiness, optional AI features, and a quick first-project path. Model installation is never automatic: onboarding hands explicit install/manage actions to the existing Model Manager, and Continue Without AI always remains available. Getting Started and a compact Quick Guide can be reopened later without resetting projects, assets or models.
+
+See `docs/PHASE35_ONBOARDING_FIRST_RUN.md` for first-run detection, onboarding versioning, readiness/model behavior, safe rerun rules, first-project integration, contextual tips and known limitations.
