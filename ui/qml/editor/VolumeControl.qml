@@ -11,6 +11,7 @@ RowLayout {
 
     IconButton {
         iconName: root.controller && root.controller.muted ? "mute" : "volume"
+        accessibleName: root.controller && root.controller.muted ? "Unmute preview audio" : "Mute preview audio"
         tooltip: root.controller && root.controller.muted ? "Unmute (M)" : "Mute (M)"
         enabled: root.controller !== null
         onClicked: if (root.controller) root.controller.toggleMute()
@@ -23,9 +24,13 @@ RowLayout {
         to: 100
         value: root.controller ? root.controller.volume : 100
         enabled: root.controller !== null
+        Accessible.name: "Preview volume, " + Math.round(value) + " percent"
+        Accessible.role: Accessible.Slider
         onMoved: if (root.controller) root.controller.setVolume(Math.round(value))
+        onValueChanged: if (activeFocus && !pressed && root.controller) root.controller.setVolume(Math.round(value))
         ToolTip.visible: hovered
         ToolTip.text: Math.round(value) + "%"
+        ToolTip.delay: Theme.tooltipDelay
 
         Connections {
             target: root.controller

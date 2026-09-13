@@ -8,6 +8,7 @@ import "../WorkflowData.js" as WorkflowData
 Item {
     id: root
     property string selectedWorkflow: "news"
+    property string projectNameError: ""
     signal navigateRequested(string page, string workflow)
     signal toastRequested(string message, string variant)
 
@@ -30,10 +31,11 @@ Item {
     }
     function createProject() {
         if (projectName.text.trim().length === 0) {
-            root.toastRequested("Enter a project name before creating the project.", "warning")
+            root.projectNameError = "Project name is required."
             projectName.forceActiveFocus()
             return
         }
+        root.projectNameError = ""
         if (typeof projectController === "undefined") {
             root.toastRequested("Project services are not available.", "error")
             return
@@ -123,22 +125,23 @@ Item {
                             Layout.columnSpan: width < 760 ? 2 : 1
                             Layout.fillWidth: true; spacing: Theme.spacing.xs
                             Text { text: "Project Name"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.label }
-                            AppTextField { id: projectName; Layout.fillWidth: true; placeholderText: "My video project"; maximumLength: 120 }
+                            AppTextField { id: projectName; Layout.fillWidth: true; accessibleName: "Project Name"; placeholderText: "My video project"; maximumLength: 120; onTextChanged: if (text.trim().length > 0) root.projectNameError = "" }
+                            Text { visible: root.projectNameError.length > 0; Layout.fillWidth: true; text: root.projectNameError; color: Theme.colors.danger; font.family: Theme.type.family; font.pixelSize: Theme.type.caption; Accessible.role: Accessible.AlertMessage; Accessible.name: text }
                         }
                         ColumnLayout {
                             Layout.fillWidth: true; spacing: Theme.spacing.xs
                             Text { text: "Language"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.label }
-                            AppComboBox { id: languageBox; Layout.fillWidth: true; model: ["English", "Khmer"] }
+                            AppComboBox { id: languageBox; Layout.fillWidth: true; accessibleName: "Project language"; model: ["English", "Khmer"] }
                         }
                         ColumnLayout {
                             Layout.fillWidth: true; spacing: Theme.spacing.xs
                             Text { text: "Aspect Ratio"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.label }
-                            AppComboBox { id: ratioBox; Layout.fillWidth: true; model: ["9:16", "16:9", "1:1"] }
+                            AppComboBox { id: ratioBox; Layout.fillWidth: true; accessibleName: "Project aspect ratio"; model: ["9:16", "16:9", "1:1"] }
                         }
                         ColumnLayout {
                             Layout.fillWidth: true; spacing: Theme.spacing.xs
                             Text { text: "FPS"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.label }
-                            AppComboBox { id: fpsBox; Layout.fillWidth: true; model: [24, 25, 30, 50, 60]; currentIndex: 2 }
+                            AppComboBox { id: fpsBox; Layout.fillWidth: true; accessibleName: "Project frame rate"; model: [24, 25, 30, 50, 60]; currentIndex: 2 }
                         }
                     }
 

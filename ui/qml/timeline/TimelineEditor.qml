@@ -25,6 +25,12 @@ FocusScope {
     signal toastRequested(string message,string variant)
     signal openStoryboardRequested()
     focus: true
+    activeFocusOnTab: true
+    Accessible.name: root.controller ? "Timeline editor. Current time " + root.controller.playheadAccessibleText : "Timeline editor"
+    Accessible.description: "Use Left and Right to move the playhead. Use Up and Down to move clip selection. Phase 33 shortcuts remain available."
+    Accessible.role: Accessible.Pane
+    Keys.onUpPressed: function(event) { if(root.controller && !Commands.textEditing) { root.controller.selectRelativeClip(-1); event.accepted=true } }
+    Keys.onDownPressed: function(event) { if(root.controller && !Commands.textEditing) { root.controller.selectRelativeClip(1); event.accepted=true } }
 
     function claimContext(){ if(root.activeFocus && !Commands.textEditing) Commands.setContext("timeline") }
     function copyTimelineSelection(){

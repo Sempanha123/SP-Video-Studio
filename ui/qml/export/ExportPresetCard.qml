@@ -13,10 +13,12 @@ AppCard {
     signal deleteRequested()
     implicitWidth: 210
     implicitHeight: 142
+    interactive: true
+    accessibleName: (preset.name || "Export preset") + ". " + (preset.aspectRatio || "") + ". " + (preset.width || 0) + " by " + (preset.height || 0) + ". " + (preset.fps || 30) + " FPS."
+    onClicked: root.chosen()
     border.color: selected ? Theme.colors.accent : Theme.colors.border
     border.width: selected ? 2 : 1
 
-    MouseArea { anchors.fill: parent; onClicked: root.chosen() }
     ColumnLayout {
         anchors.fill: parent; anchors.margins: Theme.spacing.md; spacing: Theme.spacing.xs
         RowLayout {

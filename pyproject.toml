@@ -21,8 +21,8 @@ tts = ["voxcpm>=2.0.3,<3", "soundfile>=0.13,<1"]
 translation = ["transformers>=5.17,<6", "torch>=2.5", "sentencepiece>=0.2,<1"]
 
 [project.scripts]
-# Phase 33 layers centralized command/shortcut productivity on Phase 32.
-sp-video-studio = "app.phase33_runtime:run"
+# Phase 34 layers accessibility and final creator UX polish on Phase 33.
+sp-video-studio = "app.phase34_runtime:run"
 
 [tool.pytest.ini_options]
 addopts = "-ra"

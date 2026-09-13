@@ -1,5 +1,6 @@
 import QtQuick 2.15
 import SPVideoStudio.ManualSpeech 1.0
+import SPVideoStudio.Commands 1.0
 import "../theme"
 
 Item {
@@ -23,12 +24,12 @@ Item {
     function sceneIndexForX(px){var clips=track.clips||[],scenes=[];for(var i=0;i<clips.length;i++)if(clips[i].sourceType==="scene_video"||clips[i].sourceType==="scene_image")scenes.push(clips[i]);for(var j=0;j<scenes.length;j++){var mid=(Number(scenes[j].startMs)+Number(scenes[j].durationMs)/2)/1000*pixelsPerSecond;if(px<mid)return j}return Math.max(0,scenes.length-1)}
     function speechTiming(id,start,end){if(ManualSpeech.setTimingMs(id,Math.max(0,Math.round(start)),Math.max(Math.round(start)+1,Math.round(end)))){if(root.controller)root.controller.refresh();return true}return false}
     Repeater {
-        model:root.visibleClips
+        model: root.visibleClips
         delegate:TimelineClip {
             required property var modelData
-            clipData:modelData;pixelsPerSecond:root.pixelsPerSecond;trackLocked:!!root.track.locked
-            selected:root.controller&&root.controller.selectedClip.id===modelData.id;clipColor:root.accent(root.track.type)
-            onActivated:function(id){if(root.controller)root.controller.selectClip(id)}
+            clipData:modelData;pixelsPerSecond:root.pixelsPerSecond;trackLocked:!!root.track.locked;trackName:String(root.track.name||root.track.type||"Timeline track");trackType:String(root.track.type||"")
+            selected:root.controller&&root.controller.isSelected(modelData.id);clipColor:root.accent(root.track.type)
+            onActivated:function(id,modifiers){if(root.controller){root.forceActiveFocus();Commands.setContext("timeline");root.controller.toggleClipSelection(id,(modifiers&Qt.ControlModifier)!==0)}}
             onMoveDropped:function(data,xpos){if(!root.controller)return;var ms=Math.max(0,Math.round(xpos/root.pixelsPerSecond*1000));ms=root.controller.snapTime(ms);if(data.sourceType==="scene_video"||data.sourceType==="scene_image")root.controller.reorderScene(data.sourceId,root.sceneIndexForX(xpos));else if(data.sourceType==="subtitle")root.controller.setSubtitleTiming(data.sourceId,ms,ms+Number(data.durationMs));else if(data.sourceType==="scene_overlay")root.controller.setOverlayTiming(data.sourceId,ms,ms+Number(data.durationMs));else if(data.sourceType==="speech_block")root.speechTiming(data.sourceId,ms,ms+Number(data.durationMs))}
             onTrimRightDropped:function(data,dx){if(!root.controller)return;var delta=Math.round(dx/root.pixelsPerSecond*1000),end=Math.max(Number(data.startMs)+100,Number(data.endMs)+delta);if(data.sourceType==="scene_video"||data.sourceType==="scene_image")root.controller.trimSceneRight(data.sourceId,Math.max(100,Number(data.durationMs)+delta));else if(data.sourceType==="subtitle")root.controller.setSubtitleTiming(data.sourceId,Number(data.startMs),end);else if(data.sourceType==="scene_overlay")root.controller.setOverlayTiming(data.sourceId,Number(data.startMs),end);else if(data.sourceType==="speech_block")root.speechTiming(data.sourceId,Number(data.startMs),end)}
             onTrimLeftDropped:function(data,dx){if(!root.controller)return;var delta=Math.round(dx/root.pixelsPerSecond*1000);if((data.sourceType==="scene_video"||data.sourceType==="scene_image")&&delta>0)root.controller.trimSceneLeft(data.sourceId,delta);else if(data.sourceType==="subtitle")root.controller.setSubtitleTiming(data.sourceId,Math.max(0,Number(data.startMs)+delta),Number(data.endMs));else if(data.sourceType==="scene_overlay")root.controller.setOverlayTiming(data.sourceId,Math.max(0,Number(data.startMs)+delta),Number(data.endMs));else if(data.sourceType==="speech_block")root.speechTiming(data.sourceId,Math.max(0,Number(data.startMs)+delta),Number(data.endMs))}

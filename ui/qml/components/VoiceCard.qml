@@ -20,7 +20,8 @@ AppCard {
     signal favoriteRequested(string voiceId)
 
     selected: isSelected
-    implicitHeight: 176
+    accessibleName: root.voiceName + ". " + root.languageName + ". " + root.category + ". " + (root.recommended ? "Recommended. " : "") + (root.voiceType === "preset" ? "Preset voice" : "Custom voice")
+    implicitHeight: Math.max(176, Math.round(176 * Theme.textScale))
 
     ColumnLayout {
         anchors.fill: parent
@@ -37,11 +38,24 @@ AppCard {
             }
             ColumnLayout {
                 Layout.fillWidth: true; spacing: 1
-                Text { Layout.fillWidth: true; text: root.voiceName; elide: Text.ElideRight; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.heading; font.weight: Theme.type.semibold }
+                Text {
+                    id: voiceNameLabel
+                    Layout.fillWidth: true
+                    text: root.voiceName
+                    elide: Text.ElideRight
+                    color: Theme.colors.textPrimary
+                    font.family: Theme.type.family
+                    font.pixelSize: Theme.type.heading
+                    font.weight: Theme.type.semibold
+                    ToolTip.visible: voiceNameHover.hovered && voiceNameLabel.truncated
+                    ToolTip.text: root.voiceName
+                    ToolTip.delay: Theme.tooltipDelay
+                    HoverHandler { id: voiceNameHover }
+                }
                 Text { Layout.fillWidth: true; text: root.category + "  •  " + root.languageName; elide: Text.ElideRight; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
             }
             StatusBadge { visible: root.recommended; text: "Recommended"; status: "ready" }
-            IconButton { iconName: root.favorite ? "heart-filled" : "heart"; tooltip: root.favorite ? "Remove favorite" : "Favorite"; onClicked: root.favoriteRequested(root.voiceId) }
+            IconButton { iconName: root.favorite ? "heart-filled" : "heart"; accessibleName: root.favorite ? "Remove voice from favorites" : "Add voice to favorites"; tooltip: root.favorite ? "Remove favorite" : "Favorite"; onClicked: root.favoriteRequested(root.voiceId) }
         }
 
         Text {
@@ -59,7 +73,7 @@ AppCard {
             Layout.fillWidth: true
             spacing: Theme.spacing.sm
             SecondaryButton { text: root.isSelected ? "Selected" : "Select"; compact: true; enabled: !root.isSelected; onClicked: root.selectRequested(root.voiceId) }
-            AppButton { text: "Preview"; iconName: "play"; compact: true; variant: "secondary"; onClicked: { root.selectRequested(root.voiceId); root.previewRequested(root.voiceId) } }
+            AppButton { text: "Preview"; accessibleName: "Preview " + root.voiceName; iconName: "play"; compact: true; variant: "secondary"; onClicked: { root.selectRequested(root.voiceId); root.previewRequested(root.voiceId) } }
             Item { Layout.fillWidth: true }
             Text { text: root.voiceType === "preset" ? "Preset" : (root.voiceType === "reference" ? "Reference" : "Designed"); color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: 10 }
         }

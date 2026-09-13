@@ -8,7 +8,7 @@ import "components"
 import "shortcuts"
 ApplicationWindow {
     id: window
-    width: 1360; height: 860; minimumWidth: 1080; minimumHeight: 700; visible: true
+    width: 1360; height: 860; minimumWidth: 1080; minimumHeight: 700; visible: false
     title: "MMO Video Studio"; color: Theme.colors.background
     property string currentPage: "home"
     property string selectedWorkflow: "news"
@@ -20,6 +20,10 @@ ApplicationWindow {
     function pageSource(key) { var sources={home:"pages/HomePage.qml",create:"pages/CreatePage.qml",projects:"pages/ProjectsPage.qml",workspace:"pages/ProjectWorkspacePage.qml",batch:"pages/BatchPage.qml",voices:"pages/VoicesPage.qml",templates:"pages/TemplatesPage.qml",assets:"pages/AssetsPage.qml",models:"pages/ModelsPage.qml",settings:"pages/SettingsPage.qml"}; return Qt.resolvedUrl(sources[key]||sources.home) }
     function navigate(page,context){ currentPage=page; if(page==="settings"){if(context)settingsSection=context}else if(context)selectedWorkflow=context; updateCommandContext() }
     function readinessState(){return typeof readinessController!=="undefined"?readinessController.readiness:({})}
+    function applyAccessibilitySettings(){
+        if(typeof settingsController!=="undefined")
+            Theme.setAccessibility(settingsController.reduceMotionEffective, settingsController.interfaceTextSize, settingsController.strongerFocusIndicator)
+    }
     function updateCommandContext(){
         Commands.setProjectOpen(window.hasOpenProject)
         if(!window.hasOpenProject) Commands.setContext("global")
@@ -63,11 +67,11 @@ ApplicationWindow {
                     }
                     Rectangle {Layout.fillWidth:true;Layout.preferredHeight:1;color:Theme.colors.border;Layout.bottomMargin:Theme.spacing.xs}
                     Repeater { model:[{k:"home",t:"Home",i:"home"},{k:"create",t:"Create",i:"plus-square"},{k:"projects",t:"Projects",i:"projects"},{k:"batch",t:"Batch",i:"batch"},{k:"voices",t:"Voices",i:"mic"},{k:"templates",t:"Templates",i:"template"},{k:"assets",t:"Assets",i:"assets"},{k:"models",t:"Models",i:"models"}]
-                        delegate: SidebarItem { required property var modelData; Layout.fillWidth:true; text:window.compactNav?"":modelData.t; iconName:modelData.i; selected:window.currentPage===modelData.k||(modelData.k==="projects"&&window.currentPage==="workspace"); ToolTip.visible:hovered&&window.compactNav;ToolTip.text:modelData.t; onClicked:window.navigate(modelData.k,modelData.k==="create"?window.selectedWorkflow:"") }
+                        delegate: SidebarItem { required property var modelData; Layout.fillWidth:true; text:window.compactNav?"":modelData.t; accessibleName:modelData.t; iconName:modelData.i; selected:window.currentPage===modelData.k||(modelData.k==="projects"&&window.currentPage==="workspace"); ToolTip.visible:hovered&&window.compactNav;ToolTip.text:modelData.t; onClicked:window.navigate(modelData.k,modelData.k==="create"?window.selectedWorkflow:"") }
                     }
                     Item{Layout.fillHeight:true}
                     Rectangle{Layout.fillWidth:true;Layout.preferredHeight:1;color:Theme.colors.border}
-                    SidebarItem {Layout.fillWidth:true;text:window.compactNav?"":"Settings";iconName:"settings";selected:window.currentPage==="settings";ToolTip.visible:hovered&&window.compactNav;ToolTip.text:"Settings";onClicked:window.navigate("settings","General")}
+                    SidebarItem {Layout.fillWidth:true;text:window.compactNav?"":"Settings";accessibleName:"Settings";iconName:"settings";selected:window.currentPage==="settings";ToolTip.visible:hovered&&window.compactNav;ToolTip.text:"Settings";onClicked:window.navigate("settings","General")}
                 }
             }
             ColumnLayout { Layout.fillWidth:true;Layout.fillHeight:true;spacing:0
@@ -96,11 +100,11 @@ ApplicationWindow {
             }
         }
     }
-    Component.onCompleted:{if(typeof settingsController!=="undefined")Theme.setMode(settingsController.theme); if(typeof projectController!=="undefined")Recovery.setCurrentProject(projectController.currentProject.id||""); updateCommandContext()}
+    Component.onCompleted:{if(typeof settingsController!=="undefined"){Theme.setMode(settingsController.theme);applyAccessibilitySettings()} if(typeof projectController!=="undefined")Recovery.setCurrentProject(projectController.currentProject.id||""); updateCommandContext(); window.visible=true}
     onActiveChanged: Commands.setWindowActive(active)
     onHasOpenProjectChanged: updateCommandContext()
     Connections{target:Commands;function onPaletteRequested(){commandPalette.open()}function onShortcutsRequested(){shortcutHelp.open()}function onCommandTriggered(commandId){if(!window.dispatchGlobalCommand(commandId)&&commandId.indexOf("app.")===0)toast.show("That command is not available here.","info",2200)}function onOperationFailed(message){toast.show(message,"error",3600)}}
-    Connections{target:typeof settingsController!=="undefined"?settingsController:null;ignoreUnknownSignals:true;function onSettingsChanged(){Theme.setMode(settingsController.theme)}function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}}
+    Connections{target:typeof settingsController!=="undefined"?settingsController:null;ignoreUnknownSignals:true;function onSettingsChanged(){Theme.setMode(settingsController.theme);window.applyAccessibilitySettings()}function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}}
     Connections{target:typeof projectController!=="undefined"?projectController:null;ignoreUnknownSignals:true;function onCurrentProjectChanged(){Recovery.setCurrentProject(projectController.currentProject.id||"");window.updateCommandContext()}function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}function onMissingProjectDetected(projectId){window.missingProjectId=projectId;missingProjectDialog.open()}}
     Connections{target:Recovery;function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}}
     AppDialog {id:missingProjectDialog;width:Math.min(470,window.width-48);parent:Overlay.overlay;x:(parent.width-width)/2;y:(parent.height-height)/2;header:null;footer:null;closePolicy:Popup.CloseOnEscape

@@ -9,12 +9,13 @@ AppCard {
     property var controller
     property var output: controller ? controller.lastOutput : ({})
     signal anotherVersionRequested()
+    accessibleName: "Export complete. " + (output.name || "Exported video")
     implicitHeight: 205
     ColumnLayout {
         anchors.fill: parent; anchors.margins: Theme.spacing.lg; spacing: Theme.spacing.md
         RowLayout { Layout.fillWidth: true
             ColumnLayout { Layout.fillWidth: true; spacing:2
-                Text { text:"Video Ready"; color:Theme.colors.success; font.family:Theme.type.family; font.pixelSize:Theme.type.heading; font.weight:Theme.type.semibold }
+                Text { text:"Export complete"; color:Theme.colors.success; font.family:Theme.type.family; font.pixelSize:Theme.type.heading; font.weight:Theme.type.semibold }
                 Text { Layout.fillWidth:true; text:root.output.name || "Exported video"; elide:Text.ElideMiddle; color:Theme.colors.textPrimary; font.family:Theme.type.family; font.pixelSize:Theme.type.body }
             }
             StatusBadge { text:"Completed"; status:"ready" }

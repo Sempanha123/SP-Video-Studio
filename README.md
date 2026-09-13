@@ -30,3 +30,11 @@ Phase 33 adds one centralized command/shortcut registry, context-aware dispatch,
 The shortcut router protects native text editing, blocks background shortcuts behind modal dialogs and inactive windows, and keeps mouse workflows unchanged. Timeline playback/editing, Speech/TTS navigation/generation, source-range commands, media/audio command definitions and project Undo/Redo are exposed through the shared command layer.
 
 See `docs/PHASE33_KEYBOARD_SHORTCUTS_PRODUCTIVITY.md` for command architecture, contexts, default shortcuts, focus rules, customization/conflicts, Timeline/Speech integration, Undo/Redo behavior and tests.
+
+## Phase 34 — Accessibility + Final UX Polish
+
+Phase 34 refines the existing Phase 28 desktop UI instead of redesigning it. Shared controls now expose accessible names/roles, predictable soft focus indicators, delayed tooltips, stronger light/dark contrast, semantic status labels, bounded interface text scaling, reduced-motion preferences, and high-DPI-friendly startup behavior. Modal focus restoration and keyboard navigation build on the centralized Phase 33 command layer without duplicating shortcuts.
+
+Timeline, Speech/TTS, Subtitle, Audio Mixer, Assets, Templates, Batch, News, Story, Dub, Shorts, Export, Recovery, Storage and Settings receive targeted accessibility semantics and clearer empty/error/progress states. Khmer, Thai and Vietnamese typography is explicitly covered by Phase 34 contract tests. No formal WCAG or complete screen-reader certification is claimed without a real Windows accessibility audit.
+
+See `docs/PHASE34_ACCESSIBILITY_FINAL_UX.md` for architecture, focus/navigation rules, contrast/status semantics, reduced motion, text/DPI behavior, multilingual typography, feature-specific accessibility and known limitations.

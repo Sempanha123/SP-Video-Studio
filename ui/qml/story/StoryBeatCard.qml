@@ -1,13 +1,19 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import SPVideoStudio.Commands 1.0
 import "../theme"
 import "../components"
 Rectangle {
     id: root
     property var beat
     property var controller
-    width: parent ? parent.width : 600; height: 126; radius: Theme.radius.medium; color: Theme.colors.surface2; border.color: beat.locked ? Theme.colors.warning : Theme.colors.border
+    width: parent ? parent.width : 600; height: Math.max(126, Math.round(126*Theme.textScale)); radius: Theme.radius.medium; color: Theme.colors.surface2; border.color: beat.locked ? Theme.colors.warning : Theme.colors.border
+    activeFocusOnTab: true
+    Accessible.role: Accessible.ListItem
+    Accessible.name: "Beat " + String((beat.order||0)+1) + ". " + (beat.type||"custom").replaceAll("_"," ") + ". " + (beat.title||"Untitled beat") + ". Duration " + Math.round((beat.targetDurationMs||0)/1000) + " seconds" + (beat.locked ? ". Locked" : "")
+    Keys.onReturnPressed: function(event){ root.openEditor(); event.accepted=true }
+    Keys.onSpacePressed: function(event){ root.openEditor(); event.accepted=true }
     function openEditor() {
         titleField.text=beat.title||""; descriptionField.text=beat.description||""; durationField.text=String(beat.targetDurationMs||5000)
         visualField.text=beat.visualDirection||""; characterField.text=beat.characterId||""; notesField.text=beat.notes||""; lockCheck.checked=!!beat.locked
@@ -25,16 +31,16 @@ Rectangle {
         }
         SecondaryButton { text:"Edit"; compact:true; onClicked:root.openEditor() }
         SecondaryButton { text: beat.locked ? "Locked" : "Lock"; compact: true; onClicked: if (root.controller) root.controller.updateBeat(beat.id,beat.title,beat.description,beat.targetDurationMs,beat.type,beat.visualDirection,!beat.locked) }
-        SecondaryButton { text: "↑"; compact: true; onClicked: if(root.controller) root.controller.moveBeat(beat.id,-1) }
-        SecondaryButton { text: "↓"; compact: true; onClicked: if(root.controller) root.controller.moveBeat(beat.id,1) }
+        SecondaryButton { text: "↑"; compact: true; accessibleName: "Move beat up"; tooltip: "Move Beat Up"; onClicked: if(root.controller) root.controller.moveBeat(beat.id,-1) }
+        SecondaryButton { text: "↓"; compact: true; accessibleName: "Move beat down"; tooltip: "Move Beat Down"; onClicked: if(root.controller) root.controller.moveBeat(beat.id,1) }
         SecondaryButton { text: "Copy"; compact: true; onClicked: if(root.controller) root.controller.duplicateBeat(beat.id) }
-        IconButton { iconName: "trash"; tooltip: "Delete beat only; linked production items remain"; onClicked: if(root.controller) root.controller.deleteBeat(beat.id) }
+        IconButton { iconName: "trash"; accessibleName: "Delete story beat"; tooltip: "Delete beat only; linked production items remain"; onClicked: if(root.controller) root.controller.deleteBeat(beat.id) }
     }
-    Dialog {
-        id:editDialog; modal:true; anchors.centerIn:Overlay.overlay; width:Math.min(680,root.Window.width-48); title:"Edit Story Beat"; standardButtons:Dialog.NoButton
+    AppDialog {
+        id:editDialog; modal:true; initialFocusItem:titleField; onOpened:Commands.setModalOpen(true); onClosed:Commands.setModalOpen(false); anchors.centerIn:Overlay.overlay; width:Math.min(680,root.Window.width-48); title:"Edit Story Beat"; standardButtons:Dialog.NoButton
         ColumnLayout { width:parent.width; spacing:Theme.spacing.sm
             AppTextField { id:titleField; Layout.fillWidth:true; placeholderText:"Beat title" }
-            TextArea { id:descriptionField; Layout.fillWidth:true; Layout.preferredHeight:90; placeholderText:"Narrative purpose / description"; wrapMode:TextEdit.Wrap; color:Theme.colors.textPrimary; background:Rectangle { radius:Theme.radius.medium; color:Theme.colors.surface2; border.color:Theme.colors.border } }
+            TextArea { id:descriptionField; Accessible.name:"Story beat description"; Accessible.role:Accessible.EditableText; Layout.fillWidth:true; Layout.preferredHeight:90; placeholderText:"Narrative purpose / description"; wrapMode:TextEdit.Wrap; color:Theme.colors.textPrimary; background:Rectangle { radius:Theme.radius.medium; color:Theme.colors.surface2; border.color:Theme.colors.border } }
             RowLayout { Layout.fillWidth:true
                 AppComboBox { id:typeBox; Layout.fillWidth:true; model:["hook","setup","context","character","development","conflict","discovery","turning_point","climax","resolution","lesson","outro","problem","struggle","explanation","example","current_state","closing","custom"] }
                 AppComboBox { id:emotionBox; Layout.fillWidth:true; model:["neutral","warm","tense","hopeful","sad","excited","calm"] }

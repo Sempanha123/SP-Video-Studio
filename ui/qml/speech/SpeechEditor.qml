@@ -13,6 +13,10 @@ FocusScope {
     property string projectId: ""
     property string scriptSectionId: ""
     signal toastRequested(string message, string variant)
+    activeFocusOnTab: true
+    Accessible.name: "Speech and TTS editor"
+    Accessible.description: "Use Up and Down to navigate speech blocks, Enter to edit, and Escape to leave editing."
+    Accessible.role: Accessible.Pane
 
     function rowSelected(id) { return controller && controller.selectedIds.indexOf(id) >= 0 }
     function claimContext(){ if(root.activeFocus) Commands.setContext("speech_editor") }
@@ -89,23 +93,37 @@ FocusScope {
         }
 
         RowLayout { Layout.fillWidth: true; visible: controller.busy; spacing: Theme.spacing.sm
-            ProgressBar { Layout.fillWidth: true; from: 0; to: Math.max(1, controller.generationTotal); value: controller.generationCurrent }
+            SoftProgressBar { Layout.fillWidth: true; from: 0; to: Math.max(1, controller.generationTotal); value: controller.generationCurrent; accessibleName: "Speech generation " + controller.generationCurrent + " of " + controller.generationTotal }
             Text { text: "Generating " + controller.generationCurrent + " / " + controller.generationTotal + " · " + controller.generationLabel; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
             SecondaryButton { text: "Cancel Remaining"; compact: true; onClicked: controller.cancelGeneration() }
         }
 
         RowLayout { Layout.fillWidth: true; spacing: 0
             Repeater { model: ["Select","Start","End","Speaker","Lang","Text","Voice Profile","Duration Status","Audio Status","Actions"]; delegate: Rectangle { required property string modelData; height: 30; width: modelData === "Text" ? 310 : (modelData === "Select" ? 46 : 104); color: Theme.colors.surfaceRaised; border.color: Theme.colors.border
-                Text { anchors.centerIn: parent; text: modelData; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption; font.weight: Theme.type.semibold }
+                Text { anchors.centerIn: parent; text: modelData; Accessible.name: modelData === "Start" ? "Start time" : (modelData === "End" ? "End time" : modelData); Accessible.role: Accessible.StaticText; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption; font.weight: Theme.type.semibold }
             } }
         }
 
-        SplitView { Layout.fillWidth: true; Layout.fillHeight: true; orientation: Qt.Horizontal
+        FriendlyEmptyState {
+            visible: controller && controller.rows.length === 0
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            iconName: "mic"
+            title: "No speech blocks yet"
+            description: "Add a line manually, import from a transcript, or create speech blocks from your script."
+            action: AppButton { text: "Add Speech"; accessibleName: "Add Speech"; onClicked: controller.addSpeech(root.scriptSectionId, "New speech") }
+        }
+
+        SplitView { visible: !controller || controller.rows.length > 0; Layout.fillWidth: true; Layout.fillHeight: true; orientation: Qt.Horizontal
             ListView {
                 id: table
                 focus: true
                 SplitView.fillWidth: true; SplitView.minimumWidth: 780; clip: true; model: controller.rows; spacing: 1; reuseItems: true; cacheBuffer: 160
                 onActiveFocusChanged: if(activeFocus && root.editingId==="") { Commands.setTextEditing(false); Commands.setContext("speech_editor") }
+                Keys.onUpPressed: function(event){ if(root.editingId==="" && controller){ controller.selectRelative(-1); event.accepted=true } }
+                Keys.onDownPressed: function(event){ if(root.editingId==="" && controller){ controller.selectRelative(1); event.accepted=true } }
+                Keys.onReturnPressed: function(event){ if(root.editingId==="" && controller && controller.selectedRow && controller.selectedRow.id){ root.editingId=String(controller.selectedRow.id); event.accepted=true } }
+                Keys.onEscapePressed: function(event){ if(root.editingId!==""){ root.editingId=""; table.forceActiveFocus(Qt.TabFocusReason); event.accepted=true } else if(controller && controller.selectedCount>0){ controller.clearSelection(); event.accepted=true } }
                 delegate: SpeechRow {
                     required property var modelData
                     width: table.width; rowData: modelData; selected: root.rowSelected(modelData.id); editing: root.editingId === modelData.id

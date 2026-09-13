@@ -10,14 +10,22 @@ Slider {
     to: controller ? Math.max(1, controller.duration) : 1
     enabled: controller ? controller.seekEnabled : false
     value: 0
+    Accessible.name: "Playback position, " + (Math.max(0, Math.round(value)) / 1000).toFixed(1) + " seconds"
+    Accessible.role: Accessible.Slider
+    property bool initialized: false
+    property bool syncing: false
 
     function syncPosition() {
-        if (!pressed && controller)
+        if (!pressed && controller) {
+            syncing = true
             value = controller.position
+            syncing = false
+        }
     }
 
-    Component.onCompleted: syncPosition()
-    onMoved: { }
+    Component.onCompleted: { syncPosition(); initialized = true }
+    onMoved: if (controller && enabled) controller.seek(Math.round(value))
+    onValueChanged: if (initialized && !syncing && activeFocus && !pressed && controller && enabled) controller.seek(Math.round(value))
     onPressedChanged: {
         if (!pressed && controller && enabled)
             controller.seek(Math.round(value))

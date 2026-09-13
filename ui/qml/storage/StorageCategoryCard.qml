@@ -13,6 +13,7 @@ AppCard {
     property bool manageable: true
     signal manageRequested()
     implicitHeight: 138
+    accessibleName: title + ". " + sizeText + ". " + safetyLabel() + ". " + description
 
     function safetyLabel() {
         if (safety === "safe_to_clear") return "Safe to Clear"

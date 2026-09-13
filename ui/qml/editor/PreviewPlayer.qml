@@ -4,10 +4,12 @@ import QtQuick.Layouts 1.15
 import QtMultimedia
 import "../components"
 import "../theme"
+import SPVideoStudio.Commands 1.0
 
 FocusScope {
     id: root
     property var controller
+    property string commandContext: ""
     focus: true
 
     function loadSelection() {
@@ -18,30 +20,8 @@ FocusScope {
             player.source = root.controller.sourceUrl
     }
 
-    Keys.onSpacePressed: function(event) {
-        if (root.controller && (root.controller.selectedType === "video" || root.controller.selectedType === "audio")) {
-            root.controller.togglePlayback()
-            event.accepted = true
-        }
-    }
-    Keys.onLeftPressed: function(event) {
-        if (root.controller) {
-            root.controller.keyboardSeek(-1, (event.modifiers & Qt.ShiftModifier) !== 0)
-            event.accepted = true
-        }
-    }
-    Keys.onRightPressed: function(event) {
-        if (root.controller) {
-            root.controller.keyboardSeek(1, (event.modifiers & Qt.ShiftModifier) !== 0)
-            event.accepted = true
-        }
-    }
-    Keys.onPressed: function(event) {
-        if (root.controller && event.key === Qt.Key_M && event.modifiers === Qt.NoModifier) {
-            root.controller.toggleMute()
-            event.accepted = true
-        }
-    }
+    onActiveFocusChanged: if (activeFocus && commandContext.length>0 && !Commands.textEditing) Commands.setContext(commandContext)
+
 
     Rectangle {
         anchors.fill: parent

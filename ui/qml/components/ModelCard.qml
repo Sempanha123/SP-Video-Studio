@@ -15,6 +15,7 @@ AppCard {
     signal removePartialRequested(string modelId)
 
     Layout.fillWidth: true
+    accessibleName: (dataMap.name || "AI Model") + ". " + (dataMap.purpose === "voice" ? "Text to Speech" : "Speech to Text") + ". Status " + String(dataMap.status || "not installed").replaceAll("_", " ") + ". " + (dataMap.compatibility || "compatibility unknown")
     Layout.preferredHeight: dataMap.status === "downloading" || dataMap.status === "verifying" ? 300 : 248
 
     ColumnLayout {
@@ -41,7 +42,20 @@ AppCard {
                 spacing: 1
                 RowLayout {
                     Layout.fillWidth: true
-                    Text { text: dataMap.name || "AI Model"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.heading; font.weight: Theme.type.semibold }
+                    Text {
+                        id: modelNameLabel
+                        Layout.fillWidth: true
+                        text: dataMap.name || "AI Model"
+                        elide: Text.ElideRight
+                        color: Theme.colors.textPrimary
+                        font.family: Theme.type.family
+                        font.pixelSize: Theme.type.heading
+                        font.weight: Theme.type.semibold
+                        ToolTip.visible: modelNameHover.hovered && modelNameLabel.truncated
+                        ToolTip.text: modelNameLabel.text
+                        ToolTip.delay: Theme.tooltipDelay
+                        HoverHandler { id: modelNameHover }
+                    }
                     StatusBadge { visible: dataMap.recommended === true; text: "Recommended"; status: "ready" }
                     Item { Layout.fillWidth: true }
                 }

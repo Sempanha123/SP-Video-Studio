@@ -10,6 +10,9 @@ Rectangle {
     property string actionText: ""
     property string variant: "info"
     signal actionClicked()
+    Accessible.role: Accessible.Note
+    Accessible.name: root.title !== "" ? root.title : (root.variant === "warning" ? "Warning" : "Information")
+    Accessible.description: root.description !== "" ? root.description : root.text
 
     implicitHeight: content.implicitHeight + Theme.spacing.md * 2
     radius: Theme.radius.medium

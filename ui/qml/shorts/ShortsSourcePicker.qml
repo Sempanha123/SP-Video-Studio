@@ -2,11 +2,13 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import SPVideoStudio.Phase23 1.0
+import SPVideoStudio.Commands 1.0
 import "../theme"
 import "../components"
 
 AppCard {
     id:root
+    onActiveFocusChanged: if(activeFocus && !Commands.textEditing) Commands.setContext("source_editor")
     property var timelineController
     property var selectedTranscriptIds: []
     property var transcriptRows: []
@@ -37,8 +39,8 @@ AppCard {
         AppComboBox { id:media; Layout.fillWidth:true; model:Shorts.mediaOptions; textRole:"name" }
         RowLayout {
             Layout.fillWidth:true
-            SecondaryButton { text:"Set In"; onClicked:if(root.timelineController) Shorts.setIn(root.timelineController.playheadMs) }
-            SecondaryButton { text:"Set Out"; onClicked:if(root.timelineController) Shorts.setOut(root.timelineController.playheadMs) }
+            SecondaryButton { text:"Set In"; shortcutHint:"I"; onClicked:if(root.timelineController) Shorts.setIn(root.timelineController.playheadMs) }
+            SecondaryButton { text:"Set Out"; shortcutHint:"O"; onClicked:if(root.timelineController) Shorts.setOut(root.timelineController.playheadMs) }
             SecondaryButton { text:"Add Range"; compact:true; onClicked:root.addCurrentRange() }
             Text { Layout.fillWidth:true; text: "In " + (Number((Shorts.settings.metadata||{}).inMs||0)/1000).toFixed(1) + "s · Out " + (Number((Shorts.settings.metadata||{}).outMs||0)/1000).toFixed(1) + "s"; color:Theme.colors.textMuted; font.family:Theme.type.family; font.pixelSize:Theme.type.caption; elide:Text.ElideRight }
         }

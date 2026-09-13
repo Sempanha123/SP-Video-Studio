@@ -1,26 +1,28 @@
 import QtQuick 2.15
 QtObject {
+    property real scale: 1.0
     readonly property string family: "Segoe UI"
     readonly property string unicodeFallback: "Noto Sans"
     readonly property string khmerFallback: "Noto Sans Khmer"
     readonly property string thaiFallback: "Noto Sans Thai"
-    readonly property int display: 24
-    readonly property int titleLarge: 22
-    readonly property int pageTitle: 22
-    readonly property int title: 18
-    readonly property int titleMedium: 17
-    readonly property int sectionTitle: 16
-    readonly property int heading: 15
-    readonly property int bodyStrong: 14
-    readonly property int body: 14
-    readonly property int bodySmall: 13
-    readonly property int small: 12
-    readonly property int caption: 12
-    readonly property int label: 12
-    readonly property int button: 13
-    readonly property int timeline: 11
-    readonly property real normalLineHeight: 1.35
-    readonly property real multilingualLineHeight: 1.5
+    function px(base) { return Math.max(9, Math.round(base * scale)) }
+    readonly property int display: px(24)
+    readonly property int titleLarge: px(22)
+    readonly property int pageTitle: px(22)
+    readonly property int title: px(18)
+    readonly property int titleMedium: px(17)
+    readonly property int sectionTitle: px(16)
+    readonly property int heading: px(15)
+    readonly property int bodyStrong: px(14)
+    readonly property int body: px(14)
+    readonly property int bodySmall: px(13)
+    readonly property int small: px(12)
+    readonly property int caption: px(12)
+    readonly property int label: px(12)
+    readonly property int button: px(13)
+    readonly property int timeline: px(11)
+    readonly property real normalLineHeight: 1.38
+    readonly property real multilingualLineHeight: 1.58
     readonly property int regular: 400
     readonly property int medium: 500
     readonly property int semibold: 600

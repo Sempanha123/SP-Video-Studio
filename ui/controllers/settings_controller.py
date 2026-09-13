@@ -10,6 +10,7 @@ from PySide6.QtGui import QDesktopServices
 from app.paths import AppPaths
 from domain.settings import AppSettings
 from media.ffmpeg_locator import FFmpegLocator
+from services.accessibility_service import AccessibilityService
 from services.project_service import ProjectService
 from services.settings_service import SettingsService
 from workers.worker_pool import WorkerPool
@@ -41,6 +42,7 @@ class SettingsController(QObject):
         self.ffmpeg_locator = ffmpeg_locator
         self.worker_pool = worker_pool
         self.logger = logger
+        self.accessibility = AccessibilityService(service)
         self._validating_media_tool = False
         self._mediaToolValidationReady.connect(self._apply_media_tool_validation)
         self._mediaToolValidationFailed.connect(self._apply_media_tool_validation_error)
@@ -109,6 +111,26 @@ class SettingsController(QObject):
     def readinessOnStartup(self) -> bool:
         return self.current.readiness_check_on_startup
 
+    @Property(str, notify=settingsChanged)
+    def reduceMotionMode(self) -> str:
+        return self.accessibility.current().reduce_motion_mode
+
+    @Property(bool, notify=settingsChanged)
+    def reduceMotionEffective(self) -> bool:
+        return self.accessibility.current().reduce_motion_effective
+
+    @Property(str, notify=settingsChanged)
+    def interfaceTextSize(self) -> str:
+        return self.accessibility.current().interface_text_size
+
+    @Property(float, notify=settingsChanged)
+    def interfaceTextScale(self) -> float:
+        return self.accessibility.current().text_scale
+
+    @Property(bool, notify=settingsChanged)
+    def strongerFocusIndicator(self) -> bool:
+        return self.accessibility.current().stronger_focus_indicator
+
     @Property(bool, notify=mediaToolValidationChanged)
     def mediaToolValidating(self) -> bool:
         return self._validating_media_tool
@@ -164,6 +186,33 @@ class SettingsController(QObject):
     @Slot(bool)
     def setReadinessOnStartup(self, value: bool) -> None:
         self._update(readiness_check_on_startup=value)
+
+    @Slot(str)
+    def setReduceMotion(self, value: str) -> None:
+        try:
+            self.accessibility.set_reduce_motion(value)
+            self.settingsChanged.emit()
+        except Exception as exc:
+            self.logger.exception("Reduce Motion update failed")
+            self.operationFailed.emit(str(exc) or "Reduce Motion could not be updated.")
+
+    @Slot(str)
+    def setInterfaceTextSize(self, value: str) -> None:
+        try:
+            self.accessibility.set_interface_text_size(value)
+            self.settingsChanged.emit()
+        except Exception as exc:
+            self.logger.exception("Interface text size update failed")
+            self.operationFailed.emit(str(exc) or "Interface text size could not be updated.")
+
+    @Slot(bool)
+    def setStrongerFocusIndicator(self, value: bool) -> None:
+        try:
+            self.accessibility.set_stronger_focus_indicator(value)
+            self.settingsChanged.emit()
+        except Exception as exc:
+            self.logger.exception("Focus indicator preference update failed")
+            self.operationFailed.emit(str(exc) or "Focus indicator preference could not be updated.")
 
     @Slot(str, result=bool)
     def setProjectFolder(self, value: str) -> bool:

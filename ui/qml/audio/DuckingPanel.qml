@@ -15,11 +15,20 @@ AppCard {
                 Text { text:"Lower music while speaking";color:Theme.colors.textPrimary;font.family:Theme.type.family;font.pixelSize:Theme.type.bodySmall;font.weight:Theme.type.semibold }
                 Text { text:"Timing-based ducking follows voice clips and returns smoothly between speech.";color:Theme.colors.textMuted;font.family:Theme.type.family;font.pixelSize:Theme.type.caption;wrapMode:Text.WordWrap;Layout.fillWidth:true }
             }
-            AppSwitch { checked:root.enabledDucking;onToggled:{root.enabledDucking=checked;if(root.controller)root.controller.setMusicDucking(checked,root.amountDb)} }
+            AppSwitch { accessibleName:"Lower music while speaking"; checked:root.enabledDucking;onToggled:{root.enabledDucking=checked;if(root.controller)root.controller.setMusicDucking(checked,root.amountDb)} }
         }
         RowLayout { Layout.fillWidth:true;enabled:root.enabledDucking
             Text { text:"Duck";color:Theme.colors.textSecondary;font.family:Theme.type.family;font.pixelSize:Theme.type.caption }
-            Slider { Layout.fillWidth:true;from:-24;to:-3;value:root.amountDb;stepSize:1;onPressedChanged:{if(!pressed){root.amountDb=value;if(root.controller)root.controller.setMusicDucking(root.enabledDucking,value)}} }
+            Slider {
+                id: duckAmount
+                Layout.fillWidth:true; from:-24; to:-3; value:root.amountDb; stepSize:1
+                Accessible.name:"Music ducking amount, "+Number(value).toFixed(0)+" decibels"
+                Accessible.role:Accessible.Slider
+                property bool initialized:false
+                Component.onCompleted:initialized=true
+                onValueChanged:if(initialized&&activeFocus&&!pressed){root.amountDb=value;if(root.controller)root.controller.setMusicDucking(root.enabledDucking,value)}
+                onPressedChanged:{if(!pressed){root.amountDb=value;if(root.controller)root.controller.setMusicDucking(root.enabledDucking,value)}}
+            }
             Text { text:root.amountDb.toFixed(0)+" dB";color:Theme.colors.textSecondary;font.family:Theme.type.family;font.pixelSize:Theme.type.caption }
         }
     }

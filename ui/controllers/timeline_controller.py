@@ -6,11 +6,17 @@ from PySide6.QtCore import QObject, Property, Signal, Slot
 
 from services.timeline_edit_service import TimelineInvalidOperation
 from services.timeline_service import TimelineService
+from services.focus_navigation_service import FocusNavigationService
+from services.project_clipboard_service import shared_project_clipboard
 
 
 def _time_text(ms:int)->str:
     value=max(0,int(ms)); h=value//3600000; m=(value//60000)%60; s=(value//1000)%60; milli=value%1000
     return f"{h:02d}:{m:02d}:{s:02d}.{milli:03d}" if h else f"{m:02d}:{s:02d}.{milli:03d}"
+
+def _accessible_time_text(ms:int)->str:
+    value=max(0,int(ms)); h=value//3600000; m=(value//60000)%60; s=(value//1000)%60; milli=value%1000
+    return f"{h:02d}:{m:02d}:{s:02d}.{milli:03d}"
 
 
 class TimelineController(QObject):
@@ -19,7 +25,7 @@ class TimelineController(QObject):
 
     def __init__(self,service:TimelineService,logger=None,parent=None):
         super().__init__(parent); self.service=service; self.logger=logger or logging.getLogger("sp_video_studio.timeline_controller")
-        self._project_id=""; self._state={}; self._tracks=[]; self._markers=[]; self._issues=[]; self._selected={}; self._preview_scene_id=""; self._flat={}
+        self._project_id=""; self._state={}; self._tracks=[]; self._markers=[]; self._issues=[]; self._selected={}; self._selected_ids:set[str]=set(); self._preview_scene_id=""; self._flat={}; self.clipboard=shared_project_clipboard()
 
     @Property(str,notify=timelineChanged)
     def currentProjectId(self): return self._project_id
@@ -31,6 +37,8 @@ class TimelineController(QObject):
     def issues(self): return self._issues
     @Property('QVariantMap',notify=selectionChanged)
     def selectedClip(self): return dict(self._selected)
+    @Property('QVariantList',notify=selectionChanged)
+    def selectedClipIds(self): return list(self._selected_ids)
     @Property(int,notify=timelineChanged)
     def durationMs(self): return int(self._state.get("durationMs",0) or 0)
     @Property(str,notify=timelineChanged)
@@ -39,6 +47,8 @@ class TimelineController(QObject):
     def playheadMs(self): return int(self._state.get("playheadMs",0) or 0)
     @Property(str,notify=playheadChanged)
     def playheadText(self): return _time_text(self.playheadMs)
+    @Property(str,notify=playheadChanged)
+    def playheadAccessibleText(self): return _accessible_time_text(self.playheadMs)
     @Property(float,notify=timelineChanged)
     def pixelsPerSecond(self): return float(self._state.get("pixelsPerSecond",80.0) or 80.0)
     @Property(bool,notify=timelineChanged)
@@ -56,7 +66,7 @@ class TimelineController(QObject):
     def setCurrentProject(self,project_id:str):
         value=(project_id or "").strip()
         if value==self._project_id:return
-        self._project_id=value; self._preview_scene_id=""; self._selected={}; self.service.edits.clear_history(); self.refresh(); self.historyChanged.emit()
+        self._project_id=value; self._preview_scene_id=""; self._selected={}; self._selected_ids.clear(); self.service.edits.clear_history(); self.refresh(); self.historyChanged.emit()
 
     @Slot()
     def refresh(self):
@@ -72,12 +82,43 @@ class TimelineController(QObject):
                     item=clip.to_dict(); clips.append(item); self._flat[clip.id]=item
                 row=track.to_dict(); row["clips"]=clips; row["clipCount"]=len(clips); rows.append(row)
             self._tracks=rows; self._markers=[m.to_dict() for m in data["markers"]]; self._issues=[{"severity":x.severity,"code":x.code,"message":x.message,"clipId":x.clip_id} for x in data["issues"]]; self._state=state.to_dict()
-            sid=str(self._state.get("selectedClipId","") or ""); self._selected=dict(self._flat.get(sid,{})); self.timelineChanged.emit(); self.selectionChanged.emit(); self.playheadChanged.emit()
+            sid=str(self._state.get("selectedClipId","") or ""); self._selected=dict(self._flat.get(sid,{})); self._selected_ids={sid} if sid and sid in self._flat else set(); self.timelineChanged.emit(); self.selectionChanged.emit(); self.playheadChanged.emit()
         except Exception as exc: self._fail(exc)
 
     @Slot(str)
     def selectClip(self,clip_id:str):
-        self._selected=dict(self._flat.get(clip_id,{})); self.service.save_editor_state(self._project_id,selected_clip_id=clip_id if self._selected else ""); self.selectionChanged.emit()
+        self._selected=dict(self._flat.get(clip_id,{})); self._selected_ids={clip_id} if self._selected else set(); self.service.save_editor_state(self._project_id,selected_clip_id=clip_id if self._selected else ""); self.selectionChanged.emit()
+    @Slot(str,bool)
+    def toggleClipSelection(self,clip_id:str,toggle:bool=True):
+        if clip_id not in self._flat:return
+        if not toggle:self._selected_ids={clip_id}
+        elif clip_id in self._selected_ids:self._selected_ids.remove(clip_id)
+        else:self._selected_ids.add(clip_id)
+        self._selected=dict(self._flat.get(next(iter(self._selected_ids),""),{}));self.selectionChanged.emit()
+    @Slot(str,result=bool)
+    def isSelected(self,clip_id:str):return clip_id in self._selected_ids
+    @Slot()
+    def clearSelection(self):
+        self._selected={};self._selected_ids.clear();self.service.save_editor_state(self._project_id,selected_clip_id="");self.selectionChanged.emit()
+    @Slot()
+    def selectAllClips(self):
+        self._selected_ids=set(self._flat);self._selected=dict(self._flat.get(next(iter(self._selected_ids),""),{}));self.selectionChanged.emit()
+
+    @Slot(int,result=bool)
+    def selectRelativeClip(self,direction:int):
+        ordered=[]
+        for track_index,track in enumerate(self._tracks):
+            for clip in list(track.get("clips") or []):
+                ordered.append((int(clip.get("startMs",0) or 0),track_index,str(clip.get("id","") or "")))
+        ordered=[item for item in sorted(ordered,key=lambda x:(x[0],x[1],x[2])) if item[2]]
+        if not ordered:return False
+        ids=[item[2] for item in ordered]
+        current_id=str(self._selected.get("id","") or "")
+        if current_id in ids:index=ids.index(current_id)
+        else:index=FocusNavigationService.nearest_index([item[0] for item in ordered],self.playheadMs)
+        target=FocusNavigationService.next_index(index,len(ids),int(direction),wrap=False)
+        if target<0:return False
+        self.selectClip(ids[target]);return True
 
     @Slot(int,bool)
     def seekProject(self,position_ms:int,autoplay:bool=False):
@@ -143,16 +184,92 @@ class TimelineController(QObject):
         if not mapped or mapped[0]!=scene_id:return self._reject("The playhead must be inside the selected clip.")
         return self._edit(lambda:self.service.edits.split_scene(self._project_id,scene_id,mapped[1]),"Scene split")
     @Slot(result=bool)
+    def copySelected(self):
+        selected=[self._flat[x] for x in self._selected_ids if x in self._flat]
+        if len(selected)!=1 or selected[0].get("sourceType") not in {"scene_video","scene_image"}:return self._reject("Copy currently supports one scene clip at a time.")
+        try:self.clipboard.copy(self._project_id,"timeline_clip",{"clip":dict(selected[0])},cut=False);return True
+        except Exception as exc:self._fail(exc);return False
+    @Slot(result=bool)
+    def cutSelected(self):
+        selected=[self._flat[x] for x in self._selected_ids if x in self._flat]
+        if len(selected)!=1 or selected[0].get("sourceType") not in {"scene_video","scene_image"}:return self._reject("Cut currently supports one scene clip at a time.")
+        try:self.clipboard.copy(self._project_id,"timeline_clip",{"clip":dict(selected[0])},cut=True);return True
+        except Exception as exc:self._fail(exc);return False
+    @Slot(result=bool)
+    def pasteAtPlayhead(self):
+        try:data=self.clipboard.paste_payload(self._project_id,{"timeline_clip"})
+        except Exception:return self._reject("Nothing compatible is available to paste in this project.")
+        clip=data.get("clip") or {};source=str(clip.get("sourceId",""))
+        if clip.get("sourceType") not in {"scene_video","scene_image"} or not source:return self._reject("That clipboard item cannot be pasted here.")
+        try:
+            clone_id=self.service.edits.duplicate_scene(self._project_id,source)
+            ranges=self.service.mapping.scene_ranges(self._project_id);target=next((i for i,r in enumerate(ranges) if int(r.get("endMs",0))>=self.playheadMs),max(0,len(ranges)-1))
+            self.service.edits.reorder_scene(self._project_id,clone_id,target)
+            item=self.clipboard.item
+            if item is not None and item.cut:
+                self.service.edits.delete_scene(self._project_id,source);self.clipboard.clear()
+            self.refresh();self.selectClip(f"scene:{clone_id}");self.historyChanged.emit();return True
+        except Exception as exc:self._fail(exc);return False
+    @Slot(result=bool)
+    def trimStartToPlayhead(self):
+        if self._selected.get("sourceType") not in {"scene_video","scene_image"}:return self._reject("Select a scene clip first.")
+        start=int(self._selected.get("startMs",0));amount=self.playheadMs-start
+        if amount<=0:return self._reject("Move the playhead inside the selected clip.")
+        return self.trimSceneLeft(str(self._selected.get("sourceId","")),amount)
+    @Slot(result=bool)
+    def trimEndToPlayhead(self):
+        if self._selected.get("sourceType") not in {"scene_video","scene_image"}:return self._reject("Select a scene clip first.")
+        start=int(self._selected.get("startMs",0));duration=self.playheadMs-start
+        if duration<=0:return self._reject("Move the playhead inside the selected clip.")
+        return self.trimSceneRight(str(self._selected.get("sourceId","")),duration)
+    @Slot(int,result=bool)
+    def moveSelectedPosition(self,direction:int):
+        if self._selected.get("sourceType") not in {"scene_video","scene_image"}:return self._reject("Select a scene clip first.")
+        ranges=self.service.mapping.scene_ranges(self._project_id);ids=[str(x.get("sceneId","")) for x in ranges];source=str(self._selected.get("sourceId",""))
+        if source not in ids:return False
+        index=ids.index(source);target=max(0,min(len(ids)-1,index+(1 if int(direction)>=0 else -1)))
+        return self.reorderScene(source,target)
+
+    def _selected_clips(self):
+        clips=[self._flat[x] for x in self._selected_ids if x in self._flat]
+        if not clips and self._selected:
+            clips=[self._selected]
+        return sorted(clips,key=lambda c:(int(c.get("startMs",0)),str(c.get("id",""))))
+
+    @Slot(result=bool)
     def duplicateSelected(self):
-        if self._selected.get("sourceType") not in {"scene_video","scene_image"}: return self._reject("This clip cannot be duplicated here.")
-        return self._edit(lambda:self.service.edits.duplicate_scene(self._project_id,str(self._selected.get("sourceId",""))),"Scene duplicated")
+        clips=self._selected_clips()
+        if not clips:return self._reject("Select a clip first.")
+        if any(c.get("sourceType") not in {"scene_video","scene_image"} for c in clips):
+            return self._reject("Duplicate supports selected scene clips only; mixed Timeline types are not duplicated together.")
+        try:
+            created=[]
+            for clip in clips:
+                created.append(self.service.edits.duplicate_scene(self._project_id,str(clip.get("sourceId",""))))
+            self.refresh();self._selected_ids={f"scene:{x}" for x in created};self.selectionChanged.emit();self.historyChanged.emit();self.operationSucceeded.emit(f"{len(created)} scene{'s' if len(created)!=1 else ''} duplicated")
+            return True
+        except Exception as exc:self._fail(exc);return False
+
     @Slot(result=bool)
     def deleteSelected(self):
-        kind=str(self._selected.get("sourceType","")); source=str(self._selected.get("sourceId",""))
-        if kind in {"scene_video","scene_image"}: return self._edit(lambda:self.service.edits.delete_scene(self._project_id,source),"Scene deleted")
-        if kind=="scene_overlay":
-            scene_id=str(self._selected.get("metadata",{}).get("sceneId","")); return self._edit(lambda:self.service.edits.delete_overlay(self._project_id,scene_id,source),"Overlay deleted")
-        return self._reject("Use its source editor to remove this clip safely.")
+        clips=self._selected_clips()
+        if not clips:return self._reject("Select a Timeline item first.")
+        kinds={str(c.get("sourceType","")) for c in clips}
+        scene_kinds={"scene_video","scene_image"}
+        if kinds.issubset(scene_kinds):
+            try:
+                for clip in reversed(clips):self.service.edits.delete_scene(self._project_id,str(clip.get("sourceId","")))
+                self._selected_ids.clear();self._selected={};self.refresh();self.selectionChanged.emit();self.historyChanged.emit();self.operationSucceeded.emit(f"{len(clips)} scene{'s' if len(clips)!=1 else ''} deleted")
+                return True
+            except Exception as exc:self._fail(exc);return False
+        if kinds=={"scene_overlay"}:
+            try:
+                for clip in reversed(clips):
+                    scene_id=str(clip.get("metadata",{}).get("sceneId",""));self.service.edits.delete_overlay(self._project_id,scene_id,str(clip.get("sourceId","")))
+                self._selected_ids.clear();self._selected={};self.refresh();self.selectionChanged.emit();self.historyChanged.emit();self.operationSucceeded.emit(f"{len(clips)} overlay{'s' if len(clips)!=1 else ''} deleted")
+                return True
+            except Exception as exc:self._fail(exc);return False
+        return self._reject("Mixed or generated Timeline selections cannot be deleted together. Use the owning source editor for those items.")
 
     @Slot(str,int,int,result=bool)
     def setOverlayTiming(self,overlay_id:str,start_ms:int,end_ms:int):

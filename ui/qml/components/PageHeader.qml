@@ -11,8 +11,8 @@ Item {
         anchors.fill: parent; spacing: Theme.spacing.lg
         ColumnLayout {
             Layout.fillWidth: true; spacing: 2
-            Text { Layout.fillWidth: true; text: root.title; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.pageTitle; font.weight: Theme.type.semibold; elide: Text.ElideRight }
-            Text { visible: root.description.length > 0; Layout.fillWidth: true; text: root.description; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.small; wrapMode: Text.WordWrap; maximumLineCount: 2 }
+            Text { Layout.fillWidth: true; text: root.title; Accessible.role: Accessible.Heading; Accessible.name: root.title; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.pageTitle; font.weight: Theme.type.semibold; elide: Text.ElideRight }
+            Text { visible: root.description.length > 0; Layout.fillWidth: true; text: root.description; Accessible.name: root.description; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.small; wrapMode: Text.WordWrap; maximumLineCount: 2 }
         }
         RowLayout { id: actionHost; spacing: Theme.spacing.sm }
     }

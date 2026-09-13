@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import QtQuick.Dialogs
+import SPVideoStudio.Commands 1.0
 import "../theme"
 import "../components"
 import "../editor"
@@ -24,10 +25,15 @@ Item {
     signal navigateRequested(string page, string workflow)
     signal toastRequested(string message, string variant)
 
-    Shortcut { sequence: "Ctrl+E"; onActivated: root.setWorkspaceMode("export") }
-
     function current() {
         return typeof projectController !== "undefined" ? projectController.currentProject : ({})
+    }
+
+    function shortcutContextForMode(mode) {
+        if (mode === "timeline") return "timeline"
+        if (mode === "subtitles") return "subtitle_editor"
+        if (mode === "media") return "media_library"
+        return "project"
     }
 
     function selectMedia(mediaId) {
@@ -71,6 +77,7 @@ Item {
         if (mode === "story" && typeof storyController !== "undefined")
             storyController.setCurrentProject(root.current().id || "")
         root.workspaceMode = mode
+        Commands.setContext(root.shortcutContextForMode(mode))
     }
 
     function leaveWorkspace() {
@@ -99,6 +106,7 @@ Item {
     }
 
     Component.onCompleted: {
+        Commands.setContext(root.shortcutContextForMode(root.workspaceMode))
         if (typeof mediaController !== "undefined")
             mediaController.setCurrentProject(root.current().id || "")
         if (typeof playbackController !== "undefined")
@@ -467,6 +475,7 @@ Item {
                 SplitView.minimumWidth: workspaceSplit.orientation === Qt.Horizontal ? 420 : 0
                 SplitView.minimumHeight: workspaceSplit.orientation === Qt.Vertical ? 300 : 0
                 controller: typeof playbackController !== "undefined" ? playbackController : null
+                commandContext: root.workspaceMode === "media" ? "media_library" : "project"
             }
         }
 
@@ -749,4 +758,29 @@ Item {
             }
         }
     }
+    Connections {
+        target: Commands
+        function onCommandRequested(commandId) {
+            if (commandId === "workspace.export") { root.setWorkspaceMode("export"); return }
+            if (Commands.activeContext === "media_library") {
+                if (commandId === "media.import") importDialog.open()
+                else if (commandId === "media.remove" && root.selectedMediaId.length>0) {
+                    var item=mediaController.mediaDetails(root.selectedMediaId); root.requestRemove(root.selectedMediaId,item.name||"media")
+                }
+                else if (commandId === "media.preview" && root.selectedMediaId.length>0) root.selectMedia(root.selectedMediaId)
+                else if (commandId === "media.search") { searchField.forceActiveFocus(); searchField.selectAll() }
+            }
+            if (root.workspaceMode !== "timeline" && typeof playbackController !== "undefined") {
+                if (commandId === "playback.toggle") playbackController.togglePlayback()
+                else if (commandId === "playback.start") playbackController.seek(0)
+                else if (commandId === "playback.end") playbackController.seek(playbackController.duration)
+                else if (commandId === "playback.seek_back") playbackController.keyboardSeek(-1,false)
+                else if (commandId === "playback.seek_forward") playbackController.keyboardSeek(1,false)
+                else if (commandId === "playback.seek_back_large") playbackController.keyboardSeek(-1,true)
+                else if (commandId === "playback.seek_forward_large") playbackController.keyboardSeek(1,true)
+                else if (commandId === "playback.mute") playbackController.toggleMute()
+            }
+        }
+    }
+
 }

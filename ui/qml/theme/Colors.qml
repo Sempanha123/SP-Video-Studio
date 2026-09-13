@@ -17,8 +17,8 @@ QtObject {
 
     readonly property color textPrimary: darkMode ? "#F1F0F5" : "#25232B"
     readonly property color textSecondary: darkMode ? "#BBB8C4" : "#615D6A"
-    readonly property color textMuted: darkMode ? "#8D8996" : "#8C8795"
-    readonly property color textDisabled: darkMode ? "#64616B" : "#B3AFB9"
+    readonly property color textMuted: darkMode ? "#A39EAC" : "#6F6A78"
+    readonly property color textDisabled: darkMode ? "#8E8997" : "#8A8591"
     readonly property color onAccent: "#FFFFFF"
     readonly property color overlayScrim: darkMode ? "#990E0F12" : "#6623212B"
 
@@ -27,13 +27,13 @@ QtObject {
     readonly property color accentPressed: darkMode ? "#887BC2" : "#685B9F"
     readonly property color accentSoft: darkMode ? "#302D45" : "#F0EDFA"
 
-    readonly property color success: darkMode ? "#77B79A" : "#4A8B70"
+    readonly property color success: darkMode ? "#77B79A" : "#36785F"
     readonly property color successSoft: darkMode ? "#24372F" : "#ECF6F1"
-    readonly property color warning: darkMode ? "#D0AD70" : "#A87931"
+    readonly property color warning: darkMode ? "#D0AD70" : "#8B6328"
     readonly property color warningSoft: darkMode ? "#3C3426" : "#FBF4E8"
-    readonly property color danger: darkMode ? "#D9858D" : "#B85C65"
+    readonly property color danger: darkMode ? "#D9858D" : "#9F4752"
     readonly property color dangerSoft: darkMode ? "#402B2E" : "#F9ECEE"
-    readonly property color info: darkMode ? "#80A7C9" : "#5A7FA2"
+    readonly property color info: darkMode ? "#80A7C9" : "#476B8C"
     readonly property color infoSoft: darkMode ? "#283745" : "#EDF3F8"
 
     readonly property color previewBackground: darkMode ? "#111216" : "#17181D"

@@ -7,6 +7,7 @@ import SPVideoStudio.Phase31 1.0
 import "../theme"
 import "../components"
 import "../storage"
+import "../accessibility"
 
 Item {
     id: root
@@ -86,7 +87,7 @@ Item {
                     Layout.bottomMargin: Theme.spacing.sm
                 }
                 Repeater {
-                    model: ["General", "Appearance", "Projects", "Performance", "Rendering", "Storage", "Advanced"]
+                    model: ["General", "Appearance", "Projects", "Performance", "Rendering", "Keyboard Shortcuts", "Accessibility", "Storage", "Advanced"]
                     delegate: SidebarItem {
                         required property string modelData
                         Layout.fillWidth: true
@@ -121,6 +122,8 @@ Item {
                             if (root.section === "Projects") return "Choose where new projects are created."
                             if (root.section === "Performance") return "Tune performance and review system readiness."
                             if (root.section === "Rendering") return "Set defaults for future rendering workflows."
+                            if (root.section === "Keyboard Shortcuts") return "Search, customize and reset keyboard shortcuts safely."
+                            if (root.section === "Accessibility") return "Motion, text size and keyboard focus preferences."
                             if (root.section === "Storage") return "Review storage usage, safe cache cleanup and disk health."
                             return "Diagnostics and advanced application preferences."
                         }
@@ -366,6 +369,48 @@ Item {
                         description: "Hardware encoder discovery arrives with the rendering phase."
                         StatusBadge { text: "Auto"; status: "ready" }
                     }
+                }
+
+                SettingsSection {
+                    visible: root.section === "Keyboard Shortcuts"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 620
+                    title: "Keyboard Shortcuts"
+                    description: "Mouse actions remain available. Conflicts are detected only where shortcut contexts overlap."
+                    Loader { Layout.fillWidth: true; Layout.fillHeight: true; source: Qt.resolvedUrl("../shortcuts/ShortcutSettings.qml") }
+                }
+
+                SettingsSection {
+                    visible: root.section === "Accessibility"
+                    Layout.fillWidth: true
+                    title: "Accessibility"
+                    description: "Preferences apply immediately and persist across restarts. They do not change project or export content."
+                    SettingsRow {
+                        title: "Reduce Motion"
+                        description: "Minimize non-essential fades, hover lift and panel animation while keeping progress feedback visible."
+                        RowLayout {
+                            spacing: Theme.spacing.sm
+                            RadioCard { Layout.preferredWidth: 154; implicitHeight: 62; title: "Follow System"; value: "system"; selected: settingsController.reduceMotionMode === value; onChosen: settingsController.setReduceMotion(value) }
+                            RadioCard { Layout.preferredWidth: 112; implicitHeight: 62; title: "On"; value: "on"; selected: settingsController.reduceMotionMode === value; onChosen: settingsController.setReduceMotion(value) }
+                            RadioCard { Layout.preferredWidth: 112; implicitHeight: 62; title: "Off"; value: "off"; selected: settingsController.reduceMotionMode === value; onChosen: settingsController.setReduceMotion(value) }
+                        }
+                    }
+                    SettingsRow {
+                        title: "Interface Text Size"
+                        description: "Large increases shared UI typography modestly without turning the compact desktop layout into an oversized interface."
+                        RowLayout {
+                            spacing: Theme.spacing.sm
+                            RadioCard { Layout.preferredWidth: 150; implicitHeight: 62; title: "Default"; value: "default"; selected: settingsController.interfaceTextSize === value; onChosen: settingsController.setInterfaceTextSize(value) }
+                            RadioCard { Layout.preferredWidth: 150; implicitHeight: 62; title: "Large"; value: "large"; selected: settingsController.interfaceTextSize === value; onChosen: settingsController.setInterfaceTextSize(value) }
+                        }
+                    }
+                    SettingsRow {
+                        title: "Stronger Focus Indicator"
+                        description: "Use a slightly thicker soft-accent outline for keyboard focus. Selection remains a separate state."
+                        AppSwitch { accessibleName: "Stronger Focus Indicator"; checked: settingsController.strongerFocusIndicator; onToggled: settingsController.setStrongerFocusIndicator(checked) }
+                    }
+                    AccessibilityPreview { Layout.fillWidth: true }
+                    InfoBanner { Layout.fillWidth: true; text: settingsController.reduceMotionMode === "system" ? "Follow System uses Windows animation preference when available and otherwise keeps normal motion." : "Reduced motion affects interface animation only; media playback and essential progress remain unchanged." }
                 }
 
                 StoragePage {

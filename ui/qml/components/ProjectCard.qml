@@ -10,7 +10,8 @@ AppCard {
     signal duplicateRequested(string projectId)
     signal deleteRequested(string projectId, string title)
 
-    implicitHeight: 122
+    accessibleName: (root.projectData.title || "Untitled Project") + ". " + (root.projectData.workflowName || "Video") + ". " + (root.projectData.languageName || "English") + ". " + (root.projectData.statusName || "Draft")
+    implicitHeight: Math.max(122, Math.round(122 * Theme.textScale))
 
     RowLayout {
         anchors.fill: parent
@@ -31,6 +32,7 @@ AppCard {
             RowLayout {
                 Layout.fillWidth: true
                 Text {
+                    id: projectTitleLabel
                     Layout.fillWidth: true
                     text: root.projectData.title || "Untitled Project"
                     color: Theme.colors.textPrimary
@@ -38,6 +40,10 @@ AppCard {
                     font.pixelSize: Theme.type.heading
                     font.weight: Theme.type.semibold
                     elide: Text.ElideRight
+                    ToolTip.visible: projectTitleHover.hovered && projectTitleLabel.truncated
+                    ToolTip.text: text
+                    ToolTip.delay: Theme.tooltipDelay
+                    HoverHandler { id: projectTitleHover }
                 }
                 StatusBadge {
                     text: root.projectData.statusName || "Draft"
@@ -83,7 +89,8 @@ AppCard {
             }
             IconButton {
                 iconName: "trash"
-                tooltip: "Delete"
+                accessibleName: "Delete project"
+                tooltip: "Delete Project"
                 onClicked: root.deleteRequested(root.projectData.id, root.projectData.title)
             }
         }

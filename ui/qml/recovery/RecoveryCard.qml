@@ -6,6 +6,7 @@ import "../components"
 AppCard {
     id: root; property var snapshot: ({}); signal recoverRequested(string snapshotId); signal savedRequested(string snapshotId); signal reviewRequested(string snapshotId); signal discardRequested(string snapshotId)
     Layout.fillWidth: true; implicitHeight: content.implicitHeight + 28; elevated: true
+    accessibleName: "Recovery found for " + (snapshot.projectTitle || snapshot.projectId || "project") + ". Recovered " + (snapshot.createdAt || "unknown time") + "."
     ColumnLayout { id: content; anchors.fill: parent; anchors.margins: Theme.spacing.lg; spacing: Theme.spacing.sm
         RowLayout { Layout.fillWidth:true
             Rectangle { width:34;height:34;radius:10;color:Theme.colors.accentSoft; Icon{anchors.centerIn:parent;width:17;height:17;name:"projects"} }

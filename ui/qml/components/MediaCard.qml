@@ -7,7 +7,7 @@ AppCard {
     id:root
     property string mediaId:""; property string mediaName:"Untitled media"; property string mediaType:"video"; property string typeName:"Video"; property string thumbnail:""; property string duration:""; property string resolution:""; property string fileSize:""; property string mediaStatus:"ready"; property string statusName:"Ready"; property bool isSelected:false
     signal activated(string mediaId); signal detailsRequested(string mediaId); signal revealRequested(string mediaId); signal removeRequested(string mediaId,string name)
-    interactive:true; selected:isSelected; implicitHeight:226; onClicked:root.activated(root.mediaId)
+    interactive:true; selected:isSelected; accessibleName:root.mediaName+". "+root.typeName+". "+root.secondaryLine()+". Status "+root.statusName; implicitHeight:Math.max(226,Math.round(226*Theme.textScale)); onClicked:root.activated(root.mediaId)
     Drag.active: dragHandler.active
     Drag.source: root
     Drag.keys: ["sp-video-studio-media", "sp-media-"+root.mediaType]
@@ -21,11 +21,24 @@ AppCard {
                 Text { anchors.horizontalCenter:parent.horizontalCenter;text:root.mediaType==="audio"?"Audio":(root.mediaStatus==="missing"?"File Missing":root.typeName);color:root.mediaStatus==="missing"?Theme.colors.warning:Theme.colors.textMuted;font.family:Theme.type.family;font.pixelSize:Theme.type.caption }
             }
             StatusBadge { anchors.left:parent.left;anchors.top:parent.top;anchors.margins:Theme.spacing.sm;text:root.statusName;status:root.mediaStatus }
-            IconButton { id:moreButton;anchors.right:parent.right;anchors.top:parent.top;anchors.margins:Theme.spacing.xs;iconName:"more";tooltip:"Media actions";onClicked:actionsMenu.popup() }
+            IconButton { id:moreButton;anchors.right:parent.right;anchors.top:parent.top;anchors.margins:Theme.spacing.xs;iconName:"more";accessibleName:"Media actions for "+root.mediaName;tooltip:"Media actions";onClicked:actionsMenu.popup() }
             Rectangle { anchors.fill:parent; visible:dragHandler.active; color:"transparent"; border.color:Theme.colors.accent; border.width:2; radius:Theme.radius.medium }
         }
         ColumnLayout { Layout.fillWidth:true;spacing:2
-            Text { Layout.fillWidth:true;text:root.mediaName;color:Theme.colors.textPrimary;font.family:Theme.type.family;font.pixelSize:Theme.type.body;font.weight:Theme.type.semibold;elide:Text.ElideMiddle }
+            Text {
+                id: mediaNameLabel
+                Layout.fillWidth: true
+                text: root.mediaName
+                color: Theme.colors.textPrimary
+                font.family: Theme.type.family
+                font.pixelSize: Theme.type.body
+                font.weight: Theme.type.semibold
+                elide: Text.ElideMiddle
+                ToolTip.visible: mediaNameHover.hovered && mediaNameLabel.truncated
+                ToolTip.text: root.mediaName
+                ToolTip.delay: Theme.tooltipDelay
+                HoverHandler { id: mediaNameHover }
+            }
             RowLayout { Layout.fillWidth:true;spacing:Theme.spacing.sm
                 Text { Layout.fillWidth:true;text:root.secondaryLine();color:Theme.colors.textSecondary;font.family:Theme.type.family;font.pixelSize:Theme.type.caption;elide:Text.ElideRight }
                 Text { text:root.fileSize;color:Theme.colors.textMuted;font.family:Theme.type.family;font.pixelSize:Theme.type.caption }

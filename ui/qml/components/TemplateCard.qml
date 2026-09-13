@@ -7,11 +7,25 @@ AppCard {
     property string templateName: "Modern News"
     property string description: "Clean editorial layout"
     property string iconName: "template"
-    implicitHeight: 118
+    accessibleName: root.templateName + ". " + root.description
+    implicitHeight: Math.max(118, Math.round(118 * Theme.textScale))
     ColumnLayout {
         anchors.fill: parent; anchors.margins: Theme.spacing.lg; spacing: Theme.spacing.sm
         Rectangle { width: 34; height: 34; radius: Theme.radius.medium; color: Theme.colors.surfaceHover; Icon { anchors.centerIn: parent; width: 18; height: 18; name: root.iconName } }
-        Text { text: root.templateName; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.heading; font.weight: Theme.type.semibold }
-        Text { text: root.description; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
+        Text {
+            id: templateNameLabel
+            Layout.fillWidth: true
+            text: root.templateName
+            elide: Text.ElideRight
+            color: Theme.colors.textPrimary
+            font.family: Theme.type.family
+            font.pixelSize: Theme.type.heading
+            font.weight: Theme.type.semibold
+            ToolTip.visible: templateNameHover.hovered && templateNameLabel.truncated
+            ToolTip.text: root.templateName
+            ToolTip.delay: Theme.tooltipDelay
+            HoverHandler { id: templateNameHover }
+        }
+        Text { Layout.fillWidth:true; text: root.description; wrapMode:Text.WordWrap; maximumLineCount:2; elide:Text.ElideRight; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
     }
 }

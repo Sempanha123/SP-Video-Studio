@@ -39,6 +39,7 @@ Item {
         SplitView { Layout.fillWidth:true; Layout.fillHeight:true; orientation:root.width<1000?Qt.Vertical:Qt.Horizontal
             ScrollView { SplitView.fillWidth:true; SplitView.preferredWidth:root.width*.62; clip:true; contentWidth:availableWidth
                 GridLayout { width:parent.width; columns:width<720?1:2; columnSpacing:Theme.spacing.md; rowSpacing:Theme.spacing.md
+                    FriendlyEmptyState { Layout.columnSpan: parent.columns; Layout.fillWidth:true; Layout.preferredHeight:220; visible:Templates.templates.length===0; title:"No templates found"; description:"Clear filters, import a template, or save the current project as a reusable template."; iconName:"template"; action: AppButton{text:"Import Template";onClicked:importDialog.open()} }
                     Repeater { model:Templates.templates; delegate:TemplateUi.TemplateCard { required property var modelData; Layout.fillWidth:true; templateData:modelData; onSelected:function(id){root.choose(id)}; onUseRequested:function(id){root.choose(id);applyDialog.applyCurrent=false;applyDialog.open()} } }
                 }
             }

@@ -9,6 +9,8 @@ RowLayout {
     spacing: Theme.spacing.md
     Text {
         text: parent.title
+        Accessible.role: Accessible.Heading
+        Accessible.name: text
         color: Theme.colors.textPrimary
         font.family: Theme.type.family
         font.pixelSize: Theme.type.heading
@@ -18,9 +20,14 @@ RowLayout {
     Text {
         visible: parent.actionText !== ""
         text: parent.actionText
+        activeFocusOnTab: visible
+        Accessible.role: Accessible.Button
+        Accessible.name: text
         color: Theme.colors.accent
         font.family: Theme.type.family
         font.pixelSize: Theme.type.caption
         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: parent.parent.actionClicked() }
+        Keys.onReturnPressed: function(event) { parent.parent.actionClicked(); event.accepted = true }
+        Keys.onSpacePressed: function(event) { parent.parent.actionClicked(); event.accepted = true }
     }
 }

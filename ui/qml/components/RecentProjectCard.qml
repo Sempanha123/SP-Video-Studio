@@ -1,4 +1,5 @@
 import QtQuick 2.15
+import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import "../theme"
 
@@ -7,7 +8,8 @@ AppCard {
     property var projectData: ({})
     signal openRequested(string projectId)
     interactive: true
-    implicitHeight: 74
+    accessibleName: (root.projectData.title || "Untitled Project") + ". " + (root.projectData.workflowName || "Video") + ". Last activity " + (root.projectData.lastActivityDisplay || "Never")
+    implicitHeight: Math.max(74, Math.round(74 * Theme.textScale))
     onClicked: root.openRequested(root.projectData.id)
 
     RowLayout {
@@ -22,6 +24,7 @@ AppCard {
         ColumnLayout {
             Layout.fillWidth: true; spacing: 1
             Text {
+                id: projectTitle
                 Layout.fillWidth: true
                 text: root.projectData.title || "Untitled Project"
                 color: Theme.colors.textPrimary
@@ -29,6 +32,10 @@ AppCard {
                 font.pixelSize: Theme.type.body
                 font.weight: Theme.type.semibold
                 elide: Text.ElideRight
+                ToolTip.visible: projectTitleHover.hovered && projectTitle.truncated
+                ToolTip.text: projectTitle.text
+                ToolTip.delay: Theme.tooltipDelay
+                HoverHandler { id: projectTitleHover }
             }
             Text {
                 Layout.fillWidth: true

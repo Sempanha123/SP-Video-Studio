@@ -4,12 +4,19 @@ import QtQuick.Layouts 1.15
 import QtQuick.Dialogs
 import "../theme"
 import "../components"
+import SPVideoStudio.Commands 1.0
 
-Item {
+FocusScope {
     id: root
     property var controller
     property var playbackController
     signal toastRequested(string message, string variant)
+    focus: true
+    activeFocusOnTab: true
+    Accessible.role: Accessible.Pane
+    Accessible.name: "Subtitle Editor"
+    Accessible.description: "Edit subtitle timing, text, style and validation warnings"
+    onActiveFocusChanged: if(activeFocus && !Commands.textEditing) Commands.setContext("subtitle_editor")
 
     ColumnLayout {
         anchors.fill: parent
@@ -27,15 +34,16 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             spacing: Theme.spacing.sm
-            ComboBox {
+            AppComboBox {
                 id: trackPicker
+                accessibleName: "Subtitle track"
                 Layout.preferredWidth: 220
                 model: root.controller ? root.controller.tracks : []
                 textRole: "name"
                 onActivated: if (root.controller && currentIndex >= 0) root.controller.loadTrack(model[currentIndex].id)
             }
-            TextField { id: searchField; Layout.fillWidth: true; placeholderText: "Search subtitles"; onTextChanged: if (root.controller) root.controller.search(text) }
-            ComboBox { model: ["All", "Warnings", "Edited", "Source Changed"]; onActivated: if (root.controller) root.controller.filter(["all","warnings","edited","source_changed"][currentIndex]) }
+            AppTextField { id: searchField; Layout.fillWidth: true; placeholderText: "Search subtitles"; tooltip: "Search subtitles"; onTextChanged: if (root.controller) root.controller.search(text) }
+            AppComboBox { accessibleName: "Subtitle filter"; model: ["All", "Warnings", "Edited", "Source Changed"]; onActivated: if (root.controller) root.controller.filter(["all","warnings","edited","source_changed"][currentIndex]) }
             SecondaryButton { text: "Shift"; compact: true; enabled: !!root.controller && !!root.controller.track.id; onClicked: shiftDialog.open() }
         }
 
@@ -54,6 +62,11 @@ Item {
 
             ListView {
                 id: cueList
+                activeFocusOnTab: true
+                Accessible.role: Accessible.List
+                Accessible.name: "Subtitle cues"
+                Keys.onUpPressed: function(event) { if (root.controller && !Commands.textEditing) { root.controller.selectRelativeCue(-1); event.accepted = true } }
+                Keys.onDownPressed: function(event) { if (root.controller && !Commands.textEditing) { root.controller.selectRelativeCue(1); event.accepted = true } }
                 SplitView.fillWidth: true
                 SplitView.fillHeight: true
                 SplitView.minimumWidth: 420
@@ -88,8 +101,9 @@ Item {
         }
     }
 
-    Dialog {
+    AppDialog {
         id: createDialog
+        initialFocusItem: kindBox
         modal: true
         width: 500
         title: "Create Subtitle Track"
@@ -97,12 +111,14 @@ Item {
         property string kind: "transcript"
         contentItem: ColumnLayout {
             spacing: Theme.spacing.md
-            ComboBox { id: kindBox; Layout.fillWidth: true; model: ["From Transcript", "From Translation", "Bilingual", "Manual"]; onActivated: createDialog.kind=["transcript","translation","bilingual","manual"][currentIndex] }
-            ComboBox { id: transcriptBox; Layout.fillWidth: true; visible: createDialog.kind === "transcript" || createDialog.kind === "bilingual"; model: root.controller ? root.controller.sources.transcripts : []; textRole: "label" }
-            ComboBox { id: translationBox; Layout.fillWidth: true; visible: createDialog.kind === "translation" || createDialog.kind === "bilingual"; model: root.controller ? root.controller.sources.translations : []; textRole: "label" }
-            ComboBox { id: languageBox; Layout.fillWidth: true; visible: createDialog.kind === "manual"; model: ["English", "Khmer"] }
-            ComboBox { id: presetBox; Layout.fillWidth: true; model: root.controller ? root.controller.presetList : []; textRole: "name" }
+            AppComboBox { id: kindBox; accessibleName: "Subtitle source"; Layout.fillWidth: true; model: ["From Transcript", "From Translation", "Bilingual", "Manual"]; onActivated: createDialog.kind=["transcript","translation","bilingual","manual"][currentIndex] }
+            AppComboBox { id: transcriptBox; accessibleName: "Transcript source"; Layout.fillWidth: true; visible: createDialog.kind === "transcript" || createDialog.kind === "bilingual"; model: root.controller ? root.controller.sources.transcripts : []; textRole: "label" }
+            AppComboBox { id: translationBox; accessibleName: "Translation source"; Layout.fillWidth: true; visible: createDialog.kind === "translation" || createDialog.kind === "bilingual"; model: root.controller ? root.controller.sources.translations : []; textRole: "label" }
+            AppComboBox { id: languageBox; accessibleName: "Subtitle language"; Layout.fillWidth: true; visible: createDialog.kind === "manual"; model: ["English", "Khmer"] }
+            AppComboBox { id: presetBox; accessibleName: "Subtitle style preset"; Layout.fillWidth: true; model: root.controller ? root.controller.presetList : []; textRole: "name" }
         }
+        onOpened: Commands.setModalOpen(true)
+        onClosed: Commands.setModalOpen(false)
         onAccepted: {
             if (!root.controller) return
             var preset = presetBox.currentIndex >= 0 ? presetBox.model[presetBox.currentIndex].id : "clean"
@@ -113,9 +129,12 @@ Item {
         }
     }
 
-    Dialog {
+    AppDialog {
         id: shiftDialog
+        initialFocusItem: shiftValue
         modal: true
+        onOpened: Commands.setModalOpen(true)
+        onClosed: Commands.setModalOpen(false)
         title: "Shift All Subtitles"
         standardButtons: Dialog.Ok | Dialog.Cancel
         contentItem: RowLayout { Text { text: "Milliseconds" }; SpinBox { id: shiftValue; from: -60000; to: 60000; value: 500; editable: true } }
@@ -136,6 +155,19 @@ Item {
         fileMode: FileDialog.SaveFile
         nameFilters: ["SubRip (*.srt)", "WebVTT (*.vtt)", "Advanced SubStation Alpha (*.ass)"]
         onAccepted: if (root.controller) root.controller.exportTrack(selectedNameFilter.indexOf("WebVTT") >= 0 ? "vtt" : selectedNameFilter.indexOf("Advanced") >= 0 ? "ass" : "srt", selectedFile)
+    }
+
+    Connections {
+        target: Commands
+        function onCommandRequested(commandId) {
+            if (Commands.activeContext !== "subtitle_editor" || !root.controller) return
+            if (commandId === "subtitle.commit") root.controller.flush()
+            else if (commandId === "subtitle.search") { searchField.forceActiveFocus(); searchField.selectAll() }
+            else if (commandId === "subtitle.split") root.controller.splitSelectedAtPlayhead()
+            else if (commandId === "subtitle.delete") root.controller.deleteSelectedCue()
+            else if (commandId === "subtitle.duplicate") root.controller.duplicateSelectedCue()
+            else if (commandId === "general.escape") { root.forceActiveFocus(); Commands.setTextEditing(false) }
+        }
     }
 
     Connections {

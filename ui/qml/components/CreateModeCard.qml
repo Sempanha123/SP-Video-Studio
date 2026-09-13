@@ -1,6 +1,7 @@
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import "../theme"
+import "../accessibility"
 
 Rectangle {
     id: root
@@ -18,6 +19,10 @@ Rectangle {
     border.color: selected ? Theme.colors.accent : Theme.colors.border
     border.width: selected ? 2 : 1
     focus: true
+    activeFocusOnTab: true
+    Accessible.role: Accessible.Button
+    Accessible.name: root.title
+    Accessible.description: root.description
 
     ColumnLayout {
         anchors.fill: parent
@@ -63,5 +68,6 @@ Rectangle {
     MouseArea { id: mouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.clicked() }
     Keys.onSpacePressed: clicked()
     Keys.onReturnPressed: clicked()
+    FocusRing { focused: root.activeFocus }
     Behavior on color { ColorAnimation { duration: Theme.animation.fast } }
 }

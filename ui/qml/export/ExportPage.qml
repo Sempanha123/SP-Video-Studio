@@ -7,6 +7,9 @@ import "../components"
 
 Item {
     id: root
+    Accessible.name: "Export video"
+    Accessible.description: "Choose export settings, validate the output, and export the current project."
+    Accessible.role: Accessible.Pane
     property var controller
     property string selectedPresetId: ""
     property int exportWidth: 1920
@@ -42,11 +45,30 @@ Item {
     Connections { target: root.controller; ignoreUnknownSignals:true; function onContextChanged(){ root.loadDraft() } }
 
     FolderDialog { id:folderDialog; title:"Choose Export Folder"; onAccepted:{ root.outputFolder=root.controller ? root.controller.localPathFromUrl(selectedFolder) : selectedFolder.toString(); settingsPanel.outputFolder=root.outputFolder; root.pushDraft() } }
-    Dialog { id:presetDialog; modal:true; title:"Save Export Preset"; standardButtons:Dialog.NoButton; width:420
-        ColumnLayout { anchors.fill:parent; spacing:Theme.spacing.md
-            AppTextField { id:presetName; Layout.fillWidth:true; placeholderText:"My Vertical HQ" }
-            AppTextField { id:presetDescription; Layout.fillWidth:true; placeholderText:"Optional description" }
-            RowLayout { Layout.fillWidth:true; Item{Layout.fillWidth:true}; SecondaryButton{text:"Cancel";onClicked:presetDialog.close()}; AppButton{text:"Save";onClicked:{root.pushDraft(); if(root.controller && root.controller.saveAsPreset(presetName.text,presetDescription.text)){presetDialog.close();presetName.text="";presetDescription.text=""}}} }
+    AppDialog {
+        id: presetDialog
+        title: "Save Export Preset"
+        width: 420
+        standardButtons: Dialog.NoButton
+        initialFocusItem: presetName
+        contentItem: ColumnLayout {
+            spacing: Theme.spacing.md
+            AppTextField { id:presetName; Layout.fillWidth:true; accessibleName:"Preset name"; placeholderText:"My Vertical HQ" }
+            AppTextField { id:presetDescription; Layout.fillWidth:true; accessibleName:"Preset description"; placeholderText:"Optional description" }
+            RowLayout {
+                Layout.fillWidth:true
+                Item { Layout.fillWidth:true }
+                SecondaryButton { text:"Cancel"; onClicked:presetDialog.close() }
+                AppButton {
+                    text:"Save Preset"
+                    onClicked:{
+                        root.pushDraft()
+                        if(root.controller && root.controller.saveAsPreset(presetName.text,presetDescription.text)){
+                            presetDialog.close(); presetName.text=""; presetDescription.text=""
+                        }
+                    }
+                }
+            }
         }
     }
 

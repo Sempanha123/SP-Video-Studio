@@ -13,9 +13,13 @@ Item { id: root; property var controller; signal nextRequested()
         SearchField { Layout.fillWidth:true; placeholderText:"Search input rows"; onTextChanged: if(root.controller) root.controller.setInputSearch(text) }
         Text { text:(root.controller ? root.controller.inputRows.length : 0)+" visible rows · uncheck rows you do not want to generate"; color:Theme.colors.textSecondary }
         ListView { Layout.fillWidth:true; Layout.fillHeight:true; clip:true; reuseItems:true; cacheBuffer:440; model:root.controller ? root.controller.inputRows : []
-            delegate: Rectangle { width:ListView.view.width; height:44; color:index%2?"transparent":Theme.colors.surfaceRaised
+            Accessible.role: Accessible.List
+            Accessible.name: "Batch input rows"
+            delegate: Rectangle { width:ListView.view.width; height:Math.max(44,Math.round(44*Theme.textScale)); color:index%2?"transparent":Theme.colors.surfaceRaised
+                Accessible.role: Accessible.ListItem
+                Accessible.name: "Row " + String(modelData.rowIndex+1) + ". " + (modelData.validity || "valid")
                 RowLayout { anchors.fill:parent; anchors.margins:8
-                    CheckBox { checked:modelData.selected!==false; onToggled: root.controller.setRowSelected(modelData.rowIndex,checked) }
+                    CheckBox { Accessible.name:"Include batch row "+String(modelData.rowIndex+1); checked:modelData.selected!==false; onToggled: root.controller.setRowSelected(modelData.rowIndex,checked) }
                     Text { text:"#"+(modelData.rowIndex+1); color:Theme.colors.textSecondary; Layout.preferredWidth:50 }
                     Text { text:JSON.stringify(modelData.data); elide:Text.ElideRight; color:Theme.colors.textPrimary; Layout.fillWidth:true }
                     Text { text:modelData.validity || "valid"; color:Theme.colors.textSecondary; Layout.preferredWidth:70 }

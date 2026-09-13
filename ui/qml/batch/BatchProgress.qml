@@ -9,7 +9,7 @@ Item { property var controller; implicitHeight: 60
             Text { text: (controller.currentBatch.completedItems||0) + " Done"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall; font.weight: Theme.type.semibold }
             Text { text: (controller.currentBatch.totalItems||0) + " total"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
         }
-        SoftProgressBar { Layout.fillWidth: true; value: controller.currentBatch.overallProgress || 0 }
+        SoftProgressBar { Layout.fillWidth: true; accessibleName: "Overall batch progress"; value: controller.currentBatch.overallProgress || 0 }
         Text { text: Math.round((controller.currentBatch.overallProgress||0)*100) + "%"; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
         StatusBadge { visible: !!controller.currentBatch.pauseReason; text: controller.currentBatch.pauseReason === "low_disk_space" ? "Paused · Low disk" : controller.currentBatch.pauseReason; status: "warning" }
         AppButton { text: "Pause"; variant: "quiet"; size: "small"; enabled: controller.currentBatch.status === "running"; onClicked: controller.pauseBatch() }

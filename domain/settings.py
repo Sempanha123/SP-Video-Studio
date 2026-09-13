@@ -5,6 +5,11 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, Mapping
 
+from domain.accessibility_settings import (
+    SUPPORTED_INTERFACE_TEXT_SIZES,
+    SUPPORTED_REDUCE_MOTION_MODES,
+)
+
 SETTINGS_VERSION = 1
 SUPPORTED_SETTING_FPS = (24, 25, 30, 50, 60)
 SUPPORTED_SETTING_ASPECT_RATIOS = ("9:16", "16:9", "1:1")
@@ -63,6 +68,10 @@ class AppSettings:
     readiness_check_on_startup: bool = True
     # Phase 33 stores only stable command IDs -> portable key sequences.
     shortcut_overrides: dict[str, str] = field(default_factory=dict)
+    # Phase 34 accessibility preferences live in the existing settings document.
+    reduce_motion: str = "system"
+    interface_text_size: str = "default"
+    stronger_focus_indicator: bool = False
 
     @classmethod
     def defaults(cls, project_root: Path) -> "AppSettings":
@@ -91,6 +100,10 @@ class AppSettings:
             raise ValueError("Keyboard shortcut overrides must be a mapping.")
         if any(not isinstance(k, str) or not isinstance(v, str) for k, v in self.shortcut_overrides.items()):
             raise ValueError("Keyboard shortcut overrides must use command IDs and key sequences.")
+        if self.reduce_motion not in SUPPORTED_REDUCE_MOTION_MODES:
+            raise ValueError("Unsupported Reduce Motion preference.")
+        if self.interface_text_size not in SUPPORTED_INTERFACE_TEXT_SIZES:
+            raise ValueError("Unsupported interface text size.")
 
     def with_changes(self, **changes: Any) -> "AppSettings":
         updated = replace(self, **changes)
@@ -126,6 +139,11 @@ class AppSettings:
             "keyboard_shortcuts": {
                 "overrides": dict(self.shortcut_overrides),
             },
+            "accessibility": {
+                "reduce_motion": self.reduce_motion,
+                "interface_text_size": self.interface_text_size,
+                "stronger_focus_indicator": self.stronger_focus_indicator,
+            },
         }
 
     @classmethod
@@ -138,6 +156,7 @@ class AppSettings:
         media_tools = _mapping(payload.get("media_tools"))
         advanced = _mapping(payload.get("advanced"))
         keyboard_shortcuts = _mapping(payload.get("keyboard_shortcuts"))
+        accessibility = _mapping(payload.get("accessibility"))
         raw_overrides = _mapping(keyboard_shortcuts.get("overrides"))
         settings = cls(
             settings_version=int(payload.get("settings_version", SETTINGS_VERSION)),
@@ -169,6 +188,9 @@ class AppSettings:
                 for key, value in raw_overrides.items()
                 if str(key).strip()
             },
+            reduce_motion=str(accessibility.get("reduce_motion", "system")),
+            interface_text_size=str(accessibility.get("interface_text_size", "default")),
+            stronger_focus_indicator=bool(accessibility.get("stronger_focus_indicator", False)),
         )
         settings.validate()
         return settings

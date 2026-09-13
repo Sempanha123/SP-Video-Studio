@@ -4,6 +4,9 @@ import "../theme"
 
 ColumnLayout {
     id: root
+    Accessible.role: Accessible.Pane
+    Accessible.name: root.title
+    Accessible.description: root.description
     property string iconName: "folder"
     property string title: "Nothing here yet"
     property string description: ""
@@ -35,6 +38,8 @@ ColumnLayout {
         font.pixelSize: Theme.type.body
         wrapMode: Text.WordWrap
         horizontalAlignment: Text.AlignHCenter
+        lineHeightMode: Text.ProportionalHeight
+        lineHeight: Theme.type.multilingualLineHeight
     }
     AppButton {
         visible: root.actionText !== ""

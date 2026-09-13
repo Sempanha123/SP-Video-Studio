@@ -19,6 +19,7 @@ ColumnLayout {
 
     AppCard {
         Layout.fillWidth: true
+        accessibleName: "Managed storage used " + (root.overview.totalOwnedDisplay || "0 bytes")
         implicitHeight: 108
         ColumnLayout {
             anchors.fill: parent; anchors.margins: Theme.spacing.lg; spacing: Theme.spacing.xs

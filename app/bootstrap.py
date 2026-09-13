@@ -444,7 +444,7 @@ def build_container() -> DependencyContainer:
 
 def run() -> int:
     try:
-        from PySide6.QtCore import QCoreApplication, QTimer, QUrl
+        from PySide6.QtCore import QCoreApplication, QTimer, QUrl, Qt
         from PySide6.QtGui import QGuiApplication
         from PySide6.QtQml import QQmlApplicationEngine
     except ImportError as exc:  # pragma: no cover - user environment problem
@@ -463,6 +463,14 @@ def run() -> int:
 
     QCoreApplication.setOrganizationName("SP Video Studio")
     QCoreApplication.setApplicationName("SP Video Studio")
+    # Qt 6 enables high-DPI scaling by default. Preserve fractional Windows
+    # scale factors (125/150/200%) instead of forcing integer rounding.
+    try:
+        QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
+            Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
+        )
+    except (AttributeError, TypeError):
+        pass
     app = QGuiApplication(sys.argv)
 
     from ui.controllers.media_controller import MediaController

@@ -101,6 +101,15 @@ class SubtitleController(QObject):
             media_id=self.service.media_id_for_track(self._project_id,self._track.track_id)
             if media_id:self.playbackRequested.emit(media_id,cue.start_ms,False)
         self.trackChanged.emit()
+    @Slot(int,result=bool)
+    def selectRelativeCue(self,direction):
+        cues=self.cueModel.all_cues()
+        if not cues:return False
+        ids=[cue.cue_id for cue in cues]
+        try:index=ids.index(self._selected_cue)
+        except ValueError:index=0 if int(direction)>=0 else len(ids)-1
+        target=max(0,min(len(ids)-1,index+(1 if int(direction)>=0 else -1)))
+        self.selectCue(ids[target]);return True
     @Slot(str,str,str)
     def queueText(self,cue_id,text,secondary=''):
         self._dirty[cue_id]=(text,secondary); self._save_state='Unsaved'; self._timer.start(); self.stateChanged.emit()
@@ -139,6 +148,29 @@ class SubtitleController(QObject):
     def deleteCue(self,cue_id):
         try:self.service.delete_cue(self._project_id,self._track.track_id,cue_id); self._reload(); return True
         except Exception as exc:self.operationFailed.emit(self._friendly(exc)); return False
+    @Slot(result=bool)
+    def deleteSelectedCue(self):
+        return self.deleteCue(self._selected_cue) if self._selected_cue else False
+    @Slot(result=bool)
+    def duplicateSelectedCue(self):
+        if not self._track or not self._selected_cue:return False
+        cue=self.cueModel.cue(self._selected_cue)
+        if cue is None:return False
+        try:
+            duration=max(300,int(cue.end_ms)-int(cue.start_ms)); clone=self.service.add_cue(self._project_id,self._track.track_id,int(cue.end_ms),cue.text,duration)
+            self.service.update_cue(self._project_id,self._track.track_id,clone.cue_id,secondary_text=cue.secondary_text,position=cue.position,alignment=cue.alignment)
+            self._reload();self.selectCue(clone.cue_id);return True
+        except Exception as exc:self.operationFailed.emit(self._friendly(exc));return False
+    @Slot(result=bool)
+    def splitSelectedAtPlayhead(self):
+        if not self._track or not self._selected_cue:return False
+        cue=self.cueModel.cue(self._selected_cue)
+        if cue is None:return False
+        split=int(self._playhead)
+        if split<=int(cue.start_ms) or split>=int(cue.end_ms):
+            self.operationFailed.emit("Move the playhead inside the selected subtitle cue before splitting.");return False
+        text=str(cue.text or "");mid=max(1,len(text)//2);left=text[:mid].rstrip();right=text[mid:].lstrip()
+        return self.splitCue(cue.cue_id,split,left,right)
     @Slot(str,result=bool)
     def applyPreset(self,preset_id):
         try:self._style=self.service.apply_preset(self._project_id,self._track.track_id,preset_id); self.trackChanged.emit(); return True
