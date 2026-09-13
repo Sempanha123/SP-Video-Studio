@@ -33,6 +33,16 @@ markers = [
   "voxcpm: opt-in real VoxCPM2 model tests",
   "faster_whisper: opt-in real faster-whisper model tests",
   "translation: opt-in real local translation model tests",
+  "fast: normal developer test profile; no huge models or external runtime dependencies",
+  "e2e: deterministic end-to-end workflow tests with tiny media and fake AI engines",
+  "real_engine_optional: optional installed-model smoke tests; never required by standard CI",
+  "packaging_smoke: packaging/import/resource sanity checks",
+  "qml_smoke: QML load/compile smoke checks when Qt tooling is available",
+  "performance: non-flaky Phase 31 scale sanity checks",
+  "fault_injection: controlled failure-path tests",
+  "security: Phase 37 security regression coverage",
+  "migration: Phase 38 migration regression coverage",
+  "windows: Windows-specific filesystem/process acceptance checks",
 ]
 
 [tool.ruff]

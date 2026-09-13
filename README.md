@@ -70,3 +70,11 @@ Phase 38 adds safe forward-only upgrades for the existing application database, 
 Legacy Script content can seed the existing SpeechBlock model, old Dub/source/narration volume settings map to the existing Phase 30 Audio Mixer, active Batch work is safely interrupted across upgrades, Recovery payloads migrate in memory, and template upgrades continue to use the Phase 24 template migrator. Migration failure keeps the original project unchanged and exposes Diagnostics/backup actions; a project created by a newer version is never modified.
 
 See `docs/PHASE38_DATABASE_PROJECT_MIGRATIONS.md` for schema/version contracts, backup/rollback rules, legacy mapping behavior, validation, user-facing failure handling and future migration-author rules.
+
+## Phase 39 — Full Test Suite + End-to-End QA
+
+Phase 39 adds a release-grade QA architecture over the completed product without introducing a new runtime layer. Tests are organized into FAST, INTEGRATION, E2E, REAL_ENGINE_OPTIONAL and PACKAGING_SMOKE profiles. Deterministic fake TTS, STT, translation and Director providers plus tiny generated FFmpeg media allow complete creator workflows to run without downloading large AI models. Every Phase 39 workflow uses temporary databases/project roots and generated fixtures rather than user LocalAppData or committed media.
+
+The mandatory E2E suite covers Normal Video, Reporter News, Interview, Story, Translate & Dub, Shorts, Templates, Asset Library, Batch Factory, Recovery and legacy Migration-to-render. Release regression also covers English/Khmer/Thai/Vietnamese content, Phase 31 scale/resource sanity, Phase 34 accessibility contracts, Phase 37 security, Phase 38 migrations, failure injection, libx264 rendering and privacy-safe machine/human test summaries. Optional real-engine tests remain capability-driven and skipped when models are not installed.
+
+See `docs/PHASE39_RELEASE_QA.md`, `docs/manual-qa-checklist.md` and `docs/known-issues.md` for profile commands, E2E coverage, Windows/manual acceptance, release gates and tracked limitations.

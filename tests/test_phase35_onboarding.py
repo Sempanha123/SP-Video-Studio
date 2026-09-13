@@ -282,10 +282,16 @@ def test_help_and_template_handoff_are_reopenable():
         assert text in guide
 
 
-def test_entrypoint_is_phase35():
+def test_phase35_runtime_remains_in_release_lineage():
     root=Path(__file__).resolve().parents[1]
-    assert "app.phase35_runtime" in (root/"main.py").read_text(encoding="utf-8")
-    assert 'sp-video-studio = "app.phase35_runtime:run"' in (root/"pyproject.toml").read_text(encoding="utf-8")
+    assert (root/"app/phase35_runtime.py").is_file()
+    main=(root/"main.py").read_text(encoding="utf-8")
+    pyproject=(root/"pyproject.toml").read_text(encoding="utf-8")
+    import re
+    match=re.search(r"from app\.phase(\d+)_runtime import run", main)
+    assert match and int(match.group(1)) >= 35
+    current=match.group(1)
+    assert f'sp-video-studio = "app.phase{current}_runtime:run"' in pyproject
 
 
 def test_fresh_install_acceptance_sequence(tmp_path):

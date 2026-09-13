@@ -8,6 +8,7 @@ from PySide6.QtCore import QObject, Property, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices
 
 from domain.project import Project
+from domain.language import language_name
 from services.project_migration_service import NewerProjectVersionError, ProjectMigrationError
 from services.project_service import ProjectError, ProjectFilesMissingError, ProjectService
 
@@ -20,7 +21,11 @@ WORKFLOW_NAMES = {
     "shorts": "Shorts Maker",
     "batch": "Batch Factory",
 }
-LANGUAGE_NAMES = {"en": "English", "km": "Khmer"}
+def _language_display(code: str) -> str:
+    try:
+        return language_name(code)
+    except ValueError:
+        return (code or "").upper()
 
 
 def _display_time(value: str | None) -> str:
@@ -40,7 +45,7 @@ def project_to_ui(project: Project) -> dict[str, object]:
         "workflow": str(project.workflow),
         "workflowName": WORKFLOW_NAMES.get(str(project.workflow), str(project.workflow).title()),
         "language": project.language,
-        "languageName": LANGUAGE_NAMES.get(project.language, project.language.upper()),
+        "languageName": _language_display(project.language),
         "aspectRatio": project.aspect_ratio,
         "fps": project.fps,
         "status": str(project.status),

@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-13T23:13:00.602301+00:00",
+  "profile": "RELEASE",
+  "exitStatus": 0,
+  "counts": {
+    "passed": 216,
+    "failed": 0,
+    "skipped": 6,
+    "xfailed": 0,
+    "xpassed": 0,
+    "errors": 0
+  },
+  "failedTests": [],
+  "privacy": "Contains test IDs/counts only; no project text, media paths, credentials, or user data."
+}
