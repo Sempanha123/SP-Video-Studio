@@ -21,8 +21,8 @@ tts = ["voxcpm>=2.0.3,<3", "soundfile>=0.13,<1"]
 translation = ["transformers>=5.17,<6", "torch>=2.5", "sentencepiece>=0.2,<1"]
 
 [project.scripts]
-# Phase 37 layers security/privacy hardening on the completed Phase 36 runtime.
-sp-video-studio = "app.phase37_runtime:run"
+# Phase 38 layers durable database/project migrations on the completed Phase 37 runtime.
+sp-video-studio = "app.phase38_runtime:run"
 
 [tool.pytest.ini_options]
 addopts = "-ra"
@@ -44,4 +44,4 @@ select = ["E", "F", "I", "UP", "B"]
 py-modules = ["main"]
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["app*", "domain*", "engines*", "workers*", "services*", "storage*", "media*", "rendering*", "workflows*", "ui*"]
+include = ["app*", "domain*", "engines*", "workers*", "services*", "storage*", "media*", "rendering*", "workflows*", "ui*", "migrations*"]

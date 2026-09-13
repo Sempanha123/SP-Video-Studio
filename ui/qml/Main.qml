@@ -16,6 +16,9 @@ ApplicationWindow {
     property string selectedWorkflow: "news"
     property string settingsSection: "General"
     property string missingProjectId: ""
+    property string migrationIssueKind: ""
+    property string migrationIssueMessage: ""
+    property string migrationIssueLocation: ""
     property bool compactNav: width < 1220 || currentPage === "workspace"
     property bool hasOpenProject: currentPage === "workspace" && typeof projectController !== "undefined" && String(projectController.currentProject.id || "").length > 0
     function pageTitle(key) { var names={home:"Home",create:"Create",projects:"Projects",workspace:"Project Workspace",batch:"Batch Factory",voices:"Voices",templates:"Templates",assets:"Assets",models:"Models",diagnostics:"Diagnostics",settings:"Settings"}; return names[key]||"MMO Video Studio" }
@@ -46,6 +49,7 @@ ApplicationWindow {
             if(shortcutHelp.opened) { shortcutHelp.close(); return true }
             if(quickGuide.opened) { quickGuide.close(); return true }
             if(setupWizard.opened) { setupWizard.close(); return true }
+            if(migrationIssueDialog.opened) { migrationIssueDialog.close(); return true }
             if(missingProjectDialog.opened) { missingProjectDialog.close(); return true }
         }
         if(pageLoader.item && typeof pageLoader.item.handleCommand === "function") return pageLoader.item.handleCommand(commandId)
@@ -133,8 +137,23 @@ ApplicationWindow {
     Connections{target:Commands;function onPaletteRequested(){commandPalette.open()}function onShortcutsRequested(){shortcutHelp.open()}function onCommandTriggered(commandId){if(!window.dispatchGlobalCommand(commandId)&&commandId.indexOf("app.")===0)toast.show("That command is not available here.","info",2200)}function onOperationFailed(message){toast.show(message,"error",3600)}}
     Connections{target:typeof settingsController!=="undefined"?settingsController:null;ignoreUnknownSignals:true;function onSettingsChanged(){Theme.setMode(settingsController.theme);window.applyAccessibilitySettings()}function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}}
     Connections{target:Onboarding;function onChanged(){window.applyOnboardingPreview()}function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}function onCloseRequested(){setupWizard.close()}function onOpenModelsRequested(){setupWizard.close();window.navigate("models","")}function onOpenTemplatesRequested(){setupWizard.close();window.navigate("templates","")}function onOpenSettingsRequested(section){setupWizard.close();window.navigate("settings",section)}}
-    Connections{target:typeof projectController!=="undefined"?projectController:null;ignoreUnknownSignals:true;function onCurrentProjectChanged(){Recovery.setCurrentProject(projectController.currentProject.id||"");window.updateCommandContext()}function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}function onMissingProjectDetected(projectId){window.missingProjectId=projectId;missingProjectDialog.open()}}
+    Connections{target:typeof projectController!=="undefined"?projectController:null;ignoreUnknownSignals:true;function onCurrentProjectChanged(){Recovery.setCurrentProject(projectController.currentProject.id||"");window.updateCommandContext()}function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}function onMissingProjectDetected(projectId){window.missingProjectId=projectId;missingProjectDialog.open()}function onMigrationIssue(kind,message,location){window.migrationIssueKind=kind;window.migrationIssueMessage=message;window.migrationIssueLocation=location;migrationIssueDialog.open()}}
     Connections{target:Recovery;function onOperationSucceeded(message){toast.show(message,"success",2600)}function onOperationFailed(message){toast.show(message,"error",4200)}}
+    AppDialog {id:migrationIssueDialog;width:Math.min(540,window.width-48);parent:Overlay.overlay;x:(parent.width-width)/2;y:(parent.height-height)/2;header:null;footer:null;closePolicy:Popup.CloseOnEscape
+        onOpened: Commands.setModalOpen(true)
+        onClosed: Commands.setModalOpen(commandPalette.opened || shortcutSettings.opened || shortcutHelp.opened || quickGuide.opened || setupWizard.opened || missingProjectDialog.opened)
+        contentItem:ColumnLayout{spacing:Theme.spacing.lg
+            Text{Layout.fillWidth:true;text:window.migrationIssueKind==="newer_project"?"Project created by a newer version":"Project update could not be completed";color:Theme.colors.textPrimary;font.family:Theme.type.family;font.pixelSize:Theme.type.sectionTitle;font.weight:Theme.type.semibold;wrapMode:Text.WordWrap}
+            Text{Layout.fillWidth:true;text:window.migrationIssueMessage;wrapMode:Text.WordWrap;color:Theme.colors.textSecondary;font.family:Theme.type.family;font.pixelSize:Theme.type.bodySmall}
+            Text{Layout.fillWidth:true;visible:window.migrationIssueKind==="migration_failed";text:"Your original project was not replaced. A protected migration backup is available for diagnostics and recovery.";wrapMode:Text.WordWrap;color:Theme.colors.textMuted;font.family:Theme.type.family;font.pixelSize:Theme.type.caption}
+            RowLayout{Layout.fillWidth:true;Item{Layout.fillWidth:true}
+                AppButton{visible:window.migrationIssueKind==="migration_failed";text:"Open Diagnostics";variant:"secondary";onClicked:{migrationIssueDialog.close();window.navigate("diagnostics","")}}
+                AppButton{visible:window.migrationIssueKind==="migration_failed";text:"Open Backup Location";variant:"secondary";enabled:window.migrationIssueLocation.length>0;onClicked:{if(typeof projectController!=="undefined")projectController.openFolder(window.migrationIssueLocation)}}
+                AppButton{visible:window.migrationIssueKind==="newer_project";text:"Open Folder";variant:"secondary";enabled:window.migrationIssueLocation.length>0;onClicked:{if(typeof projectController!=="undefined")projectController.openFolder(window.migrationIssueLocation)}}
+                AppButton{text:window.migrationIssueKind==="newer_project"?"Cancel":"Close";onClicked:migrationIssueDialog.close()}
+            }
+        }
+    }
     AppDialog {id:missingProjectDialog;width:Math.min(470,window.width-48);parent:Overlay.overlay;x:(parent.width-width)/2;y:(parent.height-height)/2;header:null;footer:null;closePolicy:Popup.CloseOnEscape
         onOpened: Commands.setModalOpen(true)
         onClosed: Commands.setModalOpen(commandPalette.opened || shortcutSettings.opened || shortcutHelp.opened || quickGuide.opened || setupWizard.opened)

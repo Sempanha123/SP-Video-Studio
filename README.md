@@ -62,3 +62,11 @@ Phase 37 is a release-hardening pass, not a product-feature expansion. It centra
 Settings → Privacy now explains current Local versus Online actions without making a misleading "100% private" claim. Diagnostics/support bundles remain local and allow-list only; reference voice recordings are treated as sensitive media and are excluded from support/template packages. No cloud AI provider is added by this phase, and any future online provider must present a clear first-use data-transmission notice.
 
 See `docs/security-threat-model.md` and `docs/security-review-phase37.md` for the threat model, reviewed surfaces, fixes, dependency/license notes, accepted limitations, vulnerability-scan status and security test coverage.
+
+## Phase 38 — Database + Project Migrations
+
+Phase 38 adds safe forward-only upgrades for the existing application database, project metadata/data, settings and Recovery snapshots. The application DB now has explicit version/application bookkeeping and backup-first startup migration; projects carry their own schema version and migrate before open/duplicate with protected SQLite + metadata backups, crash markers, foreign-key/integrity validation and newer-version rejection. Unknown project/settings fields and unknown language values are preserved rather than guessed or silently discarded.
+
+Legacy Script content can seed the existing SpeechBlock model, old Dub/source/narration volume settings map to the existing Phase 30 Audio Mixer, active Batch work is safely interrupted across upgrades, Recovery payloads migrate in memory, and template upgrades continue to use the Phase 24 template migrator. Migration failure keeps the original project unchanged and exposes Diagnostics/backup actions; a project created by a newer version is never modified.
+
+See `docs/PHASE38_DATABASE_PROJECT_MIGRATIONS.md` for schema/version contracts, backup/rollback rules, legacy mapping behavior, validation, user-facing failure handling and future migration-author rules.

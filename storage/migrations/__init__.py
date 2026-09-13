@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from sqlite3 import Connection
-from collections.abc import Callable
 
 from .m001_create_projects import migrate as create_projects
 from .m002_create_media_assets import migrate as create_media_assets
@@ -31,6 +31,7 @@ from .m024_create_autosave_recovery import migrate as create_autosave_recovery
 from .m025_create_audio_mixer import migrate as create_audio_mixer
 from .m026_performance_indexes import migrate as create_performance_indexes
 from .m027_manual_speech_editor import migrate as create_manual_speech_editor
+from .m028_phase38_migration_metadata import migrate as phase38_migration_metadata
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +39,7 @@ class Migration:
     version: int
     name: str
     apply: Callable[[Connection], None]
+    validate: Callable[[Connection], None] | None = None
 
 
 MIGRATIONS: tuple[Migration, ...] = (
@@ -68,4 +70,5 @@ MIGRATIONS: tuple[Migration, ...] = (
     Migration(25, "create_audio_mixer", create_audio_mixer),
     Migration(26, "performance_indexes", create_performance_indexes),
     Migration(27, "manual_speech_editor", create_manual_speech_editor),
+    Migration(28, "phase38_migration_metadata", phase38_migration_metadata),
 )

@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime
 from collections.abc import Callable
+from pathlib import Path
 
-from PySide6.QtCore import QObject, Property, Signal, Slot
+from PySide6.QtCore import QObject, Property, QUrl, Signal, Slot
+from PySide6.QtGui import QDesktopServices
 
 from domain.project import Project
+from services.project_migration_service import NewerProjectVersionError, ProjectMigrationError
 from services.project_service import ProjectError, ProjectFilesMissingError, ProjectService
 
 
@@ -60,6 +63,7 @@ class ProjectController(QObject):
     operationSucceeded = Signal(str)
     operationFailed = Signal(str)
     missingProjectDetected = Signal(str)
+    migrationIssue = Signal(str, str, str)
 
     def __init__(self, service: ProjectService, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -69,7 +73,6 @@ class ProjectController(QObject):
         self._current_project: dict[str, object] = {}
         self._before_project_change: Callable[[], bool] | None = None
         self.refresh()
-
 
     def set_before_project_change(self, callback: Callable[[], bool] | None) -> None:
         self._before_project_change = callback
@@ -98,21 +101,12 @@ class ProjectController(QObject):
     @Slot()
     def refresh(self) -> None:
         self._projects = [project_to_ui(item) for item in self.service.list_projects()]
-        self._recent_projects = [
-            project_to_ui(item) for item in self.service.list_recent_projects(6)
-        ]
+        self._recent_projects = [project_to_ui(item) for item in self.service.list_recent_projects(6)]
         self.projectsChanged.emit()
         self.recentProjectsChanged.emit()
 
     @Slot(str, str, str, str, int, result=str)
-    def createProject(
-        self,
-        title: str,
-        workflow: str,
-        language: str,
-        aspect_ratio: str,
-        fps: int,
-    ) -> str:
+    def createProject(self, title: str, workflow: str, language: str, aspect_ratio: str, fps: int) -> str:
         try:
             if not self._can_change_project(""):
                 return ""
@@ -137,6 +131,8 @@ class ProjectController(QObject):
         except Exception as exc:
             if isinstance(exc, ProjectFilesMissingError):
                 self.missingProjectDetected.emit(project_id)
+            if self._emit_migration_issue(exc):
+                return False
             self._emit_error(exc)
             return False
 
@@ -161,6 +157,8 @@ class ProjectController(QObject):
             self.operationSucceeded.emit("Project duplicated.")
             return project.project_id
         except Exception as exc:
+            if self._emit_migration_issue(exc):
+                return ""
             self._emit_error(exc)
             return ""
 
@@ -196,9 +194,32 @@ class ProjectController(QObject):
             self._emit_error(exc)
             return False
 
+    @Slot(str, result=bool)
+    def openFolder(self, path: str) -> bool:
+        try:
+            target = Path(path).expanduser()
+            if target.is_file():
+                target = target.parent
+            if not target.is_dir():
+                self.operationFailed.emit("That folder is no longer available.")
+                return False
+            return bool(QDesktopServices.openUrl(QUrl.fromLocalFile(str(target.resolve()))))
+        except Exception:
+            self.operationFailed.emit("MMO Video Studio could not open that folder.")
+            return False
+
     def _set_current(self, project: Project) -> None:
         self._current_project = project_to_ui(project)
         self.currentProjectChanged.emit()
+
+    def _emit_migration_issue(self, exc: Exception) -> bool:
+        if isinstance(exc, NewerProjectVersionError):
+            self.migrationIssue.emit("newer_project", exc.user_message, str(exc.project_path or ""))
+            return True
+        if isinstance(exc, ProjectMigrationError):
+            self.migrationIssue.emit("migration_failed", exc.user_message, str(exc.backup_path or ""))
+            return True
+        return False
 
     def _emit_error(self, exc: Exception) -> None:
         if isinstance(exc, ProjectError):

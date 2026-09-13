@@ -8,11 +8,13 @@ from typing import Mapping, Any
 from uuid import uuid4
 
 from domain.language import supported_language_codes
+from domain.schema_version import PROJECT_SCHEMA_VERSION
 
 SUPPORTED_LANGUAGES = frozenset(supported_language_codes())
 SUPPORTED_ASPECT_RATIOS = {"9:16", "16:9", "1:1"}
 SUPPORTED_FPS = {24, 25, 30, 50, 60}
-PROJECT_VERSION = 1
+# Compatibility alias used throughout earlier phases.
+PROJECT_VERSION = PROJECT_SCHEMA_VERSION
 
 
 class ProjectWorkflow(StrEnum):
@@ -41,6 +43,13 @@ def _enum_value(value: str | StrEnum) -> str:
     return value.value if isinstance(value, StrEnum) else str(value)
 
 
+def _keys(record: Mapping[str, Any]) -> set[str]:
+    try:
+        return set(record.keys())
+    except Exception:
+        return set(record)
+
+
 @dataclass(slots=True)
 class Project:
     title: str
@@ -55,9 +64,11 @@ class Project:
     thumbnail_path: str | None = None
     status: str | ProjectStatus = ProjectStatus.DRAFT
     project_path: str = ""
-    version: int = PROJECT_VERSION
+    version: int = PROJECT_SCHEMA_VERSION
+    project_schema_version: int = PROJECT_SCHEMA_VERSION
     template: str | None = None
     settings: dict[str, object] = field(default_factory=dict)
+    extra_metadata: dict[str, object] = field(default_factory=dict)
 
     @property
     def id(self) -> str:
@@ -70,27 +81,34 @@ class Project:
             "aspect_ratio": self.aspect_ratio, "fps": self.fps, "created_at": self.created_at,
             "updated_at": self.updated_at, "last_opened_at": self.last_opened_at,
             "thumbnail_path": self.thumbnail_path, "status": _enum_value(self.status),
-            "project_path": self.project_path, "version": self.version, "template": self.template,
-            "settings": dict(self.settings),
+            "project_path": self.project_path, "version": self.version,
+            "project_schema_version": self.project_schema_version,
+            "template": self.template, "settings": dict(self.settings),
         }
 
     def to_metadata(self) -> dict[str, object]:
-        return {
-            "version": self.version, "id": self.project_id, "title": self.title,
-            "workflow": _enum_value(self.workflow), "language": self.language,
-            "aspect_ratio": self.aspect_ratio, "fps": self.fps, "created_at": self.created_at,
-            "updated_at": self.updated_at, "last_opened_at": self.last_opened_at,
-            "thumbnail_path": self.thumbnail_path, "status": _enum_value(self.status),
+        known = {
+            "version": self.version, "project_schema_version": self.project_schema_version,
+            "id": self.project_id, "title": self.title, "workflow": _enum_value(self.workflow),
+            "language": self.language, "aspect_ratio": self.aspect_ratio, "fps": self.fps,
+            "created_at": self.created_at, "updated_at": self.updated_at,
+            "last_opened_at": self.last_opened_at, "thumbnail_path": self.thumbnail_path,
+            "status": _enum_value(self.status),
         }
+        # Unknown fields from future-compatible/legacy metadata survive normal saves.
+        return {**self.extra_metadata, **known}
 
     @classmethod
     def from_record(cls, record: Mapping[str, Any]) -> "Project":
+        keys = _keys(record)
+        schema = int(record["project_schema_version"] if "project_schema_version" in keys else record["version"])
         return cls(
             project_id=str(record["id"]), title=str(record["title"]), workflow=str(record["workflow"]),
             language=str(record["language"]), aspect_ratio=str(record["aspect_ratio"]), fps=int(record["fps"]),
             created_at=str(record["created_at"]), updated_at=str(record["updated_at"]),
             last_opened_at=record["last_opened_at"], thumbnail_path=record["thumbnail_path"],
-            status=str(record["status"]), project_path=str(record["project_path"]), version=int(record["version"]),
+            status=str(record["status"]), project_path=str(record["project_path"]),
+            version=int(record["version"]), project_schema_version=schema,
         )
 
     @classmethod
@@ -99,17 +117,20 @@ class Project:
         missing = required.difference(metadata)
         if missing:
             raise ValueError(f"Project metadata is missing required fields: {', '.join(sorted(missing))}")
+        known = required | {"project_schema_version", "last_opened_at", "thumbnail_path", "status"}
+        extra = {str(k): v for k, v in metadata.items() if k not in known}
+        schema = int(metadata.get("project_schema_version", metadata["version"]))
         return cls(
             project_id=str(metadata["id"]), title=str(metadata["title"]), workflow=str(metadata["workflow"]),
             language=str(metadata["language"]), aspect_ratio=str(metadata["aspect_ratio"]), fps=int(metadata["fps"]),
             created_at=str(metadata["created_at"]), updated_at=str(metadata["updated_at"]),
             last_opened_at=metadata.get("last_opened_at"), thumbnail_path=metadata.get("thumbnail_path"),
-            status=str(metadata.get("status", ProjectStatus.DRAFT.value)), project_path=str(project_path), version=int(metadata["version"]),
+            status=str(metadata.get("status", ProjectStatus.DRAFT.value)), project_path=str(project_path),
+            version=int(metadata["version"]), project_schema_version=schema, extra_metadata=extra,
         )
 
     def validate(self) -> None:
-        title = self.title.strip()
-        if not title:
+        if not self.title.strip():
             raise ValueError("Project name is required.")
         if _enum_value(self.workflow) not in {item.value for item in ProjectWorkflow}:
             raise ValueError("Unsupported project workflow.")
@@ -121,5 +142,5 @@ class Project:
             raise ValueError("Unsupported FPS value.")
         if _enum_value(self.status) not in {item.value for item in ProjectStatus}:
             raise ValueError("Unsupported project status.")
-        if self.version != PROJECT_VERSION:
-            raise ValueError("Unsupported project version.")
+        if self.project_schema_version != PROJECT_SCHEMA_VERSION:
+            raise ValueError("Unsupported project schema version.")

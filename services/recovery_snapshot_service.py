@@ -1,27 +1,29 @@
 from __future__ import annotations
 from datetime import datetime,timezone
-from pathlib import Path
 from domain.recovery_snapshot import RecoverySnapshot,RecoverySnapshotType,RecoverySnapshotStatus
 from domain.recovery_errors import RecoveryDiskFull,RecoverySnapshotCorrupt,RecoveryVersionUnsupported
+from services.recovery_migration_service import RecoveryMigrationService,RecoverySnapshotVersionError
 
 
 def utc_iso():return datetime.now(timezone.utc).isoformat()
 
 class RecoverySnapshotService:
     PERIODIC_SECONDS=180
-    def __init__(self,repository,store,codec,autosave,*,app_version='0',logger=None):
-        self.repository=repository;self.store=store;self.codec=codec;self.autosave=autosave;self.app_version=str(app_version);self.logger=logger;self._last_periodic={};self._low_disk_warned=False
+    def __init__(self,repository,store,codec,autosave,*,app_version='0',logger=None,migration_service=None):
+        self.repository=repository;self.store=store;self.codec=codec;self.autosave=autosave;self.app_version=str(app_version);self.logger=logger;self._last_periodic={};self._low_disk_warned=False;self.migrations=migration_service or RecoveryMigrationService()
     def create(self,project_id:str,session_id:str,*,snapshot_type='periodic',reason='',force=False)->RecoverySnapshot|None:
         state=self.autosave.state(project_id)
         if not force and not state.dirty:return None
-        payload=self.codec.capture(project_id)
+        raw=self.codec.capture(project_id)
+        try:payload,_=self.migrations.migrate_payload(raw)
+        except RecoverySnapshotVersionError as exc:raise RecoveryVersionUnsupported(str(exc)) from exc
         metadata={'appVersion':self.app_version,'projectSchemaVersion':int(payload.get('schemaVersion',0)),'savedRevision':state.saved_revision,'dirty':state.dirty}
         from uuid import uuid4
         sid=str(uuid4());manifest={'createdAt':utc_iso(),'reason':reason or snapshot_type,'snapshotType':snapshot_type,'projectRevision':state.project_revision,'appVersion':self.app_version,'projectSchemaVersion':metadata['projectSchemaVersion']}
         try:path,size,checksum=self.store.create_snapshot(sid,project_id,manifest,payload)
         except RecoveryDiskFull:
             self._low_disk_warned=True;raise
-        snap=RecoverySnapshot(snapshot_id=sid,project_id=project_id,session_id=session_id,project_revision=state.project_revision,created_at=manifest['createdAt'],reason=manifest['reason'],snapshot_type=snapshot_type,path=str(path),size=size,checksum=checksum,metadata=metadata)
+        snap=RecoverySnapshot(snapshot_id=sid,project_id=project_id,session_id=session_id,project_revision=state.project_revision,created_at=manifest['createdAt'],reason=manifest['reason'],snapshot_type=snapshot_type,path=str(path),size=size,checksum=checksum,metadata=metadata,schema_version=int(payload.get('schemaVersion',1) or 1))
         self.repository.save_snapshot(snap);self.store.prune(project_id,keep_ids={sid});self._sync_pruned_metadata(project_id)
         if snapshot_type==RecoverySnapshotType.PERIODIC.value:self._last_periodic[project_id]=datetime.now(timezone.utc).timestamp()
         return snap
@@ -40,7 +42,13 @@ class RecoverySnapshotService:
             snap.status=RecoverySnapshotStatus.CORRUPT;self.repository.save_snapshot(snap);raise
         if env.get('unsupported'):
             snap.status=RecoverySnapshotStatus.UNSUPPORTED;self.repository.save_snapshot(snap);raise RecoveryVersionUnsupported('This recovery copy was created by a newer app version.')
-        return snap,env['payload']
+        try:payload,changed=self.migrations.migrate_payload(env['payload'])
+        except RecoverySnapshotVersionError as exc:
+            snap.status=RecoverySnapshotStatus.UNSUPPORTED;self.repository.save_snapshot(snap);raise RecoveryVersionUnsupported(str(exc)) from exc
+        if changed:
+            # Migration is in-memory until restore; the original snapshot file remains untouched/recoverable.
+            snap.metadata={**dict(snap.metadata), 'recoveryPayloadMigratedInMemory':True}
+        return snap,payload
     def discard(self,snapshot_id:str)->None:
         snap=self.repository.snapshot(snapshot_id)
         if snap:
