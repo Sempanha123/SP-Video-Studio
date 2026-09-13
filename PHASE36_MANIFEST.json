@@ -1,0 +1,159 @@
+{
+  "phase": 36,
+  "title": "Diagnostics + Support Tools",
+  "baseline_commit": "a00c3e46e27a103786da4a6baaaab91c7496a815",
+  "suggested_commit": "feat: add diagnostics and privacy-safe support tools",
+  "new_files": 19,
+  "modified_files": 5,
+  "total_files": 24,
+  "files": [
+    {
+      "path": "PHASE36_REPORT.md",
+      "kind": "new",
+      "bytes": 12252,
+      "sha256": "c4bc15240fb64a5626832aed39580da71c6703d75613359ce03a492d0b66a799"
+    },
+    {
+      "path": "app/phase36_runtime.py",
+      "kind": "new",
+      "bytes": 6159,
+      "sha256": "49802ce0a951693a9a9c3db44c82e93617bae1d375899171ca3aadf1c4092eb2"
+    },
+    {
+      "path": "docs/PHASE36_DIAGNOSTICS_SUPPORT_TOOLS.md",
+      "kind": "new",
+      "bytes": 6042,
+      "sha256": "4618445032d2d94b62a3475178e37d2b4643a690b8e8cc45b14178438032bea6"
+    },
+    {
+      "path": "domain/diagnostic_check.py",
+      "kind": "new",
+      "bytes": 329,
+      "sha256": "c0212486635deb1d327daffd32bc96f2580e855639cb97c67e8e4d5b5ae620df"
+    },
+    {
+      "path": "domain/diagnostic_result.py",
+      "kind": "new",
+      "bytes": 1400,
+      "sha256": "3c6709c88b736f9b687050da9a803135523e97e421b3df611344ddf0aa3fca27"
+    },
+    {
+      "path": "domain/support_bundle.py",
+      "kind": "new",
+      "bytes": 494,
+      "sha256": "d9a9fe9e92a891cee6c044af18ecbc1867c6dc1141004aa10c128669bb9b233e"
+    },
+    {
+      "path": "services/diagnostics_preferences_service.py",
+      "kind": "new",
+      "bytes": 1633,
+      "sha256": "349186fa59a1c43f49c6ff24496fe19a53e3a1a2e8c680c7e8e2e72078fc0c14"
+    },
+    {
+      "path": "services/diagnostics_service.py",
+      "kind": "new",
+      "bytes": 51209,
+      "sha256": "f6de2cdd9402ed9a0b4a318d5d4f486b655c3b6377e95b53b080838f10e9bf6d"
+    },
+    {
+      "path": "services/environment_report_service.py",
+      "kind": "new",
+      "bytes": 3506,
+      "sha256": "08a6b0da49e09643c152e396233e5115609c01659f6a9f56561d8ff133d83e9e"
+    },
+    {
+      "path": "services/log_redaction_service.py",
+      "kind": "new",
+      "bytes": 4013,
+      "sha256": "6144dcc74b0b70046d1abc8cbbec63db0b738720a8142cb1dc34847e86d4c496"
+    },
+    {
+      "path": "services/support_bundle_service.py",
+      "kind": "new",
+      "bytes": 6251,
+      "sha256": "4c3f22f906a795006da49479d85b05d0fa59cd854cac1b79cdcb51cd4c4709ec"
+    },
+    {
+      "path": "tests/test_phase36_diagnostics.py",
+      "kind": "new",
+      "bytes": 24938,
+      "sha256": "6387eb03787d433949ea7f93cf35bc27235c6824855ca298299a27959c5d91cb"
+    },
+    {
+      "path": "ui/controllers/diagnostics_controller.py",
+      "kind": "new",
+      "bytes": 7800,
+      "sha256": "b5636b32dd41e7fccfafa367d0aaa172c6ac6db20d4a95a4ccaca883e762e84d"
+    },
+    {
+      "path": "ui/qml/diagnostics/DiagnosticCheckCard.qml",
+      "kind": "new",
+      "bytes": 2224,
+      "sha256": "39e0a32682cbca63099a9c62e8e67e01274fbb7dd3871650b0722199e1984d50"
+    },
+    {
+      "path": "ui/qml/diagnostics/DiagnosticDetails.qml",
+      "kind": "new",
+      "bytes": 3202,
+      "sha256": "bb67f4f0515f75083b894ff6f6c620f22935a054d5e6948108bd163c9a9acc15"
+    },
+    {
+      "path": "ui/qml/diagnostics/DiagnosticsPage.qml",
+      "kind": "new",
+      "bytes": 4955,
+      "sha256": "f08b4e5bb08bfe25c0eef09a0483893a9d20806eceaff5f5d76e9dede8be1e96"
+    },
+    {
+      "path": "ui/qml/diagnostics/LogViewer.qml",
+      "kind": "new",
+      "bytes": 3026,
+      "sha256": "a23b6b5b4ee3dfcacafad686541d4611f48d9b4865783e224b39585684eb7885"
+    },
+    {
+      "path": "ui/qml/diagnostics/SupportBundleDialog.qml",
+      "kind": "new",
+      "bytes": 3335,
+      "sha256": "6c775bec6e0b3c6310062945ba0ffe1ecf45e724f3ffd303a46df1ba69c26a52"
+    },
+    {
+      "path": "README.md",
+      "kind": "modified",
+      "bytes": 7954,
+      "sha256": "93c659d8464bc5863c1ab9060d94d90ea22744712be569eb51526e6a49aac5c9"
+    },
+    {
+      "path": "main.py",
+      "kind": "modified",
+      "bytes": 92,
+      "sha256": "95efc610e79b25d32679461fb3fd5b457cba7c2cfc90823c2b366de627c44fdd"
+    },
+    {
+      "path": "pyproject.toml",
+      "kind": "modified",
+      "bytes": 1439,
+      "sha256": "58124f40f69117cc2553b139842483edeb30eb13b95ea43c90db206e143ba165"
+    },
+    {
+      "path": "ui/qml/Main.qml",
+      "kind": "modified",
+      "bytes": 15729,
+      "sha256": "bdd39e7dc432706888750713cffce0f3db1f8d88e5230d1a6b4abec7bd4d5829"
+    },
+    {
+      "path": "ui/qml/render/RenderDialog.qml",
+      "kind": "modified",
+      "bytes": 8774,
+      "sha256": "68c84f61cec81d810dd01cf66da975fe2f48a4f2bf564177ac909ee68b040a50"
+    }
+  ],
+  "validation": {
+    "phase35_baseline": "28/28 passed",
+    "phase36_focused": "43/43 passed",
+    "combined": "71/71 passed",
+    "python_compileall": "passed",
+    "qml_structural": "7/7 passed",
+    "secret_redaction": "passed",
+    "support_bundle_privacy": "passed",
+    "real_ffmpeg_full_probe": "ready; libx264 smoke passed"
+  }
+}

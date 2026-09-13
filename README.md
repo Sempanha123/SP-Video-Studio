@@ -46,3 +46,11 @@ Phase 35 adds a short, optional first-run experience without changing the existi
 The setup flow covers content language, appearance, projects folder, system readiness, optional AI features, and a quick first-project path. Model installation is never automatic: onboarding hands explicit install/manage actions to the existing Model Manager, and Continue Without AI always remains available. Getting Started and a compact Quick Guide can be reopened later without resetting projects, assets or models.
 
 See `docs/PHASE35_ONBOARDING_FIRST_RUN.md` for first-run detection, onboarding versioning, readiness/model behavior, safe rerun rules, first-project integration, contextual tips and known limitations.
+
+## Phase 36 — Diagnostics + Support Tools
+
+Phase 36 adds one local diagnostics/support layer over the existing System Readiness, Phase 29 storage, Model Manager, project integrity, render, recovery, template and batch architecture. Quick Check is deliberately lightweight and never loads AI models. Full Diagnostics runs through the shared worker pool and may perform model-file verification, SQLite integrity checks and tiny FFmpeg capability/smoke probes. CPU-only and fully offline editing remain supported.
+
+Support bundles are local-only, fixed allow-list ZIPs. They contain sanitized system/settings summaries, diagnostic results, bounded redacted logs, model status and database schema metadata; they exclude project databases, scripts, transcripts, subtitles, News sources, voices/reference recordings, recovery snapshots and all media. Secret fields and personal home-path prefixes are redacted before display, copy or packaging, and no telemetry/upload/remote-control behavior is introduced.
+
+See `docs/PHASE36_DIAGNOSTICS_SUPPORT_TOOLS.md` for check orchestration, FFmpeg/database/model/project diagnostics, render categorization, log redaction, support-bundle privacy boundaries, safe repair actions and test coverage.

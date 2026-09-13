@@ -1,8 +1,10 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import SPVideoStudio.Diagnostics 1.0
 import "../theme"
 import "../components"
+import "../diagnostics" as DiagnosticsUI
 
 Item {
     id: root
@@ -25,6 +27,20 @@ Item {
             }
         }
         controller.start(settings.presetId, settings.renderWidth, settings.renderHeight, settings.renderFps, settings.encoder, settings.quality, settings.subtitleTrackId, settings.keepTemp)
+    }
+    function diagnoseLastRender() {
+        if (!controller || !controller.lastFailureTechnical) return
+        Diagnostics.diagnoseRender(controller.lastFailureTechnical)
+        if (Diagnostics.results.length > 0) {
+            renderDiagnosticDetails.resultData = Diagnostics.results[0]
+            renderDiagnosticDetails.open()
+        }
+    }
+
+    DiagnosticsUI.DiagnosticDetails {
+        id: renderDiagnosticDetails
+        parent: Overlay.overlay
+        onCopyRequested: function(value) { Diagnostics.copyText(value) }
     }
 
     ScrollView {
@@ -71,6 +87,27 @@ Item {
                             StatusBadge { text: modelData.severity === "error" ? "Error" : "Warning"; status: modelData.severity === "error" ? "invalid" : "warning" }
                             Text { Layout.fillWidth: true; text: modelData.message; wrapMode: Text.WordWrap; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall }
                         }
+                    }
+                }
+            }
+
+            AppCard {
+                Layout.fillWidth: true
+                visible: root.controller && root.controller.stage === "failed" && String(root.controller.lastFailureTechnical || "").length > 0
+                implicitHeight: renderFailureColumn.implicitHeight + Theme.spacing.lg * 2
+                ColumnLayout {
+                    id: renderFailureColumn
+                    anchors.fill: parent
+                    anchors.margins: Theme.spacing.lg
+                    spacing: Theme.spacing.sm
+                    RowLayout {
+                        Layout.fillWidth: true
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Text { text: "Render failed"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodyStrong; font.weight: Theme.type.semibold }
+                            Text { Layout.fillWidth: true; text: "Run a local diagnosis to categorize the failure. Raw FFmpeg/error text stays inside Technical Details."; wrapMode: Text.WordWrap; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall }
+                        }
+                        AppButton { text: "Diagnose Render"; onClicked: root.diagnoseLastRender() }
                     }
                 }
             }

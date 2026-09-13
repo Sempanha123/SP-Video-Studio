@@ -18,8 +18,8 @@ ApplicationWindow {
     property string missingProjectId: ""
     property bool compactNav: width < 1220 || currentPage === "workspace"
     property bool hasOpenProject: currentPage === "workspace" && typeof projectController !== "undefined" && String(projectController.currentProject.id || "").length > 0
-    function pageTitle(key) { var names={home:"Home",create:"Create",projects:"Projects",workspace:"Project Workspace",batch:"Batch Factory",voices:"Voices",templates:"Templates",assets:"Assets",models:"Models",settings:"Settings"}; return names[key]||"MMO Video Studio" }
-    function pageSource(key) { var sources={home:"pages/HomePage.qml",create:"pages/CreatePage.qml",projects:"pages/ProjectsPage.qml",workspace:"pages/ProjectWorkspacePage.qml",batch:"pages/BatchPage.qml",voices:"pages/VoicesPage.qml",templates:"pages/TemplatesPage.qml",assets:"pages/AssetsPage.qml",models:"pages/ModelsPage.qml",settings:"pages/SettingsPage.qml"}; return Qt.resolvedUrl(sources[key]||sources.home) }
+    function pageTitle(key) { var names={home:"Home",create:"Create",projects:"Projects",workspace:"Project Workspace",batch:"Batch Factory",voices:"Voices",templates:"Templates",assets:"Assets",models:"Models",diagnostics:"Diagnostics",settings:"Settings"}; return names[key]||"MMO Video Studio" }
+    function pageSource(key) { var sources={home:"pages/HomePage.qml",create:"pages/CreatePage.qml",projects:"pages/ProjectsPage.qml",workspace:"pages/ProjectWorkspacePage.qml",batch:"pages/BatchPage.qml",voices:"pages/VoicesPage.qml",templates:"pages/TemplatesPage.qml",assets:"pages/AssetsPage.qml",models:"pages/ModelsPage.qml",diagnostics:"diagnostics/DiagnosticsPage.qml",settings:"pages/SettingsPage.qml"}; return Qt.resolvedUrl(sources[key]||sources.home) }
     function navigate(page,context){ currentPage=page; if(page==="settings"){if(context)settingsSection=context}else if(context)selectedWorkflow=context; updateCommandContext() }
     function readinessState(){return typeof readinessController!=="undefined"?readinessController.readiness:({})}
     function applyAccessibilitySettings(){
@@ -96,6 +96,7 @@ ApplicationWindow {
                     Rectangle{Layout.fillWidth:true;Layout.preferredHeight:1;color:Theme.colors.border}
                     SidebarItem {Layout.fillWidth:true;text:window.compactNav?"":"Getting Started";accessibleName:"Getting Started";iconName:"spark";ToolTip.visible:hovered&&window.compactNav;ToolTip.text:"Getting Started";onClicked:{Onboarding.runAgain();setupWizard.open()}}
                     SidebarItem {Layout.fillWidth:true;text:window.compactNav?"":"Quick Guide";accessibleName:"Quick Guide";iconName:"spark";ToolTip.visible:hovered&&window.compactNav;ToolTip.text:"Quick Guide";onClicked:quickGuide.open()}
+                    SidebarItem {Layout.fillWidth:true;text:window.compactNav?"":"Diagnostics";accessibleName:"Diagnostics";iconName:"settings";selected:window.currentPage==="diagnostics";ToolTip.visible:hovered&&window.compactNav;ToolTip.text:"Diagnostics";onClicked:window.navigate("diagnostics","")}
                     SidebarItem {Layout.fillWidth:true;text:window.compactNav?"":"Settings";accessibleName:"Settings";iconName:"settings";selected:window.currentPage==="settings";ToolTip.visible:hovered&&window.compactNav;ToolTip.text:"Settings";onClicked:window.navigate("settings","General")}
                 }
             }
