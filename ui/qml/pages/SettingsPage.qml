@@ -8,10 +8,12 @@ import "../theme"
 import "../components"
 import "../storage"
 import "../accessibility"
+import "../privacy"
 
 Item {
     id: root
     property string section: "General"
+    signal navigateRequested(string page, string context)
 
     function readiness() {
         return typeof readinessController !== "undefined" ? readinessController.readiness : ({})
@@ -87,7 +89,7 @@ Item {
                     Layout.bottomMargin: Theme.spacing.sm
                 }
                 Repeater {
-                    model: ["General", "Appearance", "Projects", "Performance", "Rendering", "Keyboard Shortcuts", "Accessibility", "Storage", "Advanced"]
+                    model: ["General", "Appearance", "Projects", "Performance", "Rendering", "Keyboard Shortcuts", "Accessibility", "Privacy", "Storage", "Advanced"]
                     delegate: SidebarItem {
                         required property string modelData
                         Layout.fillWidth: true
@@ -124,6 +126,7 @@ Item {
                             if (root.section === "Rendering") return "Set defaults for future rendering workflows."
                             if (root.section === "Keyboard Shortcuts") return "Search, customize and reset keyboard shortcuts safely."
                             if (root.section === "Accessibility") return "Motion, text size and keyboard focus preferences."
+                            if (root.section === "Privacy") return "Review local and online processing, support-bundle boundaries and sensitive voice handling."
                             if (root.section === "Storage") return "Review storage usage, safe cache cleanup and disk health."
                             return "Diagnostics and advanced application preferences."
                         }
@@ -411,6 +414,12 @@ Item {
                     }
                     AccessibilityPreview { Layout.fillWidth: true }
                     InfoBanner { Layout.fillWidth: true; text: settingsController.reduceMotionMode === "system" ? "Follow System uses Windows animation preference when available and otherwise keeps normal motion." : "Reduced motion affects interface animation only; media playback and essential progress remain unchanged." }
+                }
+
+                PrivacySettingsPanel {
+                    visible: root.section === "Privacy"
+                    Layout.fillWidth: true
+                    onNavigateRequested: function(page, context) { root.navigateRequested(page, context) }
                 }
 
                 StoragePage {

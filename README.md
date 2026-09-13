@@ -54,3 +54,11 @@ Phase 36 adds one local diagnostics/support layer over the existing System Readi
 Support bundles are local-only, fixed allow-list ZIPs. They contain sanitized system/settings summaries, diagnostic results, bounded redacted logs, model status and database schema metadata; they exclude project databases, scripts, transcripts, subtitles, News sources, voices/reference recordings, recovery snapshots and all media. Secret fields and personal home-path prefixes are redacted before display, copy or packaging, and no telemetry/upload/remote-control behavior is introduced.
 
 See `docs/PHASE36_DIAGNOSTICS_SUPPORT_TOOLS.md` for check orchestration, FFmpeg/database/model/project diagnostics, render categorization, log redaction, support-bundle privacy boundaries, safe repair actions and test coverage.
+
+## Phase 37 — Security + Privacy Review
+
+Phase 37 is a release-hardening pass, not a product-feature expansion. It centralizes managed-root path safety for destructive/app-owned operations, strengthens `.mmovtemplate` ZIP validation with streaming limits and compression-ratio checks, rejects executable/symlink/unsigned package payloads, hardens managed model downloads and News-source network boundaries, and tightens export filename/path handling. Existing FFmpeg rendering keeps argv-based `shell=False` execution and ASS/file-based Unicode text handling.
+
+Settings → Privacy now explains current Local versus Online actions without making a misleading "100% private" claim. Diagnostics/support bundles remain local and allow-list only; reference voice recordings are treated as sensitive media and are excluded from support/template packages. No cloud AI provider is added by this phase, and any future online provider must present a clear first-use data-transmission notice.
+
+See `docs/security-threat-model.md` and `docs/security-review-phase37.md` for the threat model, reviewed surfaces, fixes, dependency/license notes, accepted limitations, vulnerability-scan status and security test coverage.

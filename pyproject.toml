@@ -21,8 +21,8 @@ tts = ["voxcpm>=2.0.3,<3", "soundfile>=0.13,<1"]
 translation = ["transformers>=5.17,<6", "torch>=2.5", "sentencepiece>=0.2,<1"]
 
 [project.scripts]
-# Phase 36 layers local privacy-safe diagnostics/support tools on Phase 35.
-sp-video-studio = "app.phase36_runtime:run"
+# Phase 37 layers security/privacy hardening on the completed Phase 36 runtime.
+sp-video-studio = "app.phase37_runtime:run"
 
 [tool.pytest.ini_options]
 addopts = "-ra"

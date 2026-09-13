@@ -20,17 +20,17 @@ class LogRedactionService:
     def __init__(self, home: str | Path | None = None) -> None:
         self.home = Path(home).expanduser() if home else Path.home()
         self._patterns = (
-            re.compile(r"(?im)(Authorization\s*:\s*)(?:Bearer\s+)?[^\s,;]+"),
+            re.compile(r"(?im)((?:Authorization|Proxy-Authorization|X-Auth-Token)\s*:\s*)(?:Bearer\s+)?[^\s,;]+"),
             re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+\-/=]+"),
             re.compile(
                 r"(?i)(\b(?:x[-_]?api[-_]?key|api[-_]?key|apikey|access[-_]?key|secret[-_]?key|private[-_]?key|password|passwd|client[-_]?secret|"
-                r"access[-_]?token|refresh[-_]?token|session[-_]?token|auth[-_]?token|secret)\b"
+                r"access[-_]?token|refresh[-_]?token|session[-_]?token|auth[-_]?token|credential|signature|secret)\b"
                 r"\s*[=:]\s*)([^\s,;&]+|\"[^\"]*\"|'[^']*')"
             ),
             re.compile(
                 r'(?i)("(?:api[-_]?key|password|token|secret|cookie|authorization)"\s*:\s*)"[^"]*"'
             ),
-            re.compile(r"(?i)(\bCookie\s*:\s*)[^\r\n]+"),
+            re.compile(r"(?i)(\b(?:Cookie|Set-Cookie)\s*:\s*)[^\r\n]+"),
         )
 
     def redact_text(self, text: str) -> str:

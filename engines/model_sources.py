@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -32,37 +31,63 @@ class RemoteModelFile:
 
 class ModelSource(Protocol):
     def list_files(self, model: AIModel) -> list[RemoteModelFile]: ...
+    def download_file(self, remote: RemoteModelFile, destination: Path, cancellation: CancellationToken, progress: Callable[[int, int | None], None]) -> int: ...
 
-    def download_file(
-        self,
-        remote: RemoteModelFile,
-        destination: Path,
-        cancellation: CancellationToken,
-        progress: Callable[[int, int | None], None],
-    ) -> int: ...
+
+_MAX_CATALOG_BYTES = 4 * 1024 * 1024
+_TRUSTED_MODEL_HOSTS = ("huggingface.co", "hf.co")
+
+
+def _trusted_https_url(url: str) -> urllib.parse.SplitResult:
+    try:
+        parsed = urllib.parse.urlsplit(str(url or ""))
+    except ValueError as exc:
+        raise ModelSourceError("The model source returned an invalid URL.") from exc
+    if parsed.scheme.lower() != "https" or not parsed.hostname or parsed.username or parsed.password:
+        raise ModelSourceError("Model downloads require a trusted HTTPS source.")
+    host = parsed.hostname.lower().rstrip(".")
+    if not any(host == root or host.endswith("." + root) for root in _TRUSTED_MODEL_HOSTS):
+        raise ModelSourceError("The model source redirected to an untrusted host.")
+    return parsed
+
+
+class _TrustedModelRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        target = urllib.parse.urljoin(req.full_url, newurl)
+        _trusted_https_url(target)
+        return super().redirect_request(req, fp, code, msg, headers, target)
 
 
 class HuggingFaceSource:
-    """Public Hugging Face model source with HTTP Range resume support."""
+    """Trusted HTTPS Hugging Face model source with bounded catalog and resume."""
 
-    def __init__(self, timeout: float = 30.0, user_agent: str = "SP-Video-Studio/0.1") -> None:
-        self.timeout = timeout
+    def __init__(self, timeout: float = 30.0, user_agent: str = "SP-Video-Studio/0.1", opener=None) -> None:
+        self.timeout = max(1.0, float(timeout))
         self.user_agent = user_agent
+        # urllib's default HTTPS handler verifies TLS certificates. We deliberately
+        # do not install an unverified SSL context or bypass certificate verification.
+        self.opener = opener or urllib.request.build_opener(_TrustedModelRedirectHandler())
 
     def list_files(self, model: AIModel) -> list[RemoteModelFile]:
         identifier = urllib.parse.quote(model.source_identifier, safe="/")
         url = f"https://huggingface.co/api/models/{identifier}?blobs=true"
+        _trusted_https_url(url)
         request = urllib.request.Request(url, headers={"User-Agent": self.user_agent})
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except (OSError, urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError) as exc:
+            with self.opener.open(request, timeout=self.timeout) as response:
+                _trusted_https_url(response.geturl() if hasattr(response, "geturl") else url)
+                raw = response.read(_MAX_CATALOG_BYTES + 1)
+                if len(raw) > _MAX_CATALOG_BYTES:
+                    raise ModelSourceError("Model catalog response exceeded the safe size limit.")
+                payload = json.loads(raw.decode("utf-8"))
+        except ModelSourceError:
+            raise
+        except (OSError, urllib.error.URLError, urllib.error.HTTPError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ModelSourceError("Model catalog could not be read from Hugging Face.") from exc
 
         siblings = payload.get("siblings") if isinstance(payload, dict) else None
         if not isinstance(siblings, list):
             raise ModelSourceError("The model source returned an invalid file catalog.")
-
         revision = str(payload.get("sha") or "main") if isinstance(payload, dict) else "main"
         files: list[RemoteModelFile] = []
         for item in siblings:
@@ -78,6 +103,8 @@ class HuggingFaceSource:
                 size = int(size_value) if size_value is not None else None
             except (TypeError, ValueError):
                 size = None
+            if size is not None and size < 0:
+                raise ModelSourceError("The model source returned an invalid file size.")
             oid = str(lfs.get("sha256") or lfs.get("oid") or "")
             if oid.startswith("sha256:"):
                 oid = oid.split(":", 1)[1]
@@ -85,19 +112,14 @@ class HuggingFaceSource:
             quoted_path = "/".join(urllib.parse.quote(part, safe="") for part in relative.split("/"))
             revision_path = urllib.parse.quote(revision, safe="")
             download_url = f"https://huggingface.co/{identifier}/resolve/{revision_path}/{quoted_path}?download=true"
+            _trusted_https_url(download_url)
             files.append(RemoteModelFile(relative, size, download_url, sha256, revision))
-
         if not files:
             raise ModelSourceError("No downloadable model files were found.")
         return files
 
-    def download_file(
-        self,
-        remote: RemoteModelFile,
-        destination: Path,
-        cancellation: CancellationToken,
-        progress: Callable[[int, int | None], None],
-    ) -> int:
+    def download_file(self, remote: RemoteModelFile, destination: Path, cancellation: CancellationToken, progress: Callable[[int, int | None], None]) -> int:
+        _trusted_https_url(remote.url)
         destination.parent.mkdir(parents=True, exist_ok=True)
         existing = destination.stat().st_size if destination.exists() else 0
         headers = {"User-Agent": self.user_agent}
@@ -105,7 +127,7 @@ class HuggingFaceSource:
             headers["Range"] = f"bytes={existing}-"
         request = urllib.request.Request(remote.url, headers=headers)
         try:
-            response = urllib.request.urlopen(request, timeout=self.timeout)
+            response = self.opener.open(request, timeout=self.timeout)
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
                 raise ModelSourceError("Model files could not be found at the configured source.") from exc
@@ -116,6 +138,7 @@ class HuggingFaceSource:
             raise ModelSourceError("Download could not start because the network is unavailable.") from exc
 
         with response:
+            _trusted_https_url(response.geturl() if hasattr(response, "geturl") else remote.url)
             resumed = existing > 0 and getattr(response, "status", None) == 206
             if existing > 0 and not resumed:
                 existing = 0
@@ -136,10 +159,14 @@ class HuggingFaceSource:
                         chunk = response.read(1024 * 1024)
                         if not chunk:
                             break
-                        handle.write(chunk)
                         downloaded += len(chunk)
+                        if remote.size is not None and downloaded > remote.size:
+                            raise ModelSourceError("Model download exceeded the expected file size.")
+                        handle.write(chunk)
                         progress(downloaded, expected_total)
             except DownloadCancelled:
+                raise
+            except ModelSourceError:
                 raise
             except OSError as exc:
                 raise ModelSourceError("The model file could not be written to disk.") from exc
@@ -154,4 +181,6 @@ def _skip_repository_file(path: str) -> bool:
 def _validate_relative_path(path: str) -> None:
     candidate = Path(path)
     if candidate.is_absolute() or not candidate.parts or any(part in {"", ".", ".."} for part in candidate.parts):
+        raise ModelSourceError("The model source returned an unsafe file path.")
+    if "\x00" in path or path.startswith(("\\\\", "//")) or (len(path) >= 2 and path[0].isalpha() and path[1] == ":"):
         raise ModelSourceError("The model source returned an unsafe file path.")
