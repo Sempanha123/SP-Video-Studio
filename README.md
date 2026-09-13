@@ -22,3 +22,11 @@ Phase 32 adds one reusable, virtualized Manual Speech/TTS workspace across Timel
 Manual text/timing/speaker/voice/language edits invalidate only affected rows and preserve prior takes. Users can generate selected/outdated/all rows, reactivate older takes, perform Unicode find/replace, split/merge speech, synchronize explicitly with subtitles, and create speech from transcript/translation segments. The editor uses recycled ListView delegates so large 1,000-row projects do not instantiate 1,000 text editors.
 
 See `docs/PHASE32_MANUAL_SPEECH_TTS_EDITOR.md` for schema compatibility, timing/take behavior, workflow reuse, subtitle safety, autosave integration, and performance notes.
+
+## Phase 33 — Keyboard Shortcuts & Editing Productivity
+
+Phase 33 adds one centralized command/shortcut registry, context-aware dispatch, a searchable Command Palette, customizable persisted shortcuts, conflict detection and text-focus protection. Timeline and Phase 32 Speech/TTS no longer own duplicate page-local shortcut definitions; they receive command IDs and keep their existing controllers/business logic authoritative.
+
+The shortcut router protects native text editing, blocks background shortcuts behind modal dialogs and inactive windows, and keeps mouse workflows unchanged. Timeline playback/editing, Speech/TTS navigation/generation, source-range commands, media/audio command definitions and project Undo/Redo are exposed through the shared command layer.
+
+See `docs/PHASE33_KEYBOARD_SHORTCUTS_PRODUCTIVITY.md` for command architecture, contexts, default shortcuts, focus rules, customization/conflicts, Timeline/Speech integration, Undo/Redo behavior and tests.

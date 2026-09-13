@@ -2,6 +2,7 @@ import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
 import SPVideoStudio.ManualSpeech 1.0
+import SPVideoStudio.Commands 1.0
 import "../theme"
 import "../components"
 
@@ -14,33 +15,55 @@ FocusScope {
     signal toastRequested(string message, string variant)
 
     function rowSelected(id) { return controller && controller.selectedIds.indexOf(id) >= 0 }
-    Component.onCompleted: if(controller && projectId) controller.setCurrentProject(projectId)
-    onProjectIdChanged: if(controller) controller.setCurrentProject(projectId)
+    function claimContext(){ if(root.activeFocus) Commands.setContext("speech_editor") }
+    function handleSpeechCommand(commandId){
+        if(!controller) return false
+        if(commandId==="speech.generate") { controller.generateSelected(); return true }
+        if(commandId==="speech.find") { findField.forceActiveFocus(); return true }
+        if(commandId==="speech.delete") { if(root.editingId==="") controller.deleteSelected(); return true }
+        if(commandId==="speech.duplicate") { controller.duplicateSelected(); return true }
+        if(commandId==="speech.select_all") { controller.selectAll(); return true }
+        if(commandId==="speech.previous") { controller.selectRelative(-1); table.forceActiveFocus(); return true }
+        if(commandId==="speech.next") { controller.selectRelative(1); table.forceActiveFocus(); return true }
+        if(commandId==="speech.edit") {
+            var row=controller.selectedRow
+            if(row && row.id) { root.editingId=String(row.id); table.forceActiveFocus(); return true }
+            return false
+        }
+        if(commandId==="speech.generate_outdated") { controller.generateOutdated(); return true }
+        if(commandId==="app.escape") {
+            if(root.editingId!=="") { root.editingId=""; table.forceActiveFocus(); return true }
+            controller.clearSelection(); return true
+        }
+        if(commandId==="playback.toggle") { controller.togglePreview(); return true }
+        return false
+    }
 
-    Shortcut { sequence: "Ctrl+Enter"; enabled: !findField.activeFocus; onActivated: controller.generateSelected() }
-    Shortcut { sequence: "Ctrl+F"; onActivated: findField.forceActiveFocus() }
-    Shortcut { sequence: "Delete"; enabled: !findField.activeFocus && root.editingId === ""; onActivated: controller.deleteSelected() }
-    Shortcut { sequence: "Space"; enabled: !findField.activeFocus && root.editingId === ""; onActivated: controller.togglePreview() }
+    Component.onCompleted: { if(controller && projectId) controller.setCurrentProject(projectId); Commands.setProjectOpen(projectId.length>0) }
+    onProjectIdChanged: { if(controller) controller.setCurrentProject(projectId); Commands.setProjectOpen(projectId.length>0) }
+    onActiveFocusChanged: claimContext()
+    onEditingIdChanged: Commands.setTextEditing(root.editingId !== "")
 
     ColumnLayout {
         anchors.fill: parent; spacing: Theme.spacing.sm
         RowLayout { Layout.fillWidth: true; spacing: Theme.spacing.xs
             AppButton { text: "+ Add Speech"; compact: true; onClicked: controller.addSpeech(root.scriptSectionId, "New speech") }
-            SecondaryButton { text: "Split"; compact: true; enabled: controller.selectedCount === 1; onClicked: splitDialog.open() }
+            SecondaryButton { text: "Split"; compact: true; enabled: controller.selectedCount === 1; ToolTip.text: "Split speech"; onClicked: splitDialog.open() }
             SecondaryButton { text: "Merge"; compact: true; enabled: controller.selectedCount === 2; onClicked: mergeDialog.open() }
-            SecondaryButton { text: "Delete"; compact: true; enabled: controller.selectedCount > 0; onClicked: controller.deleteSelected() }
-            AppTextField { id: findField; Layout.preferredWidth: 160; placeholderText: "Find" }
-            AppTextField { id: replaceField; Layout.preferredWidth: 150; placeholderText: "Replace" }
+            SecondaryButton { text: "Delete"; compact: true; enabled: controller.selectedCount > 0; ToolTip.text: "Delete · " + Commands.shortcutFor("speech.delete"); onClicked: controller.deleteSelected() }
+            AppTextField { id: findField; Layout.preferredWidth: 160; placeholderText: "Find"; onActiveFocusChanged: Commands.setTextEditing(activeFocus) }
+            AppTextField { id: replaceField; Layout.preferredWidth: 150; placeholderText: "Replace"; onActiveFocusChanged: Commands.setTextEditing(activeFocus) }
             SecondaryButton { text: "Replace Selected"; compact: true; onClicked: controller.replaceText(findField.text, replaceField.text, "selected") }
             Item { Layout.fillWidth: true }
             SecondaryButton { text: "Select Outdated"; compact: true; onClicked: controller.selectStatus("outdated") }
-            SecondaryButton { text: "Generate Selected"; compact: true; enabled: controller.selectedCount > 0 && !controller.busy; onClicked: controller.generateSelected() }
+            SecondaryButton { text: "Generate Selected"; compact: true; enabled: controller.selectedCount > 0 && !controller.busy; ToolTip.text: "Generate Speech · " + Commands.shortcutFor("speech.generate"); onClicked: controller.generateSelected() }
             SecondaryButton { text: "Generate Outdated"; compact: true; enabled: !controller.busy; onClicked: controller.generateOutdated() }
             AppButton { text: "Generate All"; compact: true; enabled: !controller.busy; onClicked: controller.generateAll() }
         }
 
         RowLayout { Layout.fillWidth: true; spacing: Theme.spacing.xs
-            SecondaryButton { text: "Select All"; compact: true; onClicked: controller.selectAll() }
+            SecondaryButton { text: "Select All"; compact: true; ToolTip.text: "Select all · " + Commands.shortcutFor("speech.select_all"); onClicked: controller.selectAll() }
+            SecondaryButton { text: "Duplicate"; compact: true; enabled: controller.selectedCount===1; ToolTip.text: "Duplicate · " + Commands.shortcutFor("speech.duplicate"); onClicked: controller.duplicateSelected() }
             SecondaryButton { text: "Select Failed"; compact: true; onClicked: controller.selectStatus("failed") }
             SecondaryButton { text: "Select Ungenerated"; compact: true; onClicked: controller.selectStatus("ungenerated") }
             Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 24; color: Theme.colors.border }
@@ -58,9 +81,9 @@ FocusScope {
             Text { text: "Voice filters"; color: Theme.colors.textMuted; font.family: Theme.type.family; font.pixelSize: Theme.type.caption }
             AppComboBox { id: voiceLanguageFilter; Layout.preferredWidth: 92; model: ["all","en","km","th","vi"]; onActivated: controller.filterVoices(currentText, voiceRoleFilter.currentText, styleFilter.text, toneFilter.text, energyFilter.text, favoritesFilter.checked) }
             AppComboBox { id: voiceRoleFilter; Layout.preferredWidth: 130; model: ["all","reporter","narrator","interview","character","professional"]; onActivated: controller.filterVoices(voiceLanguageFilter.currentText, currentText, styleFilter.text, toneFilter.text, energyFilter.text, favoritesFilter.checked) }
-            AppTextField { id: styleFilter; Layout.preferredWidth: 110; placeholderText: "Style"; onEditingFinished: controller.filterVoices(voiceLanguageFilter.currentText, voiceRoleFilter.currentText, text, toneFilter.text, energyFilter.text, favoritesFilter.checked) }
-            AppTextField { id: toneFilter; Layout.preferredWidth: 100; placeholderText: "Tone"; onEditingFinished: controller.filterVoices(voiceLanguageFilter.currentText, voiceRoleFilter.currentText, styleFilter.text, text, energyFilter.text, favoritesFilter.checked) }
-            AppTextField { id: energyFilter; Layout.preferredWidth: 100; placeholderText: "Energy"; onEditingFinished: controller.filterVoices(voiceLanguageFilter.currentText, voiceRoleFilter.currentText, styleFilter.text, toneFilter.text, text, favoritesFilter.checked) }
+            AppTextField { id: styleFilter; Layout.preferredWidth: 110; placeholderText: "Style"; onEditingFinished: controller.filterVoices(voiceLanguageFilter.currentText, voiceRoleFilter.currentText, text, toneFilter.text, energyFilter.text, favoritesFilter.checked); onActiveFocusChanged: Commands.setTextEditing(activeFocus) }
+            AppTextField { id: toneFilter; Layout.preferredWidth: 100; placeholderText: "Tone"; onEditingFinished: controller.filterVoices(voiceLanguageFilter.currentText, voiceRoleFilter.currentText, styleFilter.text, text, energyFilter.text, favoritesFilter.checked); onActiveFocusChanged: Commands.setTextEditing(activeFocus) }
+            AppTextField { id: energyFilter; Layout.preferredWidth: 100; placeholderText: "Energy"; onEditingFinished: controller.filterVoices(voiceLanguageFilter.currentText, voiceRoleFilter.currentText, styleFilter.text, toneFilter.text, text, favoritesFilter.checked); onActiveFocusChanged: Commands.setTextEditing(activeFocus) }
             CheckBox { id: favoritesFilter; text: "Favorites"; onToggled: controller.filterVoices(voiceLanguageFilter.currentText, voiceRoleFilter.currentText, styleFilter.text, toneFilter.text, energyFilter.text, checked) }
             Item { Layout.fillWidth: true }
         }
@@ -80,13 +103,15 @@ FocusScope {
         SplitView { Layout.fillWidth: true; Layout.fillHeight: true; orientation: Qt.Horizontal
             ListView {
                 id: table
+                focus: true
                 SplitView.fillWidth: true; SplitView.minimumWidth: 780; clip: true; model: controller.rows; spacing: 1; reuseItems: true; cacheBuffer: 160
+                onActiveFocusChanged: if(activeFocus && root.editingId==="") { Commands.setTextEditing(false); Commands.setContext("speech_editor") }
                 delegate: SpeechRow {
                     required property var modelData
                     width: table.width; rowData: modelData; selected: root.rowSelected(modelData.id); editing: root.editingId === modelData.id
-                    onSelectRequested: function(value){ controller.select(modelData.id, value) }
-                    onEditRequested: root.editingId = modelData.id
-                    onTextCommitted: function(value){ root.editingId = ""; controller.editText(modelData.id, value) }
+                    onSelectRequested: function(value){ controller.select(modelData.id, value); table.forceActiveFocus(); Commands.setContext("speech_editor") }
+                    onEditRequested: { root.editingId = modelData.id; Commands.setTextEditing(true) }
+                    onTextCommitted: function(value){ root.editingId = ""; Commands.setTextEditing(false); controller.editText(modelData.id, value); table.forceActiveFocus() }
                     onTimingCommitted: function(startText,endText){ controller.setTimingText(modelData.id,startText,endText) }
                     onPlayRequested: if(modelData.activeGeneratedAudioId) controller.playTake(modelData.activeGeneratedAudioId)
                     onRegenerateRequested: { controller.clearSelection(); controller.select(modelData.id,true); controller.generateSelected() }
@@ -98,6 +123,8 @@ FocusScope {
     }
 
     AppDialog { id: splitDialog; width: 480; parent: Overlay.overlay; header: null; footer: null
+        onOpened: Commands.setModalOpen(true)
+        onClosed: Commands.setModalOpen(false)
         contentItem: ColumnLayout { spacing: Theme.spacing.sm
             Text { text: "Split Speech"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.heading }
             AppTextField { id: splitBefore; Layout.fillWidth: true; placeholderText: "Text before split" }
@@ -107,11 +134,14 @@ FocusScope {
         }
     }
     AppDialog { id: mergeDialog; width: 420; parent: Overlay.overlay; header: null; footer: null
+        onOpened: Commands.setModalOpen(true)
+        onClosed: Commands.setModalOpen(false)
         contentItem: ColumnLayout { spacing: Theme.spacing.sm
             Text { text: "Merge adjacent speech"; color: Theme.colors.textPrimary; font.family: Theme.type.family; font.pixelSize: Theme.type.heading }
             Text { text: "Compatible speaker/voice settings are preserved. If they differ, assign the desired speaker/voice first."; wrapMode: Text.WordWrap; color: Theme.colors.textSecondary; font.family: Theme.type.family; font.pixelSize: Theme.type.bodySmall }
             RowLayout { Item { Layout.fillWidth: true } SecondaryButton { text: "Cancel"; onClicked: mergeDialog.close() } AppButton { text: "Merge"; onClicked: { var ids=controller.selectedIds; if(ids.length===2 && controller.mergeBlocks(ids[0],ids[1],"","")) mergeDialog.close() } } }
         }
     }
+    Connections { target: Commands; function onCommandTriggered(commandId){ if(Commands.context==="speech_editor" || commandId==="playback.toggle") root.handleSpeechCommand(commandId) } }
     Connections { target: controller; function onOperationSucceeded(message){ root.toastRequested(message,"success") } function onOperationFailed(message){ root.toastRequested(message,"error") } }
 }

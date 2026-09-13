@@ -1,18 +1,29 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Layouts 1.15
+import SPVideoStudio.Commands 1.0
 import "../theme"
 import "../components"
 Item {
     id:root
     property var controller
     property bool advanced:false
+    function handleCommand(commandId){
+        if(!root.controller || !root.controller.selectedTrackId) return false
+        var track=root.controller.selectedTrack
+        if(commandId==="audio.mute"){root.controller.setTrackMuted(root.controller.selectedTrackId,!Boolean(track.muted));return true}
+        if(commandId==="audio.solo"){root.controller.setTrackSolo(root.controller.selectedTrackId,!Boolean(track.solo));return true}
+        return false
+    }
+    onVisibleChanged:if(visible)Commands.setContext("audio_mixer")
+    Connections{target:Commands;function onCommandTriggered(commandId){if(Commands.context==="audio_mixer")root.handleCommand(commandId)}}
     ColumnLayout { anchors.fill:parent;spacing:Theme.spacing.sm
         RowLayout { Layout.fillWidth:true
             ColumnLayout { Layout.fillWidth:true;spacing:0
                 Text { text:"Audio Mixer";color:Theme.colors.textPrimary;font.family:Theme.type.family;font.pixelSize:Theme.type.heading;font.weight:Theme.type.semibold }
                 Text { text:"Voice clarity, music, SFX and safe final output";color:Theme.colors.textMuted;font.family:Theme.type.family;font.pixelSize:Theme.type.caption }
             }
+            Text{visible:root.controller&&root.controller.selectedTrackId!=="";text:"Shift+M mute · Shift+S solo";color:Theme.colors.textMuted;font.family:Theme.type.family;font.pixelSize:Theme.type.caption}
             AppComboBox { id:preset;model:["Voice Focus","Interview","News","Story","Shorts","Dub"];onActivated:if(root.controller)root.controller.applyPreset(currentText.toLowerCase().replaceAll(" ","_")) }
             SecondaryButton { text:root.advanced?"Simple":"Mixer";compact:true;onClicked:root.advanced=!root.advanced }
             SecondaryButton { text:"Render Audio Preview";compact:true;onClicked:if(root.controller)root.controller.renderPreview() }

@@ -6,6 +6,7 @@ import SPVideoStudio.Phase23 1.0
 import SPVideoStudio.Phase25 1.0
 import SPVideoStudio.Phase30 1.0 as Phase30
 import SPVideoStudio.ManualSpeech 1.0
+import SPVideoStudio.Commands 1.0
 import "../theme"
 import "../components"
 import "../editor"
@@ -20,22 +21,66 @@ FocusScope {
     property var controller
     property var playbackController
     property string aspectRatio: "16:9"
+    property var projectClipboard: null
     signal toastRequested(string message,string variant)
     signal openStoryboardRequested()
     focus: true
 
-    Shortcut { sequence:"Ctrl+B"; onActivated:if(root.controller)root.controller.splitSelected() }
-    Shortcut { sequence:"Ctrl+Z"; onActivated:if(root.controller)root.controller.undo() }
-    Shortcut { sequence:"Ctrl+Y"; onActivated:if(root.controller)root.controller.redo() }
-    Shortcut { sequence:"Ctrl+Shift+Z"; onActivated:if(root.controller)root.controller.redo() }
-    Shortcut { sequence:"Ctrl+D"; onActivated:if(root.controller)root.controller.duplicateSelected() }
-    Shortcut { sequence:"Delete"; onActivated:if(root.controller)root.controller.deleteSelected() }
-    Shortcut { sequence:"M"; onActivated:if(root.controller)root.controller.addMarker("Marker") }
-    Shortcut { sequence:","; onActivated:if(root.controller)root.controller.stepFrame(-1) }
-    Shortcut { sequence:"."; onActivated:if(root.controller)root.controller.stepFrame(1) }
-    Keys.onSpacePressed:function(event){if(root.controller){root.controller.togglePlayback();event.accepted=true}}
-    Keys.onLeftPressed:function(event){if(root.controller){root.controller.seekRelative((event.modifiers&Qt.ShiftModifier)?-5000:-500);event.accepted=true}}
-    Keys.onRightPressed:function(event){if(root.controller){root.controller.seekRelative((event.modifiers&Qt.ShiftModifier)?5000:500);event.accepted=true}}
+    function claimContext(){ if(root.activeFocus && !Commands.textEditing) Commands.setContext("timeline") }
+    function copyTimelineSelection(){
+        if(!root.controller) return false
+        var clip=root.controller.selectedClip
+        if(!clip || !clip.id) return false
+        root.projectClipboard={kind:"timeline", sourceType:String(clip.sourceType||""), sourceId:String(clip.sourceId||""), clipId:String(clip.id||"")}
+        root.toastRequested("Timeline item copied.","info")
+        return true
+    }
+    function handleTimelineCommand(commandId){
+        if(!root.controller) return false
+        if(commandId==="playback.toggle") { root.controller.togglePlayback(); return true }
+        if(commandId==="playback.start") { root.controller.seekProject(0,false); return true }
+        if(commandId==="playback.end") { root.controller.seekProject(root.controller.durationMs,false); return true }
+        if(commandId==="playback.seek_back") { root.controller.seekRelative(-500); return true }
+        if(commandId==="playback.seek_forward") { root.controller.seekRelative(500); return true }
+        if(commandId==="playback.seek_back_large") { root.controller.seekRelative(-5000); return true }
+        if(commandId==="playback.seek_forward_large") { root.controller.seekRelative(5000); return true }
+        if(commandId==="playback.frame_previous") { root.controller.stepFrame(-1); return true }
+        if(commandId==="playback.frame_next") { root.controller.stepFrame(1); return true }
+        if(commandId==="timeline.split") { root.controller.splitSelected(); return true }
+        if(commandId==="timeline.delete") { root.controller.deleteSelected(); return true }
+        if(commandId==="timeline.duplicate") { root.controller.duplicateSelected(); return true }
+        if(commandId==="timeline.copy") return copyTimelineSelection()
+        if(commandId==="timeline.cut") { if(copyTimelineSelection()){root.controller.deleteSelected();return true} return false }
+        if(commandId==="timeline.paste") {
+            if(!root.projectClipboard || root.projectClipboard.kind!=="timeline") return false
+            var selected=root.controller.selectedClip
+            if(!selected || String(selected.sourceId||"")!==String(root.projectClipboard.sourceId||"")) root.controller.selectClip(root.projectClipboard.clipId)
+            root.controller.duplicateSelected(); return true
+        }
+        if(commandId==="timeline.marker") { root.controller.addMarker("Marker"); return true }
+        if(commandId==="timeline.snap") { root.controller.setSnapEnabled(!root.controller.snapEnabled); return true }
+        if(commandId==="timeline.zoom_in") { root.controller.zoomIn(); return true }
+        if(commandId==="timeline.zoom_out") { root.controller.zoomOut(); return true }
+        if(commandId==="timeline.fit") { root.controller.fitTimeline(timelineFlick.width); return true }
+        if(commandId==="timeline.trim_start") {
+            var a=root.controller.selectedClip
+            if(!a || (a.sourceType!=="scene_video" && a.sourceType!=="scene_image")) return false
+            var amount=Math.max(0,root.controller.playheadMs-Number(a.startMs||0))
+            if(amount>0) root.controller.trimSceneLeft(String(a.sourceId||""),amount)
+            return true
+        }
+        if(commandId==="timeline.trim_end") {
+            var b=root.controller.selectedClip
+            if(!b || (b.sourceType!=="scene_video" && b.sourceType!=="scene_image")) return false
+            root.controller.trimSceneRight(String(b.sourceId||""),Math.max(100,root.controller.playheadMs-Number(b.startMs||0))); return true
+        }
+        if(commandId==="timeline.clear_selection" || commandId==="app.escape") { root.controller.selectClip(""); return true }
+        if(commandId==="edit.undo") { root.controller.undo(); return true }
+        if(commandId==="edit.redo" || commandId==="edit.redo_alt") { root.controller.redo(); return true }
+        return false
+    }
+
+    onActiveFocusChanged: claimContext()
 
     property int studioPanelIndex: Shorts.workflow === "shorts" ? 1 : 0
 
@@ -46,6 +91,7 @@ FocusScope {
         Phase30.AudioMixer.setProject(projectId,Shorts.workflow||"video");ManualSpeech.setCurrentProject(projectId)
         Phase30.AudioMixer.setTimelineState((typeof root.controller.audioClips!=="undefined"?root.controller.audioClips:[]),Number(root.controller.durationMs||0))
         studioPanelIndex=Shorts.workflow==="shorts"?1:0
+        Commands.setProjectOpen(projectId.length>0); Commands.setContext("timeline")
     }
 
     ColumnLayout {
@@ -63,11 +109,11 @@ FocusScope {
                     anchors.fill:parent;anchors.margins:Theme.spacing.sm;spacing:Theme.spacing.xs
                     RowLayout {
                         Layout.fillWidth:true
-                        SecondaryButton{text:"Video";compact:true;enabled:root.studioPanelIndex!==0;onClicked:root.studioPanelIndex=0}
-                        SecondaryButton{text:"Shorts";compact:true;enabled:root.studioPanelIndex!==1;onClicked:root.studioPanelIndex=1}
-                        SecondaryButton{text:"Library";compact:true;enabled:root.studioPanelIndex!==2;onClicked:root.studioPanelIndex=2}
-                        SecondaryButton{text:"Audio";compact:true;enabled:root.studioPanelIndex!==3;onClicked:root.studioPanelIndex=3}
-                        SecondaryButton{text:"Speech / TTS";compact:true;enabled:root.studioPanelIndex!==4;onClicked:root.studioPanelIndex=4}
+                        SecondaryButton{text:"Video";compact:true;enabled:root.studioPanelIndex!==0;onClicked:{root.studioPanelIndex=0;Commands.setContext("timeline")}}
+                        SecondaryButton{text:"Shorts";compact:true;enabled:root.studioPanelIndex!==1;onClicked:{root.studioPanelIndex=1;Commands.setContext("source_range")}}
+                        SecondaryButton{text:"Library";compact:true;enabled:root.studioPanelIndex!==2;onClicked:{root.studioPanelIndex=2;Commands.setContext("asset_library")}}
+                        SecondaryButton{text:"Audio";compact:true;enabled:root.studioPanelIndex!==3;onClicked:{root.studioPanelIndex=3;Commands.setContext("audio_mixer")}}
+                        SecondaryButton{text:"Speech / TTS";compact:true;enabled:root.studioPanelIndex!==4;onClicked:{root.studioPanelIndex=4;Commands.setContext("speech_editor")}}
                         Item{Layout.fillWidth:true}
                         Text{text:Shorts.workflow==="shorts"?"Short project":"Source project";color:Theme.colors.timelineText;font.family:Theme.type.family;font.pixelSize:Theme.type.timeline}
                     }
@@ -88,7 +134,7 @@ FocusScope {
             Layout.fillWidth:true;Layout.fillHeight:true;spacing:0
             Column {
                 id:labels;Layout.preferredWidth:174;Layout.fillHeight:true
-                Rectangle{width:174;height:34;color:Theme.colors.timelineRuler;border.color:Theme.colors.borderStrong;RowLayout{anchors.fill:parent;anchors.margins:6;Text{Layout.fillWidth:true;text:"TRACKS";color:Theme.colors.timelineText;font.family:Theme.type.family;font.pixelSize:Theme.type.timeline}Text{text:"Frame: , .";color:Theme.colors.timelineText;font.family:Theme.type.family;font.pixelSize:Theme.type.timeline}}}
+                Rectangle{width:174;height:34;color:Theme.colors.timelineRuler;border.color:Theme.colors.borderStrong;RowLayout{anchors.fill:parent;anchors.margins:6;Text{Layout.fillWidth:true;text:"TRACKS";color:Theme.colors.timelineText;font.family:Theme.type.family;font.pixelSize:Theme.type.timeline}Text{text:"Frame Alt+←/→";color:Theme.colors.timelineText;font.family:Theme.type.family;font.pixelSize:Theme.type.timeline}}}
                 Repeater {
                     model:root.controller?root.controller.tracks:[]
                     delegate:Rectangle {
@@ -109,7 +155,7 @@ FocusScope {
                 ScrollBar.horizontal:ScrollBar{};ScrollBar.vertical:ScrollBar{}
                 Item {
                     id:timelineContent;width:timelineFlick.contentWidth;height:ruler.height+trackColumn.height
-                    TimelineRuler{id:ruler;width:timelineContent.width;pixelsPerSecond:root.controller?root.controller.pixelsPerSecond:80;durationMs:root.controller?root.controller.durationMs:0;MouseArea{anchors.fill:parent;onClicked:function(mouse){if(root.controller)root.controller.seekProject(Math.round(mouse.x/root.controller.pixelsPerSecond*1000),false)}}}
+                    TimelineRuler{id:ruler;width:timelineContent.width;pixelsPerSecond:root.controller?root.controller.pixelsPerSecond:80;durationMs:root.controller?root.controller.durationMs:0;MouseArea{anchors.fill:parent;onClicked:function(mouse){if(root.controller){root.forceActiveFocus();Commands.setContext("timeline");root.controller.seekProject(Math.round(mouse.x/root.controller.pixelsPerSecond*1000),false)}}}}
                     Column {
                         id:trackColumn;y:ruler.height;width:parent.width
                         Repeater { model:root.controller?root.controller.tracks:[];delegate:TimelineTrack {
@@ -143,8 +189,14 @@ FocusScope {
     }
 
     Connections {
+        target:Commands
+        function onCommandTriggered(commandId){
+            if(Commands.context==="timeline" || commandId.indexOf("playback.")===0 || commandId.indexOf("edit.")===0) root.handleTimelineCommand(commandId)
+        }
+    }
+    Connections {
         target:root.controller;ignoreUnknownSignals:true
-        function onTimelineChanged(){if(!root.controller)return;var pid=root.controller.currentProjectId||"";if(VideoStudio.currentProjectId!==pid)VideoStudio.setCurrentProject(pid);else VideoStudio.refresh();if(AssetLibrary.currentProjectId!==pid)AssetLibrary.setCurrentProject(pid);if(Phase30.AudioMixer.currentProjectId!==pid)Phase30.AudioMixer.setProject(pid,Shorts.workflow||"video");Phase30.AudioMixer.setTimelineState((typeof root.controller.audioClips!=="undefined"?root.controller.audioClips:[]),Number(root.controller.durationMs||0));if(Shorts.currentProjectId!==pid)Shorts.setCurrentProject(pid);else Shorts.refresh();if(ManualSpeech.currentProjectId!==pid)ManualSpeech.setCurrentProject(pid);else ManualSpeech.refresh()}
+        function onTimelineChanged(){if(!root.controller)return;var pid=root.controller.currentProjectId||"";Commands.setProjectOpen(pid.length>0);if(VideoStudio.currentProjectId!==pid)VideoStudio.setCurrentProject(pid);else VideoStudio.refresh();if(AssetLibrary.currentProjectId!==pid)AssetLibrary.setCurrentProject(pid);if(Phase30.AudioMixer.currentProjectId!==pid)Phase30.AudioMixer.setProject(pid,Shorts.workflow||"video");Phase30.AudioMixer.setTimelineState((typeof root.controller.audioClips!=="undefined"?root.controller.audioClips:[]),Number(root.controller.durationMs||0));if(Shorts.currentProjectId!==pid)Shorts.setCurrentProject(pid);else Shorts.refresh();if(ManualSpeech.currentProjectId!==pid)ManualSpeech.setCurrentProject(pid);else ManualSpeech.refresh()}
         function onOperationSucceeded(message){root.toastRequested(message,"success")}
         function onOperationFailed(message){root.toastRequested(message,"error")}
     }

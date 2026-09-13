@@ -21,8 +21,8 @@ tts = ["voxcpm>=2.0.3,<3", "soundfile>=0.13,<1"]
 translation = ["transformers>=5.17,<6", "torch>=2.5", "sentencepiece>=0.2,<1"]
 
 [project.scripts]
-# Manual Speech/TTS Editor layers on the Phase 31 performance runtime.
-sp-video-studio = "app.manual_speech_runtime:run"
+# Phase 33 layers centralized command/shortcut productivity on Phase 32.
+sp-video-studio = "app.phase33_runtime:run"
 
 [tool.pytest.ini_options]
 addopts = "-ra"

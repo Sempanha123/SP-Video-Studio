@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, Mapping
@@ -42,6 +42,7 @@ PERFORMANCE_PROFILE_GUIDANCE = {
     },
 }
 
+
 @dataclass(slots=True)
 class AppSettings:
     settings_version: int = SETTINGS_VERSION
@@ -60,6 +61,8 @@ class AppSettings:
     debug_logging: bool = False
     show_technical_error_details: bool = False
     readiness_check_on_startup: bool = True
+    # Phase 33 stores only stable command IDs -> portable key sequences.
+    shortcut_overrides: dict[str, str] = field(default_factory=dict)
 
     @classmethod
     def defaults(cls, project_root: Path) -> "AppSettings":
@@ -84,6 +87,10 @@ class AppSettings:
             raise ValueError("Unsupported FFmpeg discovery mode.")
         if not self.default_projects_folder.strip():
             raise ValueError("Default projects folder is required.")
+        if not isinstance(self.shortcut_overrides, dict):
+            raise ValueError("Keyboard shortcut overrides must be a mapping.")
+        if any(not isinstance(k, str) or not isinstance(v, str) for k, v in self.shortcut_overrides.items()):
+            raise ValueError("Keyboard shortcut overrides must use command IDs and key sequences.")
 
     def with_changes(self, **changes: Any) -> "AppSettings":
         updated = replace(self, **changes)
@@ -116,6 +123,9 @@ class AppSettings:
                 "show_technical_error_details": self.show_technical_error_details,
                 "readiness_check_on_startup": self.readiness_check_on_startup,
             },
+            "keyboard_shortcuts": {
+                "overrides": dict(self.shortcut_overrides),
+            },
         }
 
     @classmethod
@@ -127,6 +137,8 @@ class AppSettings:
         rendering = _mapping(payload.get("rendering"))
         media_tools = _mapping(payload.get("media_tools"))
         advanced = _mapping(payload.get("advanced"))
+        keyboard_shortcuts = _mapping(payload.get("keyboard_shortcuts"))
+        raw_overrides = _mapping(keyboard_shortcuts.get("overrides"))
         settings = cls(
             settings_version=int(payload.get("settings_version", SETTINGS_VERSION)),
             language=str(general.get("language", "en")),
@@ -152,6 +164,11 @@ class AppSettings:
             readiness_check_on_startup=bool(
                 advanced.get("readiness_check_on_startup", True)
             ),
+            shortcut_overrides={
+                str(key): str(value)
+                for key, value in raw_overrides.items()
+                if str(key).strip()
+            },
         )
         settings.validate()
         return settings
