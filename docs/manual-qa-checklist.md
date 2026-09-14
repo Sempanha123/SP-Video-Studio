@@ -225,3 +225,68 @@ For English, Khmer, Thai and Vietnamese:
 - [ ] No open P0
 - [ ] Prefer no open P1
 - [ ] `test-results/summary.md` and JUnit reviewed
+
+## Phase 43 final production acceptance additions
+
+Run these on the **actual Release build and Setup EXE** in a disposable clean Windows 11 x64 profile. These items are intentionally not considered satisfied by source/configuration tests.
+
+### Clean machine / installer lifecycle
+
+- [ ] Python is not installed and no repository checkout exists on the test profile
+- [ ] No developer FFmpeg is on `PATH`; no project-specific environment variables are set
+- [ ] Use a non-admin user and install through the Phase 41 per-user installer
+- [ ] Fresh install → launch → uninstall → reinstall succeeds without a reboot
+- [ ] Upgrade a real previous installer N to candidate N+1 without a manual uninstall
+- [ ] Default uninstall preserves `%LOCALAPPDATA%\\MMOVideoStudio` projects/settings/models/assets/templates/recovery/logs/managed exports
+- [ ] Explicit optional managed-data removal removes only the documented managed root and leaves external project/export paths untouched
+- [ ] Final installed/packaged directory contains no `.env`, credentials, Git metadata, test databases, private media, source screenshots, developer home paths or unnecessary test files
+
+### First launch / display / visual consistency
+
+- [ ] Release executable opens with no console window, raw traceback, missing QML module/plugin or developer error text
+- [ ] Onboarding can be completed or skipped and does not require AI models
+- [ ] Inspect every primary page at 1366x768 and 100%/200% DPI for token consistency, spacing, buttons, hover/active state, dialogs and typography
+- [ ] Khmer and Thai combining marks are not clipped in project names, editor text, subtitles, overlays, Timeline labels and dialogs
+- [ ] Force common missing-file/read-only-folder/offline errors; user-facing UI remains actionable and does not show a raw traceback as the primary error
+
+### Paths / files
+
+- [ ] Create/open/export through a path containing spaces
+- [ ] Create/open/export through Khmer `ខ្មែរ`, Thai `ไทย` and Vietnamese `Việt` path components
+- [ ] Exercise a long Windows path where OS policy/support permits it
+- [ ] Use an external referenced asset, then move it and complete relink
+- [ ] Attempt a write into a read-only folder; the operation fails safely without corrupting project state
+
+### Render / audio matrix
+
+- [ ] Software `libx264` H.264 passes at 16:9, 9:16 and 1:1
+- [ ] Output audio is AAC, 48 kHz, stereo where the export preset requires audio
+- [ ] Render subtitles, chroma key, PIP, B-roll and multi-speaker composition
+- [ ] Listen manually for clear voice, music ducking, clipping, fades, interview voice balance and dub mix
+- [ ] If NVENC/QSV/AMF is present, force a hardware-encoder failure and confirm the workflow falls back safely to software encoding where designed
+
+### Performance / long session
+
+- [ ] Compare startup and representative interaction timings to the recorded Phase 31 baseline on the same workstation class
+- [ ] Exercise approximately 1,000 assets, 1,000 Batch items, 1,000 subtitles and 100 audio clips using disposable/generated data
+- [ ] Keep the app open for an extended edit/render/project-switch session; record memory, thread count, subprocess count and temporary storage growth
+- [ ] Finish/cancel heavy work and verify worker/subprocess/temp usage settles rather than growing without bound
+
+### Recovery / interruption
+
+- [ ] Crash with unsaved disposable edits and recover the project successfully
+- [ ] Interrupt a Batch job; restart and verify recovery/retry state is coherent
+- [ ] Interrupt a render; restart and verify no stale render state or orphan FFmpeg process blocks future renders
+
+### Update round trip
+
+- [ ] With a controlled test update origin, validate newer-version discovery, offline behavior, cancel/retry, bad-checksum rejection and active-render/Batch protection on the packaged application
+- [ ] Complete installer handoff from the updater and verify N+1 launches normally, migrations complete and `last-update.json` finalizes for the intended version only
+- [ ] Verify update staging/cleanup never deletes projects, models, exports, recovery data or an in-progress/pending update
+
+### Release notices / signing
+
+- [ ] Review the exact package inventory from the final build and ship all license/notice texts required by the exact PySide6/Qt, Python/runtime and optional AI packages actually bundled
+- [ ] Review the exact staged FFmpeg `LICENSE.txt`, `SOURCE.txt` and configure flags before distribution
+- [ ] Replace/supplement `APPLICATION_LICENSE_NOTICE.txt` with owner-approved public distribution/application terms
+- [ ] If Authenticode signing is part of the release policy, sign the application/installer and configure the updater expected publisher subject; verify a mismatched signer is rejected

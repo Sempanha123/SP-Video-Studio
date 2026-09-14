@@ -104,3 +104,9 @@ Phase 42 adds a secure, user-controlled Stable update path over the existing Pha
 Settings → Updates now exposes the current version, manual checks and a persisted lightweight automatic-check preference. Update checks never auto-download installers. Install is blocked while shared background/render/model work, Batch, or migration activity is present, and Phase 27 autosave/recovery must flush before handoff. Phase 29 Update Temp cleanup, Phase 36 diagnostics and Phase 38 post-update migration startup are integrated through their existing shared services rather than duplicated.
 
 See `docs/PHASE42_UPDATE_ARCHITECTURE.md` for manifest/trust rules, privacy, staging, validation/signing limitations, active-work protection, recovery, post-update behavior and release acceptance requirements.
+
+## Phase 43 — Final Production Audit
+
+Phase 43 freezes feature scope and audits release readiness across workflows, security/privacy, storage/recovery, migrations, packaging, installer, updates, accessibility, multilingual behavior, performance and release-artifact hygiene. It adds no new application runtime layer. Automated source/configuration gates remain green, but the audit deliberately separates those results from native Windows/manual acceptance.
+
+**Current release recommendation: NOT READY — BLOCKERS REMAIN.** There are no known open P0 issues in the audited source/configuration gates, but Phase 44 is blocked until the real Windows 11 x64 clean-machine release/installer/update matrix is completed and owner-approved public application/distribution terms are supplied. See `docs/production-audit-phase43.md`, `docs/known-issues.md`, and the expanded `docs/manual-qa-checklist.md`.

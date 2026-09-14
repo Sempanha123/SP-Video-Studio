@@ -1,8 +1,42 @@
-# Known Issues — Release QA (Phases 39–42)
+# Known Issues — Release QA (Phases 39–43)
 
 Severity: **P0** data loss/security/launch failure; **P1** core workflow broken; **P2** significant with workaround; **P3** minor/polish/environmental.
 
-There are no known open P0 or P1 issues in the automated Phase 39–42 source/configuration gates completed in the patch-build environment.
+There are **no known open P0 issues** in the automated source/configuration gates completed through Phase 43. Phase 43 intentionally promotes the remaining public-release acceptance/legal gaps below to **P1 release blockers**. **Phase 44 is blocked** until they are cleared and the Phase 43 release recommendation is rerun.
+
+## REL-43-001 — Clean Windows 11 x64 production acceptance not yet executed
+
+- **Severity:** P1 release blocker
+- **Workflow:** Clean install / onboarding / workflows / rendering / accessibility / performance / installer / updater / uninstall
+- **Status:** Open release gate
+- **Evidence:** Linux/source tests can validate architecture and failure contracts, but this environment cannot execute the real Windows Release folder, Inno Setup lifecycle, shell integration, audio listening, 200% DPI/Narrator behavior, long-session resource behavior, hardware encoders, or updater-to-Setup handoff.
+- **Required resolution:** Run the expanded `docs/manual-qa-checklist.md` on a disposable clean Windows 11 x64 non-admin profile using the actual Phase 40 Release build and Phase 41 Setup EXE, including fresh install, upgrade, uninstall/reinstall, update round trip, software H.264, multilingual/Unicode paths, recovery, long session and final artifact scan. Record logs/hashes/results.
+- **Release effect:** Phase 44 must not start while this gate is open.
+
+## REL-43-002 — Public application/distribution terms are not owner-approved
+
+- **Severity:** P1 release blocker
+- **Workflow:** License / notices / public distribution
+- **Status:** Open owner/legal-content decision
+- **Evidence:** `packaging/windows/notices/APPLICATION_LICENSE_NOTICE.txt` explicitly states that owner-approved public application license terms have not been supplied.
+- **Required resolution:** The project owner must provide/approve the application/distribution terms and the release package must include or link them without implying rights that were not granted.
+- **Release effect:** Public release candidate sign-off is blocked. Internal QA builds may continue.
+
+## REL-43-003 — Final third-party notice inventory depends on the exact native build
+
+- **Severity:** P2 release-content gate (promote to P1 if redistribution requirements cannot be confirmed before candidate publication)
+- **Workflow:** Python/Qt/AI runtime/FFmpeg notices
+- **Status:** Open final-artifact verification
+- **Evidence:** `THIRD_PARTY_NOTICES.md` records the known dependency groups and the Phase 40 FFmpeg policy, but the exact binaries/wheels present in the final Windows artifact must be inventoried before redistribution.
+- **Required resolution:** Compare the actual build inventory with shipped license/notice files and verify the staged FFmpeg license/source/configuration information. Do not claim legal approval from this engineering audit.
+
+## REL-43-004 — Authenticode release identity is not configured
+
+- **Severity:** P2 release-security/reputation gate
+- **Workflow:** Windows signing / updater publisher identity
+- **Status:** Open release-infrastructure item
+- **Evidence:** The Phase 42 update config leaves the expected signer blank and Phase 40/41 signing remains optional/external. HTTPS plus SHA-256 detects transfer corruption/tampering relative to the manifest but does not by itself establish publisher identity.
+- **Required resolution:** If signing is required for the release policy, configure protected signing credentials outside the repository, sign the candidate, set the updater expected signer, and verify mismatch rejection on Windows.
 
 ## QA-39-001 — Native Windows UI acceptance pending on release workstation
 

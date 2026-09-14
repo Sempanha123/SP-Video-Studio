@@ -401,16 +401,16 @@ def test_privacy_settings_distinguish_local_online_without_marketing_claim():
     assert '100% private' not in panel.lower()
 
 
-def test_phase37_runtime_remains_in_release_lineage():
+def test_security_layer_remains_reachable_from_current_packaged_entrypoint():
     root = Path(__file__).resolve().parents[1]
-    assert (root / 'app/phase37_runtime.py').is_file()
     pyproject = (root / 'pyproject.toml').read_text(encoding='utf-8')
     main = (root / 'main.py').read_text(encoding='utf-8')
-    import re
-    match = re.search(r"from app\.phase(\d+)_runtime import run", main)
-    assert match and int(match.group(1)) >= 37
-    current = match.group(1)
-    assert f'app.phase{current}_runtime:run' in pyproject
+    phase40 = (root / 'app/phase40_runtime.py').read_text(encoding='utf-8')
+    phase38 = (root / 'app/phase38_runtime.py').read_text(encoding='utf-8')
+    assert 'app.phase40_runtime:run' in pyproject
+    assert 'from app.phase40_runtime import run' in main
+    assert 'run_phase38' in phase40
+    assert 'run_phase37' in phase38
 
 
 def test_security_documents_cover_updater_and_unresolved_risks():
