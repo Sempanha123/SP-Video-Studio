@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "technology": "Inno Setup",
+  "compilerVersion": "7.1.0",
+  "target": "Windows 11 x64",
+  "setupArchitecture": "x64",
+  "scope": "per-user",
+  "requiresElevation": false,
+  "appId": "{38CE0934-A2D4-4D9B-9499-AEA7F28FC0EB}",
+  "defaultInstallRoot": "%LOCALAPPDATA%/Programs/MMO Video Studio",
+  "userDataRoot": "%LOCALAPPDATA%/MMOVideoStudio",
+  "desktopShortcutDefault": false,
+  "fileAssociations": false,
+  "protocolHandlers": false,
+  "silentInstallSupported": true,
+  "optionalManagedDataRemoval": true,
+  "managedDataRemovalSwitch": "/REMOVEAPPDATA",
+  "architecturesAllowed": "x64os"
+}

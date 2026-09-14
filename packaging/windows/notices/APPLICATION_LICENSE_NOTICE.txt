@@ -1,0 +1,13 @@
+MMO Video Studio — Application License Notice
+
+Copyright (c) 2026 SP Video Studio. All rights reserved.
+
+This repository does not currently contain owner-approved public application license terms.
+This notice is included in the Windows installer so redistribution does not silently imply
+an open-source or permissive license that has not been granted.
+
+Before public or commercial distribution, the project owner should replace this notice with
+(or explicitly link it to) the final owner-approved application license terms.
+
+Third-party components are governed by their own license terms. See THIRD_PARTY_NOTICES.md
+and the exact FFmpeg LICENSE.txt / SOURCE.txt files shipped with the release build.

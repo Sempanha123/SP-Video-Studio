@@ -46,5 +46,17 @@
   },
   "releaseConsole": false,
   "debugConsole": true,
-  "oneFile": false
+  "oneFile": false,
+  "installer": {
+    "technology": "Inno Setup",
+    "compilerVersion": "7.1.0",
+    "target": "Windows 11 x64",
+    "script": "packaging/windows/installer/MMO-Video-Studio.iss",
+    "scope": "per-user",
+    "requiresElevation": false,
+    "appId": "{38CE0934-A2D4-4D9B-9499-AEA7F28FC0EB}",
+    "defaultInstallRoot": "%LOCALAPPDATA%/Programs/MMO Video Studio",
+    "userDataRoot": "%LOCALAPPDATA%/MMOVideoStudio",
+    "architecturesAllowed": "x64os"
+  }
 }

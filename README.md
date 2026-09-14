@@ -86,3 +86,12 @@ Phase 40 adds a reproducible Windows 11 x64 standalone build around the existing
 Release builds use a staged, reviewed FFmpeg/FFprobe pair copied into the controlled `bin/` directory; the app never downloads FFmpeg silently at runtime. Model weights remain external and Model Manager continues to own `%LOCALAPPDATA%\MMOVideoStudio\models`. CPU-capable AI runtimes can be bundled separately from model weights, with CPU PyTorch as the default packaging baseline and no NVIDIA driver stack embedded. The build emits `build-manifest.json`, scans for development/secret files, supports optional certificate-based signing, and includes a Windows clean-profile/no-Python verification flow.
 
 See `docs/PHASE40_WINDOWS_PACKAGING.md` and `packaging/windows/README.md` for the exact Python/Nuitka/PySide6 pins, FFmpeg staging rules, resource/plugin policy, build commands, fresh-profile checks, signing preparation and the Windows-only acceptance gates that must be executed before a public release artifact is considered verified.
+
+
+## Phase 41 — Windows Installer
+
+Phase 41 adds a safe per-user Windows 11 x64 installer/uninstaller around the verified Phase 40 one-folder application. The selected installer is Inno Setup 7.1.0 x64 with a stable AppId, non-elevated install under `%LOCALAPPDATA%\Programs\MMO Video Studio`, Start Menu shortcut, optional unchecked Desktop shortcut, running-app protection, numeric downgrade blocking, standard install logs, optional external code signing, and SHA-256 sidecars.
+
+Application binaries remain separate from `%LOCALAPPDATA%\MMOVideoStudio`, so normal upgrades and uninstall preserve settings, models, Asset Library data, templates, cache, recovery, logs and managed exports. Interactive uninstall offers an explicit **No-by-default** managed-data removal confirmation; projects or exports outside the managed LocalAppData root are never part of that deletion. No project file association or URL protocol handler is added.
+
+See `docs/PHASE41_WINDOWS_INSTALLER.md`, `packaging/windows/installer/README.md`, `scripts/build_windows_installer.ps1`, and `scripts/verify_windows_installer.ps1` for installer architecture, build/sign/hash commands and the mandatory Windows fresh-install/upgrade/uninstall acceptance matrix.

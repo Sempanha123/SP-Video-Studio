@@ -1,8 +1,8 @@
-# Known Issues — Release QA (Phases 39–40)
+# Known Issues — Release QA (Phases 39–41)
 
 Severity: **P0** data loss/security/launch failure; **P1** core workflow broken; **P2** significant with workaround; **P3** minor/polish/environmental.
 
-There are no known open P0 or P1 issues in the automated Phase 39–40 gates completed in the patch-build environment.
+There are no known open P0 or P1 issues in the automated Phase 39–41 source/configuration gates completed in the patch-build environment.
 
 ## QA-39-001 — Native Windows UI acceptance pending on release workstation
 
@@ -48,3 +48,22 @@ There are no known open P0 or P1 issues in the automated Phase 39–40 gates com
 - **Reproduction:** Build the Release folder without a configured code-signing certificate and download/copy it onto a clean Windows workstation.
 - **Workaround:** Verify hashes and build manifest internally. `build_windows.ps1` supports an optional certificate-thumbprint signing step when release signing is configured outside the repository.
 - **Target fix:** Phase 41 installer/signing/release preparation. Do not add obfuscation or packer tricks to suppress reputation warnings.
+
+
+## QA-41-001 — Native Inno installer acceptance pending
+
+- **Severity:** P2
+- **Workflow:** Windows installer / upgrade / uninstall / non-admin
+- **Status:** Open validation item
+- **Reproduction:** On a disposable clean Windows 11 x64 non-admin profile, build the real Setup EXE and run `scripts/verify_windows_installer.ps1 -RequireCleanProfile -RequireNonAdmin -RequireInteractiveAcceptance`; add `-PreviousInstaller` plus `-RequireUpgradeFixture` when the previous release installer is available.
+- **Workaround:** Source/configuration tests validate stable AppId, non-admin scope, downgrade guard, data-deletion boundaries, shortcuts, signing/hash wiring and verifier safety.
+- **Target fix:** Required before treating the Phase 41 Setup EXE as public-release verified.
+
+## QA-41-002 — Owner-approved application license terms not yet supplied
+
+- **Severity:** P2 release-content/legal gate
+- **Workflow:** Installer notices / public redistribution
+- **Status:** Open owner decision
+- **Reproduction:** Inspect `packaging/windows/notices/APPLICATION_LICENSE_NOTICE.txt`; it intentionally states that the repository does not yet contain final owner-approved public application license terms.
+- **Workaround:** Internal/test builds can include the notice without implying a permissive license.
+- **Target fix:** Replace the notice with, or explicitly link it to, the project owner's final license before public/commercial distribution. Third-party and FFmpeg notices remain separate.
