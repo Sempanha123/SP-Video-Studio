@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.constants import APP_VERSION
+
 import json
 import os
 import platform
@@ -289,7 +291,7 @@ class DiagnosticsService:
         try:
             version = importlib.metadata.version("sp-video-studio")
         except importlib.metadata.PackageNotFoundError:
-            version = "0.1.0"
+            version = APP_VERSION
         return self._result(
             "application.version", "Application", "Application", DiagnosticStatus.READY,
             f"MMO Video Studio {version}", "Application package metadata is readable.", "", start=start,

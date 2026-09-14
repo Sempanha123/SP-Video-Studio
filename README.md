@@ -78,3 +78,11 @@ Phase 39 adds a release-grade QA architecture over the completed product without
 The mandatory E2E suite covers Normal Video, Reporter News, Interview, Story, Translate & Dub, Shorts, Templates, Asset Library, Batch Factory, Recovery and legacy Migration-to-render. Release regression also covers English/Khmer/Thai/Vietnamese content, Phase 31 scale/resource sanity, Phase 34 accessibility contracts, Phase 37 security, Phase 38 migrations, failure injection, libx264 rendering and privacy-safe machine/human test summaries. Optional real-engine tests remain capability-driven and skipped when models are not installed.
 
 See `docs/PHASE39_RELEASE_QA.md`, `docs/manual-qa-checklist.md` and `docs/known-issues.md` for profile commands, E2E coverage, Windows/manual acceptance, release gates and tracked limitations.
+
+## Phase 40 — Windows Packaging
+
+Phase 40 adds a reproducible Windows 11 x64 standalone build around the existing application instead of changing creator workflows. The selected release architecture is CPython 3.11 + PySide6 + Nuitka in a one-folder layout. QML and static resources are included explicitly, the executable carries Windows product/version metadata and a multi-size icon, and packaged runtime data stays under `%LOCALAPPDATA%\MMOVideoStudio` rather than Program Files.
+
+Release builds use a staged, reviewed FFmpeg/FFprobe pair copied into the controlled `bin/` directory; the app never downloads FFmpeg silently at runtime. Model weights remain external and Model Manager continues to own `%LOCALAPPDATA%\MMOVideoStudio\models`. CPU-capable AI runtimes can be bundled separately from model weights, with CPU PyTorch as the default packaging baseline and no NVIDIA driver stack embedded. The build emits `build-manifest.json`, scans for development/secret files, supports optional certificate-based signing, and includes a Windows clean-profile/no-Python verification flow.
+
+See `docs/PHASE40_WINDOWS_PACKAGING.md` and `packaging/windows/README.md` for the exact Python/Nuitka/PySide6 pins, FFmpeg staging rules, resource/plugin policy, build commands, fresh-profile checks, signing preparation and the Windows-only acceptance gates that must be executed before a public release artifact is considered verified.

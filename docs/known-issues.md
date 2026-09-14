@@ -1,8 +1,8 @@
-# Known Issues — Phase 39 Release QA
+# Known Issues — Release QA (Phases 39–40)
 
 Severity: **P0** data loss/security/launch failure; **P1** core workflow broken; **P2** significant with workaround; **P3** minor/polish/environmental.
 
-There are no known open P0 or P1 issues in the automated Phase 39 gates completed in the patch-build environment.
+There are no known open P0 or P1 issues in the automated Phase 39–40 gates completed in the patch-build environment.
 
 ## QA-39-001 — Native Windows UI acceptance pending on release workstation
 
@@ -30,3 +30,21 @@ There are no known open P0 or P1 issues in the automated Phase 39 gates complete
 - **Reproduction:** Before the fix, create/open a Thai or Vietnamese project and inspect `languageName` in the project list; the controller hardcoded only English/Khmer.
 - **Workaround:** None required after this patch.
 - **Target fix:** Completed — project display labels now resolve through the shared Language Registry.
+
+## QA-40-001 — Native standalone Windows artifact verification pending
+
+- **Severity:** P2
+- **Workflow:** Windows packaging / QML / clean-profile launch / no-Python runtime
+- **Status:** Open validation item
+- **Reproduction:** On Windows 11 x64, stage the reviewed FFmpeg package, run `scripts/build_windows.ps1 -Mode Release`, then run `scripts/verify_windows_build.ps1 -RequireInteractiveAcceptance` against `dist\MMO Video Studio`.
+- **Workaround:** Phase 40 source/configuration, resource, FFmpeg-path, manifest, LocalAppData, secret-scan and package-contract tests run in the patch environment; the Windows verifier performs the native compiled checks on the target platform.
+- **Target fix:** Required before treating a Phase 40 Windows binary as a public release artifact or beginning installer release sign-off.
+
+## QA-40-002 — Unsigned Nuitka build may trigger Windows reputation warnings
+
+- **Severity:** P3
+- **Workflow:** Windows distribution / SmartScreen / antivirus reputation
+- **Status:** Expected release-preparation limitation
+- **Reproduction:** Build the Release folder without a configured code-signing certificate and download/copy it onto a clean Windows workstation.
+- **Workaround:** Verify hashes and build manifest internally. `build_windows.ps1` supports an optional certificate-thumbprint signing step when release signing is configured outside the repository.
+- **Target fix:** Phase 41 installer/signing/release preparation. Do not add obfuscation or packer tricks to suppress reputation warnings.

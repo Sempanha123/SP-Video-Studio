@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.metadata
 import platform
+
+from app.constants import APP_VERSION
 from typing import Any
 
 from services.log_redaction_service import LogRedactionService
@@ -19,7 +21,7 @@ class EnvironmentReportService:
         try:
             return importlib.metadata.version("sp-video-studio")
         except importlib.metadata.PackageNotFoundError:
-            return "0.1.0"
+            return APP_VERSION
 
     def system_summary(self) -> dict[str, Any]:
         return {

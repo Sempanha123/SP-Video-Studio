@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_pyproject_entrypoint_and_release_markers_are_valid():
     data = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     assert data["project"]["requires-python"] == ">=3.11,<3.15"
-    assert data["project"]["scripts"]["sp-video-studio"] == "app.phase38_runtime:run"
+    assert data["project"]["scripts"]["sp-video-studio"] == "app.phase40_runtime:run"
     marker_text = "\n".join(data["tool"]["pytest"]["ini_options"]["markers"])
     for marker in ("fast", "integration", "e2e", "real_engine_optional", "packaging_smoke", "security", "migration"):
         assert marker in marker_text

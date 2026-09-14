@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.constants import APP_VERSION
+
 import json
 import logging
 import sqlite3
@@ -143,7 +145,7 @@ class ProjectMigrationService:
             """INSERT INTO migration_history(scope,subject_id,migration_id,from_version,to_version,status,record_counts_json,
                warning_count,backup_path,started_at,completed_at,app_version) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
             ("project", project_id, migration_id, from_version, to_version, status,
-             json.dumps(counts, sort_keys=True), warning_count, backup_path, started_at, _utc(), "0.1.0"),
+             json.dumps(counts, sort_keys=True), warning_count, backup_path, started_at, _utc(), APP_VERSION),
         )
 
     def _record_failure(self, project_id: str, from_version: int, to_version: int, backup_path: Path, started: str) -> None:

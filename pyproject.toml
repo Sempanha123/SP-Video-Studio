@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sp-video-studio"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Native desktop AI-assisted video creation studio"
 readme = "README.md"
 requires-python = ">=3.11,<3.15"
@@ -21,8 +21,8 @@ tts = ["voxcpm>=2.0.3,<3", "soundfile>=0.13,<1"]
 translation = ["transformers>=5.17,<6", "torch>=2.5", "sentencepiece>=0.2,<1"]
 
 [project.scripts]
-# Phase 38 layers durable database/project migrations on the completed Phase 37 runtime.
-sp-video-studio = "app.phase38_runtime:run"
+# Phase 40 adds packaged-runtime safeguards on the completed Phase 39 release line.
+sp-video-studio = "app.phase40_runtime:run"
 
 [tool.pytest.ini_options]
 addopts = "-ra"
@@ -52,6 +52,9 @@ line-length = 100
 select = ["E", "F", "I", "UP", "B"]
 [tool.setuptools]
 py-modules = ["main"]
+
+[tool.setuptools.dynamic]
+version = {attr = "app.constants.APP_VERSION"}
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*", "domain*", "engines*", "workers*", "services*", "storage*", "media*", "rendering*", "workflows*", "ui*", "migrations*"]

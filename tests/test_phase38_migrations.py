@@ -205,7 +205,10 @@ def test_post_migration_render_smoke(tmp_path):
     assert done.returncode==0 and output.is_file() and output.stat().st_size>0
 
 def test_runtime_and_entrypoint_contract():
-    assert 'app.phase38_runtime' in (ROOT/'main.py').read_text(encoding='utf-8');runtime=(ROOT/'app/phase38_runtime.py').read_text(encoding='utf-8');assert 'ProjectMigrationService' in runtime and 'ensure_current(project_id)' in runtime
+    main=(ROOT/'main.py').read_text(encoding='utf-8');runtime=(ROOT/'app/phase38_runtime.py').read_text(encoding='utf-8')
+    import re
+    match=re.search(r"from app\.phase(\d+)_runtime import run",main);assert match and int(match.group(1))>=38
+    assert 'ProjectMigrationService' in runtime and 'ensure_current(project_id)' in runtime
 
 def test_storage_migration_backups_are_protected():
     text=(ROOT/'domain/storage_category.py').read_text(encoding='utf-8');assert "MIGRATION_BACKUPS='migration_backups'" in text and "StorageSafety.PROTECTED" in text

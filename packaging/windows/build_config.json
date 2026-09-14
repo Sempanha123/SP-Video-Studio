@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "productName": "MMO Video Studio",
+  "target": "Windows 11 x64",
+  "python": "3.11",
+  "packager": "Nuitka",
+  "packagerVersion": "4.2.1",
+  "pyside6Version": "6.11.2",
+  "mode": "standalone-one-folder",
+  "entrypoint": "main.py",
+  "executable": "MMO Video Studio.exe",
+  "runtimeDataRoot": "%LOCALAPPDATA%/MMOVideoStudio",
+  "resources": [
+    "ui/qml",
+    "resources"
+  ],
+  "qtPlugins": [
+    "qml",
+    "platforms",
+    "imageformats",
+    "multimedia"
+  ],
+  "explicitDynamicPackages": [
+    "faster_whisper",
+    "ctranslate2",
+    "voxcpm",
+    "transformers",
+    "torch",
+    "sentencepiece",
+    "soundfile"
+  ],
+  "ffmpeg": {
+    "strategy": "bundled-at-build-time",
+    "destination": "bin",
+    "requiredFiles": [
+      "ffmpeg.exe",
+      "ffprobe.exe",
+      "LICENSE.txt",
+      "SOURCE.txt"
+    ],
+    "runtimeDownload": false
+  },
+  "models": {
+    "bundledWeights": false,
+    "root": "%LOCALAPPDATA%/MMOVideoStudio/models"
+  },
+  "releaseConsole": false,
+  "debugConsole": true,
+  "oneFile": false
+}

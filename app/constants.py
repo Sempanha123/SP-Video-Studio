@@ -1,4 +1,5 @@
 APP_NAME = "SP Video Studio"
+PRODUCT_NAME = "MMO Video Studio"
 APP_DATA_DIR_NAME = "MMOVideoStudio"
 APP_VERSION = "0.1.0"
 ORGANIZATION_NAME = "SP Video Studio"

@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
+from app.runtime_paths import bundled_tool_path
+
 
 @dataclass(slots=True)
 class ExecutableInfo:
@@ -50,9 +52,12 @@ class FFmpegLocator:
     def _discover_one(self, executable_name: str, custom: str | None) -> ExecutableInfo:
         if custom:
             return self.validate_path(custom, executable_name)
+        bundled = bundled_tool_path(executable_name)
+        if bundled is not None:
+            return self._probe(bundled, executable_name)
         located = self._which(executable_name)
         if not located:
-            return ExecutableInfo(False, error=f"{executable_name} was not found on PATH.")
+            return ExecutableInfo(False, error=f"{executable_name} was not found in the app bundle or on PATH.")
         return self._probe(Path(located), executable_name)
 
     def _probe(self, path: Path, executable_name: str) -> ExecutableInfo:
@@ -70,11 +75,7 @@ class FFmpegLocator:
         output = (completed.stdout or completed.stderr or "").strip()
         first_line = output.splitlines()[0] if output else ""
         if completed.returncode != 0 or executable_name.lower() not in first_line.lower():
-            return ExecutableInfo(
-                False,
-                str(path),
-                error=f"Selected file is not a working {executable_name} executable.",
-            )
+            return ExecutableInfo(False, str(path), error=f"Selected file is not a working {executable_name} executable.")
         version = self._extract_version(first_line, executable_name)
         return ExecutableInfo(True, str(path.resolve()), version=version)
 
