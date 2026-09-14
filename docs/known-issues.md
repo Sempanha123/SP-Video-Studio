@@ -1,8 +1,8 @@
-# Known Issues — Release QA (Phases 39–41)
+# Known Issues — Release QA (Phases 39–42)
 
 Severity: **P0** data loss/security/launch failure; **P1** core workflow broken; **P2** significant with workaround; **P3** minor/polish/environmental.
 
-There are no known open P0 or P1 issues in the automated Phase 39–41 source/configuration gates completed in the patch-build environment.
+There are no known open P0 or P1 issues in the automated Phase 39–42 source/configuration gates completed in the patch-build environment.
 
 ## QA-39-001 — Native Windows UI acceptance pending on release workstation
 
@@ -67,3 +67,22 @@ There are no known open P0 or P1 issues in the automated Phase 39–41 source/co
 - **Reproduction:** Inspect `packaging/windows/notices/APPLICATION_LICENSE_NOTICE.txt`; it intentionally states that the repository does not yet contain final owner-approved public application license terms.
 - **Workaround:** Internal/test builds can include the notice without implying a permissive license.
 - **Target fix:** Replace the notice with, or explicitly link it to, the project owner's final license before public/commercial distribution. Third-party and FFmpeg notices remain separate.
+
+
+## QA-42-001 — Official update endpoint and Authenticode publisher are not configured
+
+- **Severity:** P2 release-security/configuration gate
+- **Workflow:** Updates / signing / public release
+- **Status:** Open owner/release-infrastructure item
+- **Reproduction:** Inspect `app/update_config.py` or `packaging/windows/build_config.json`; the official manifest URL and expected Authenticode signer are intentionally blank.
+- **Workaround:** The updater remains disabled in an unconfigured build. Internal tests use a localhost-only mock server. Do not publish an update-enabled build until the official HTTPS endpoint is controlled and, preferably, the Phase 41 installer is Authenticode-signed with the configured expected publisher.
+- **Target fix:** Release-owner infrastructure/signing setup before public update rollout.
+
+## QA-42-002 — Native Windows update round-trip acceptance pending
+
+- **Severity:** P2
+- **Workflow:** Windows update / active jobs / autosave / installer handoff / upgrade
+- **Status:** Open validation item
+- **Reproduction:** On a disposable Windows 11 x64 non-admin profile, install the previous signed/verified release, use a controlled HTTPS test update origin, download the next Setup EXE, confirm render/Batch blocking, autosave/recovery flush, installer launch, preserved LocalAppData, Phase 38 migration startup and final `last-update.json` marker.
+- **Workaround:** Deterministic source tests cover manifest security, altered-installer rejection, cancellation, retry, staging containment, active-work blocking, autosave failure, safe argv handoff and post-update markers without touching production servers.
+- **Target fix:** Required release-workstation acceptance before enabling the public manifest URL.

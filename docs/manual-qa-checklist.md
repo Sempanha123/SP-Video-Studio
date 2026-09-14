@@ -194,6 +194,26 @@ For English, Khmer, Thai and Vietnamese:
 - [ ] AMF only if enumerated **and hardware smoke succeeds**
 - [ ] Cancel active FFmpeg render; confirm no orphan process
 
+
+## Application updates (Phase 42)
+
+- [ ] Settings → Updates shows current version and Stable channel
+- [ ] Manual Check for Updates does not download an installer automatically
+- [ ] Disable Automatically Check, restart, and confirm the preference persists
+- [ ] Offline check reports `Could not check for updates.` without interrupting editing
+- [ ] With a controlled HTTPS test origin, newer version shows the update dialog and plain-text release notes
+- [ ] Cancel a download and confirm no `.part`/staged Setup EXE remains; Retry then succeeds
+- [ ] Alter the test installer while keeping the original manifest SHA-256; confirm it is rejected/deleted and never launched
+- [ ] If release signing is configured, confirm Authenticode publisher validation succeeds for the expected signer and fails for a different signer
+- [ ] Start a disposable render and Batch job; Install Now must remain blocked until active work is stopped/finished
+- [ ] Make unsaved edits, prepare the update, and verify a pre-update recovery point plus successful autosave flush before handoff
+- [ ] Force an autosave failure in disposable QA data and confirm the installer is not launched
+- [ ] Confirm the Setup EXE launches as the existing Phase 41 installer and the app exits only after successful process launch
+- [ ] After upgrade, confirm settings/models/assets/projects/recovery/logs remain under `%LOCALAPPDATA%\\MMOVideoStudio`
+- [ ] Confirm normal Phase 38 migrations run on first launch and the pending marker finalizes only under the intended newer version
+- [ ] Storage cleanup may remove stale Update Temp files only while no update is downloading/validating/ready/installing and no pending-update marker exists
+- [ ] No automatic downgrade/rollback or forced-update lockout is offered
+
 ## Release sign-off
 
 - [ ] `python scripts/run_release_qa.py FAST` passes

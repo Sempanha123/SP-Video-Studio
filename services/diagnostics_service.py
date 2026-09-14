@@ -292,9 +292,27 @@ class DiagnosticsService:
             version = importlib.metadata.version("sp-video-studio")
         except importlib.metadata.PackageNotFoundError:
             version = APP_VERSION
+        update_state = {}
+        try:
+            update_path = Path(self.paths.settings) / "updates.json"
+            payload = json.loads(update_path.read_text(encoding="utf-8")) if update_path.is_file() else {}
+            if isinstance(payload, dict):
+                update_state = {
+                    "lastUpdateCheck": str(payload.get("last_check_at") or ""),
+                    "updateState": str(payload.get("state") or "idle"),
+                    "lastUpdateError": self.redaction.redact_text(str(payload.get("last_error") or ""))[:500],
+                }
+        except (OSError, ValueError, json.JSONDecodeError):
+            update_state = {"lastUpdateCheck": "", "updateState": "unavailable", "lastUpdateError": ""}
+        details = "Application package metadata is readable."
+        if update_state.get("lastUpdateCheck"):
+            details += f"\nLast update check: {update_state['lastUpdateCheck']}"
+        details += f"\nUpdate state: {update_state.get('updateState', 'idle')}"
+        if update_state.get("lastUpdateError"):
+            details += f"\nLast update error: {update_state['lastUpdateError']}"
         return self._result(
             "application.version", "Application", "Application", DiagnosticStatus.READY,
-            f"MMO Video Studio {version}", "Application package metadata is readable.", "", start=start,
+            f"MMO Video Studio {version}", details, "", metadata={"currentVersion": version, **update_state}, start=start,
         )
 
     def _system_check(self, readiness) -> DiagnosticResult:

@@ -58,5 +58,14 @@
     "defaultInstallRoot": "%LOCALAPPDATA%/Programs/MMO Video Studio",
     "userDataRoot": "%LOCALAPPDATA%/MMOVideoStudio",
     "architecturesAllowed": "x64os"
+  },
+  "updates": {
+    "channel": "stable",
+    "officialManifestUrl": "",
+    "manifestSchemaVersion": 1,
+    "requiresHttps": true,
+    "automaticInstallerDownload": false,
+    "expectedAuthenticodeSignerSubject": "",
+    "stagingRoot": "%LOCALAPPDATA%/MMOVideoStudio/updates"
   }
 }

@@ -95,3 +95,12 @@ Phase 41 adds a safe per-user Windows 11 x64 installer/uninstaller around the ve
 Application binaries remain separate from `%LOCALAPPDATA%\MMOVideoStudio`, so normal upgrades and uninstall preserve settings, models, Asset Library data, templates, cache, recovery, logs and managed exports. Interactive uninstall offers an explicit **No-by-default** managed-data removal confirmation; projects or exports outside the managed LocalAppData root are never part of that deletion. No project file association or URL protocol handler is added.
 
 See `docs/PHASE41_WINDOWS_INSTALLER.md`, `packaging/windows/installer/README.md`, `scripts/build_windows_installer.ps1`, and `scripts/verify_windows_installer.ps1` for installer architecture, build/sign/hash commands and the mandatory Windows fresh-install/upgrade/uninstall acceptance matrix.
+
+
+## Phase 42 — Update Architecture
+
+Phase 42 adds a secure, user-controlled Stable update path over the existing Phase 40 package and Phase 41 installer. Production update metadata/installers are HTTPS-only, manifests reject executable command fields, downloads use managed LocalAppData staging with progress/cancel/retry, installer size and SHA-256 are mandatory, and optional Windows Authenticode verification is enforced when an expected publisher identity is configured. The Setup EXE is revalidated before a one-argument `shell=False` launch; the running application is never overwritten directly.
+
+Settings → Updates now exposes the current version, manual checks and a persisted lightweight automatic-check preference. Update checks never auto-download installers. Install is blocked while shared background/render/model work, Batch, or migration activity is present, and Phase 27 autosave/recovery must flush before handoff. Phase 29 Update Temp cleanup, Phase 36 diagnostics and Phase 38 post-update migration startup are integrated through their existing shared services rather than duplicated.
+
+See `docs/PHASE42_UPDATE_ARCHITECTURE.md` for manifest/trust rules, privacy, staging, validation/signing limitations, active-work protection, recovery, post-update behavior and release acceptance requirements.

@@ -4,7 +4,7 @@ from enum import Enum
 
 class StorageSafety(str,Enum):SAFE_TO_CLEAR='safe_to_clear';REGENERATABLE='regeneratable';PROTECTED='protected';USER_DATA='user_data';EXTERNAL='external'
 class StorageCategory(str,Enum):
-    PROJECT_DATA='project_data';PROJECT_MEDIA='project_media';GENERATED_AUDIO='generated_audio';AUDIO_WAVEFORM_CACHE='audio_waveform_cache';PREVIEW_CACHE='preview_cache';THUMBNAIL_CACHE='thumbnail_cache';RENDER_TEMP='render_temp';TRANSCRIPTION_TEMP='transcription_temp';TRANSLATION_CACHE='translation_cache';ASSET_LIBRARY='asset_library';ASSET_THUMBNAIL_CACHE='asset_thumbnail_cache';TEMPLATE_CACHE='template_cache';BATCH_INTERMEDIATE='batch_intermediate';RECOVERY_DATA='recovery_data';MIGRATION_BACKUPS='migration_backups';AI_MODELS='ai_models';FINAL_EXPORTS='final_exports';LOGS='logs';EXTERNAL_REFERENCES='external_references'
+    PROJECT_DATA='project_data';PROJECT_MEDIA='project_media';GENERATED_AUDIO='generated_audio';AUDIO_WAVEFORM_CACHE='audio_waveform_cache';PREVIEW_CACHE='preview_cache';THUMBNAIL_CACHE='thumbnail_cache';RENDER_TEMP='render_temp';TRANSCRIPTION_TEMP='transcription_temp';TRANSLATION_CACHE='translation_cache';UPDATE_TEMP='update_temp';ASSET_LIBRARY='asset_library';ASSET_THUMBNAIL_CACHE='asset_thumbnail_cache';TEMPLATE_CACHE='template_cache';BATCH_INTERMEDIATE='batch_intermediate';RECOVERY_DATA='recovery_data';MIGRATION_BACKUPS='migration_backups';AI_MODELS='ai_models';FINAL_EXPORTS='final_exports';LOGS='logs';EXTERNAL_REFERENCES='external_references'
 @dataclass(frozen=True,slots=True)
 class CategoryDefinition:category:StorageCategory;label:str;safety:StorageSafety;description:str;cache:bool=False
 CATEGORY_DEFINITIONS={
@@ -17,6 +17,7 @@ StorageCategory.THUMBNAIL_CACHE:CategoryDefinition(StorageCategory.THUMBNAIL_CAC
 StorageCategory.RENDER_TEMP:CategoryDefinition(StorageCategory.RENDER_TEMP,'Render Temporary Files',StorageSafety.SAFE_TO_CLEAR,'Intermediate render files not owned by active jobs.',True),
 StorageCategory.TRANSCRIPTION_TEMP:CategoryDefinition(StorageCategory.TRANSCRIPTION_TEMP,'Transcription Temporary Files',StorageSafety.SAFE_TO_CLEAR,'Temporary extracted audio and speech-recognition working files.',True),
 StorageCategory.TRANSLATION_CACHE:CategoryDefinition(StorageCategory.TRANSLATION_CACHE,'Translation Cache',StorageSafety.SAFE_TO_CLEAR,'Reproducible provider/local translation response cache.',True),
+StorageCategory.UPDATE_TEMP:CategoryDefinition(StorageCategory.UPDATE_TEMP,'Update Temporary Files',StorageSafety.SAFE_TO_CLEAR,'Incomplete or superseded validated-update staging files; active update files are excluded by the update service.',True),
 StorageCategory.ASSET_LIBRARY:CategoryDefinition(StorageCategory.ASSET_LIBRARY,'Asset Library',StorageSafety.USER_DATA,'Managed reusable source assets.'),
 StorageCategory.ASSET_THUMBNAIL_CACHE:CategoryDefinition(StorageCategory.ASSET_THUMBNAIL_CACHE,'Asset Thumbnail Cache',StorageSafety.SAFE_TO_CLEAR,'Regeneratable Asset Library thumbnails.',True),
 StorageCategory.TEMPLATE_CACHE:CategoryDefinition(StorageCategory.TEMPLATE_CACHE,'Template Cache',StorageSafety.SAFE_TO_CLEAR,'Generated template previews and import staging.',True),

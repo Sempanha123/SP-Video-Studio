@@ -38,3 +38,17 @@ The installer uses Inno Setup 7.1.0 x64, keeps mutable data under `%LOCALAPPDATA
 
 
 Phase 41 installer compilation intentionally does not run destructive/fresh-profile acceptance by default. After building, move the Setup EXE and `.sha256` sidecar to a disposable clean Windows 11 x64 profile/VM and run `scripts\verify_windows_installer.ps1`. Use `-RunNativeVerify` on the build command only when the build environment itself is that clean QA profile.
+
+
+## Phase 42 update manifest
+
+After the Phase 41 Setup EXE passes verification, publish it only through the configured official HTTPS update origin and generate metadata from the central application version:
+
+```powershell
+py -3.11 scripts\generate_update_manifest.py `
+  --installer '.\dist\installer\MMO-Video-Studio-Setup.exe' `
+  --installer-url 'https://updates.example.com/MMO-Video-Studio-Setup.exe' `
+  --output '.\dist\installer\update-manifest.json'
+```
+
+The updater does not trust installer filenames or arbitrary commands from the manifest. Size and SHA-256 are mandatory; when release signing is configured, set the build-level expected Authenticode publisher identity and verify the signed installer before publishing the manifest. See `docs/PHASE42_UPDATE_ARCHITECTURE.md`.

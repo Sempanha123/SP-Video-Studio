@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "channel": "stable",
+  "version": "0.1.0",
+  "minimum_supported_version": "0.1.0",
+  "published_at": "2026-09-14T00:00:00+00:00",
+  "release_notes": "Plain-text release notes go here.",
+  "release_notes_url": "https://updates.example.invalid/releases/0.1.0",
+  "installer_url": "https://updates.example.invalid/MMO-Video-Studio-0.1.0-Setup.exe",
+  "installer_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "installer_size": 1,
+  "signature": {},
+  "minimum_project_schema": 2
+}

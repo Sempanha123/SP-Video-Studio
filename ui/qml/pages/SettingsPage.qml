@@ -89,7 +89,7 @@ Item {
                     Layout.bottomMargin: Theme.spacing.sm
                 }
                 Repeater {
-                    model: ["General", "Appearance", "Projects", "Performance", "Rendering", "Keyboard Shortcuts", "Accessibility", "Privacy", "Storage", "Advanced"]
+                    model: ["General", "Appearance", "Projects", "Performance", "Rendering", "Keyboard Shortcuts", "Accessibility", "Privacy", "Storage", "Updates", "Advanced"]
                     delegate: SidebarItem {
                         required property string modelData
                         Layout.fillWidth: true
@@ -128,6 +128,7 @@ Item {
                             if (root.section === "Accessibility") return "Motion, text size and keyboard focus preferences."
                             if (root.section === "Privacy") return "Review local and online processing, support-bundle boundaries and sensitive voice handling."
                             if (root.section === "Storage") return "Review storage usage, safe cache cleanup and disk health."
+                            if (root.section === "Updates") return "Check for Stable updates and control lightweight automatic checks."
                             return "Diagnostics and advanced application preferences."
                         }
                         color: Theme.colors.textSecondary
@@ -426,6 +427,13 @@ Item {
                     visible: root.section === "Storage"
                     Layout.fillWidth: true
                     controller: Storage
+                }
+
+                Loader {
+                    visible: root.section === "Updates"
+                    active: visible
+                    Layout.fillWidth: true
+                    source: Qt.resolvedUrl("../updates/UpdateSettings.qml")
                 }
 
                 SettingsSection {

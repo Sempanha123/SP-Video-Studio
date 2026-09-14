@@ -89,4 +89,7 @@ def run() -> int:
     _install_windows_app_mutex()
     _install_fatal_exception_logging()
     _inject_default_window_icon()
-    return run_phase38()
+    # Phase 42 extends the stable packaged entrypoint rather than replacing it,
+    # preserving Phase 40/41 launcher and installer contracts.
+    from app.phase42_runtime import run as run_phase42
+    return run_phase42(run_phase38)
